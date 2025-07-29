@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Negotiation Logs{% endblock %}
+
+{% block content %}
+<h2>📈 Negotiation History</h2>
+
+{% if logs %}
+    <p>Showing {{ logs|length }} completed negotiations (most recent first)</p>
+    
+    {% for log in logs %}
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3>{{ log.item.name }}</h3>
+                <small>{{ log.timestamp }}</small>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+                <div>
+                    <p><strong>Starting Price:</strong> ${{ log.item.starting_price }}</p>
+                    <p><strong>Condition:</strong> {{ log.item.condition }}</p>
+                    <p><strong>Description:</strong> {{ log.item.description }}</p>
+                </div>
+                <div>
+                    {% if log.result == 'deal_accepted' %}
+                        <p><strong>Result:</strong> <span style="color: #28a745; font-weight: bold;">✅ Deal Accepted</span></p>
+                        <p><strong>Final Price:</strong> <span style="color: #28a745; font-weight: bold;">${{ log.final_price }}</span></p>
+                        <p><strong>Savings:</strong> ${{ (log.item.starting_price - log.final_price)|round(2) }}</p>
+                    {% else %}
+                        <p><strong>Result:</strong> <span style="color: #dc3545; font-weight: bold;">❌ {{ log.result|replace('_', ' ')|title }}</span></p>
+                    {% endif %}
+                    <p><strong>Negotiation Rounds:</strong> {{ log.rounds }}</p>
+                </div>
+            </div>
+            
+            {% if log.offers %}
+                <details style="margin-top: 15px;">
+                    <summary style="cursor: pointer; font-weight: bold; padding: 5px;">📜 View Full Negotiation ({{ log.offers|length }} messages)</summary>
+                    <div style="margin-top: 10px; border-left: 3px solid #007bff; padding-left: 15px;">
+                        {% for offer in log.offers %}
+                            <div style="margin: 10px 0; padding: 10px; background: {% if offer.agent_type == 'seller' %}#f8f9fa{% else %}#e7f3ff{% endif %}; border-radius: 4px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <strong>
+                                        {% if offer.agent_type == 'seller' %}
+                                            🏪 Seller
+                                        {% else %}
+                                            👤 Buyer
+                                        {% endif %}
+                                        - Round {{ offer.round_number }}
+                                    </strong>
+                                    <span style="font-weight: bold; color: {% if offer.agent_type == 'seller' %}#dc3545{% else %}#28a745{% endif %};">
+                                        ${{ offer.price }}
+                                    </span>
+                                </div>
+                                <p style="margin: 5px 0 0 0; font-style: italic;">{{ offer.message }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </details>
+            {% endif %}
+        </div>
+    {% endfor %}
+{% else %}
+    <div class="card">
+        <p>No negotiation logs found. Start some negotiations to see history here!</p>
+        <a href="{{ url_for('homepage') }}" class="btn btn-primary">Go to Dashboard</a>
+    </div>
+{% endif %}
+
+<script>
+// Add summary statistics
+const logs = {{ logs | tojson }};
+if (logs.length > 0) {
+    const successful = logs.filter(log => log.result === 'deal_accepted').length;
+    const totalSavings = logs.filter(log => log.result === 'deal_accepted')
+                           .reduce((sum, log) => sum + (log.item.starting_price - log.final_price), 0);
+    const avgRounds = logs.reduce((sum, log) => sum + log.rounds, 0) / logs.length;
+    
+    const statsDiv = document.createElement('div');
+    statsDiv.className = 'card';
+    statsDiv.innerHTML = `
+        <h3>📊 Summary Statistics</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <p><strong>Success Rate:</strong> ${Math.round(successful/logs.length*100)}% (${successful}/${logs.length})</p>
+            <p><strong>Total Savings:</strong> $${totalSavings.toFixed(2)}</p>
+            <p><strong>Avg Rounds:</strong> ${avgRounds.toFixed(1)}</p>
+        </div>
+    `;
+    
+    const content = document.querySelector('main') || document.querySelector('.container');
+    if (content && content.children.length > 1) {
+        content.insertBefore(statsDiv, content.children[1]);
+    }
+}
+</script>
+{% endblock %}

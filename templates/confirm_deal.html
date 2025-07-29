@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Confirm Deal{% endblock %}
+
+{% block content %}
+<h2>💰 Deal Confirmation</h2>
+
+<div class="card">
+    <h3>🎯 Deal Summary</h3>
+    <p><strong>Buyer:</strong> {{ buyer_name }}</p>
+    <p><strong>Item:</strong> {{ listing.item.name }}</p>
+    <p><strong>Original Asking Price:</strong> ${{ listing.asking_price }}</p>
+    <p><strong>Agreed Price:</strong> <span style="font-size: 1.2em; font-weight: bold; color: #28a745;">${{ deal.agreed_price }}</span></p>
+    <p><strong>Savings:</strong> ${{ (listing.asking_price - deal.agreed_price)|round(2) }}</p>
+</div>
+
+<div class="card">
+    <h3>📋 Item Details</h3>
+    <p><strong>Condition:</strong> {{ listing.item.condition }}</p>
+    <p><strong>Description:</strong> {{ listing.item.description }}</p>
+</div>
+
+<div class="card">
+    <h3>⚡ Action Required</h3>
+    <p>Do you want to accept this deal?</p>
+    
+    <div style="display: flex; gap: 15px; margin-top: 20px;">
+        <a href="{{ url_for('handle_deal', deal_id=deal.deal_id, action='confirm') }}" 
+           class="btn btn-success" 
+           onclick="return confirm('Are you sure you want to ACCEPT this deal for ${{ deal.agreed_price }}?')">
+            ✅ Accept Deal (${{ deal.agreed_price }})
+        </a>
+        
+        <a href="{{ url_for('handle_deal', deal_id=deal.deal_id, action='reject') }}" 
+           class="btn btn-danger"
+           onclick="return confirm('Are you sure you want to REJECT this deal? This cannot be undone.')">
+            ❌ Reject Deal
+        </a>
+        
+        <a href="{{ url_for('homepage') }}" class="btn">🔙 Back to Dashboard</a>
+    </div>
+</div>
+
+<div class="card">
+    <h4>💡 Pro Tips</h4>
+    <ul>
+        <li>Once you accept, the deal is final and the item will be marked as sold</li>
+        <li>If you reject, the negotiation ends and the buyer may try again later</li>
+        <li>Consider the buyer's personality - some may negotiate better next time</li>
+    </ul>
+</div>
+{% endblock %}

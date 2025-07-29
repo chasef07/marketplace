@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h2>📊 Marketplace Dashboard</h2>
+
+<div class="card">
+    <h3>📋 Active Listings ({{ listings|length }})</h3>
+    {% if listings %}
+        {% for listing in listings %}
+            <div class="card">
+                <h4>{{ listing.item.name }} - ${{ listing.asking_price }}</h4>
+                <p><strong>Status:</strong> {{ listing.listing_status.value }}</p>
+                <p><strong>Condition:</strong> {{ listing.item.condition }}</p>
+                <p><strong>Description:</strong> {{ listing.item.description }}</p>
+                <p><strong>Interested Buyers:</strong> {{ listing.interested_buyers|length }}</p>
+                <p><strong>Active Negotiations:</strong> {{ listing.active_negotiations|length }}</p>
+                
+                {% if listing.listing_status.value == 'active' %}
+                    <a href="{{ url_for('negotiate_page', listing_id=listing.listing_id) }}" class="btn btn-primary">Start Negotiations</a>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No active listings. <a href="{{ url_for('create_listing') }}">Create your first listing!</a></p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>🤝 Active Negotiations ({{ negotiations|length }})</h3>
+    {% if negotiations %}
+        {% for nego in negotiations %}
+            {% set buyer_name = orchestrator.users[nego.buyer_user_id].name %}
+            {% set listing = orchestrator.listings[nego.listing_id] %}
+            <div class="card">
+                <p><strong>{{ buyer_name }}</strong> → <strong>{{ listing.item.name }}</strong></p>
+                <p>Status: {{ nego.status }} | Rounds: {{ nego.negotiation_state.round_number }}</p>
+                {% if nego.negotiation_state.current_offer %}
+                    <p>Current Offer: ${{ nego.negotiation_state.current_offer }}</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No active negotiations</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>💰 Pending Deals ({{ pending_deals|length }})</h3>
+    {% if pending_deals %}
+        {% for deal in pending_deals %}
+            {% set buyer_name = orchestrator.users[deal.buyer_user_id].name %}
+            {% set listing = orchestrator.listings[deal.listing_id] %}
+            <div class="card">
+                <p><strong>{{ buyer_name }}</strong> → <strong>{{ listing.item.name }}</strong></p>
+                <p><strong>Agreed Price:</strong> ${{ deal.agreed_price }}</p>
+                <div>
+                    <a href="{{ url_for('confirm_deal_page', deal_id=deal.deal_id) }}" class="btn btn-primary">Review Deal</a>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No pending deals</p>
+    {% endif %}
+</div>
+{% endblock %}

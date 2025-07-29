@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Start Negotiations{% endblock %}
+
+{% block content %}
+<h2>🤝 Start Negotiations</h2>
+
+<div class="card">
+    <h3>📋 Listing Details</h3>
+    <p><strong>Item:</strong> {{ listing.item.name }}</p>
+    <p><strong>Asking Price:</strong> ${{ listing.asking_price }}</p>
+    <p><strong>Condition:</strong> {{ listing.item.condition }}</p>
+    <p><strong>Description:</strong> {{ listing.item.description }}</p>
+</div>
+
+<div class="card">
+    <h3>👥 Select AI Buyers to Start Negotiations</h3>
+    <form method="POST" action="{{ url_for('start_negotiation') }}">
+        <input type="hidden" name="listing_id" value="{{ listing.listing_id }}">
+        
+        <div class="checkbox-group">
+            {% for buyer_name, buyer_id in buyer_ids.items() %}
+                <div class="checkbox-item">
+                    <input type="checkbox" id="buyer_{{ loop.index }}" name="buyers" value="{{ buyer_name }}">
+                    <label for="buyer_{{ loop.index }}">
+                        <strong>{{ buyer_name }}</strong>
+                    </label>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="form-group" style="margin-top: 20px;">
+            <button type="submit" class="btn btn-success">🚀 Start Selected Negotiations</button>
+            <a href="{{ url_for('homepage') }}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+// Add select all functionality
+const allCheckboxes = document.querySelectorAll('input[name="buyers"]');
+const form = document.querySelector('form');
+
+// Add a "Select All" button
+const selectAllBtn = document.createElement('button');
+selectAllBtn.type = 'button';
+selectAllBtn.textContent = '✅ Select All';
+selectAllBtn.className = 'btn btn-primary';
+selectAllBtn.style.margin = '10px 10px 0 0';
+
+selectAllBtn.addEventListener('click', function() {
+    const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
+    allCheckboxes.forEach(cb => cb.checked = !allChecked);
+    this.textContent = allChecked ? '✅ Select All' : '❌ Deselect All';
+});
+
+form.insertBefore(selectAllBtn, form.querySelector('.form-group'));
+</script>
+{% endblock %}

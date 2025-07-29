@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Create Listing{% endblock %}
+
+{% block content %}
+<h2>📝 Create New Furniture Listing</h2>
+
+<form method="POST">
+    <div class="form-group">
+        <label for="name">Item Name:</label>
+        <input type="text" id="name" name="name" placeholder="e.g. Vintage Leather Couch" required>
+    </div>
+
+    <div class="form-group">
+        <label for="price">Asking Price ($):</label>
+        <input type="number" id="price" name="price" step="0.01" min="1" placeholder="500.00" required>
+    </div>
+
+    <div class="form-group">
+        <label for="min_price">Minimum Acceptable Price ($):</label>
+        <input type="number" id="min_price" name="min_price" step="0.01" min="1" placeholder="300.00" required>
+    </div>
+
+    <div class="form-group">
+        <label for="condition">Condition:</label>
+        <select id="condition" name="condition" required>
+            <option value="excellent">Excellent</option>
+            <option value="good" selected>Good</option>
+            <option value="fair">Fair</option>
+            <option value="poor">Poor</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="description">Description:</label>
+        <textarea id="description" name="description" rows="4" placeholder="Describe your furniture item..."></textarea>
+    </div>
+
+    <div class="form-group">
+        <button type="submit" class="btn btn-success">🏪 Create Listing</button>
+        <a href="{{ url_for('homepage') }}" class="btn">Cancel</a>
+    </div>
+</form>
+
+<script>
+// Auto-calculate minimum price as 60% of asking price
+document.getElementById('price').addEventListener('input', function() {
+    const price = parseFloat(this.value);
+    if (price && !document.getElementById('min_price').value) {
+        document.getElementById('min_price').value = (price * 0.6).toFixed(2);
+    }
+});
+</script>
+{% endblock %}
