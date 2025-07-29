@@ -82,6 +82,8 @@ class ItemListing:
     expiry_time: datetime = field(default_factory=lambda: datetime.now() + timedelta(days=7))
     interested_buyers: Set[str] = field(default_factory=set)
     active_negotiations: Dict[str, str] = field(default_factory=dict)  # buyer_id -> negotiation_id
+    successful_negotiations: List[str] = field(default_factory=list)  # Track completed negotiations
+    winner_selected: bool = False  # Flag to prevent multiple winner selections
     created_at: datetime = field(default_factory=datetime.now)
 
 
@@ -293,7 +295,7 @@ class ScalableMarketplaceOrchestrator:
             
             # Handle negotiation result
             if negotiation.negotiation_state.result == NegotiationResult.DEAL_ACCEPTED:
-                self._create_pending_deal(negotiation)
+                self._handle_successful_negotiation(negotiation)
             else:
                 self._finalize_failed_negotiation(negotiation)
                 
@@ -361,6 +363,89 @@ class ScalableMarketplaceOrchestrator:
                 state.result = NegotiationResult.DEAL_ACCEPTED
                 state.final_price = counter_price
     
+    def _handle_successful_negotiation(self, negotiation: ActiveNegotiation) -> None:
+        """Handle a successful negotiation - may need to compete with others"""
+        with self.negotiation_lock:
+            listing = self.listings[negotiation.listing_id]
+            
+            # If winner already selected, this negotiation loses
+            if listing.winner_selected:
+                print(f"🔍 Late negotiation {negotiation.negotiation_id[:8]} - Winner already selected")
+                self._finalize_failed_negotiation(negotiation)
+                return
+            
+            # Add to successful negotiations
+            listing.successful_negotiations.append(negotiation.negotiation_id)
+            negotiation.status = "completed"
+            
+            print(f"✅ Successful negotiation: ${negotiation.negotiation_state.final_price:.2f} from {self.users[negotiation.buyer_user_id].name}")
+            
+            # Check if we should select winner immediately (first success or timeout)
+            self._check_and_select_winner(listing.listing_id)
+    
+    def _check_and_select_winner(self, listing_id: str) -> None:
+        """Check if we should select a winner from successful negotiations"""
+        listing = self.listings[listing_id]
+        
+        if listing.winner_selected or not listing.successful_negotiations:
+            return
+            
+        # For now, select winner immediately with highest price
+        # TODO: Add competition window for more realistic bidding
+        self._select_winner_highest_price(listing_id)
+    
+    def _select_winner_highest_price(self, listing_id: str) -> None:
+        """Select winner based on highest price (Option A implementation)"""
+        listing = self.listings[listing_id]
+        
+        if listing.winner_selected:
+            return
+            
+        # Find negotiation with highest final price
+        best_negotiation = None
+        best_price = 0
+        
+        for negotiation_id in listing.successful_negotiations:
+            if negotiation_id in self.negotiations:
+                negotiation = self.negotiations[negotiation_id]
+                final_price = negotiation.negotiation_state.final_price
+                
+                if final_price > best_price:
+                    best_price = final_price
+                    best_negotiation = negotiation
+        
+        if best_negotiation:
+            # Mark winner selected
+            listing.winner_selected = True
+            
+            # Create winning deal
+            self._create_pending_deal(best_negotiation)
+            
+            # Cancel all other negotiations for this item
+            self._cancel_losing_negotiations(listing_id, best_negotiation.negotiation_id)
+            
+            buyer_name = self.users[best_negotiation.buyer_user_id].name
+            print(f"🏆 WINNER SELECTED: {buyer_name} with highest bid of ${best_price:.2f}")
+    
+    def _cancel_losing_negotiations(self, listing_id: str, winner_negotiation_id: str) -> None:
+        """Cancel all negotiations except the winner"""
+        listing = self.listings[listing_id]
+        
+        for negotiation_id in listing.successful_negotiations:
+            if negotiation_id != winner_negotiation_id and negotiation_id in self.negotiations:
+                negotiation = self.negotiations[negotiation_id]
+                negotiation.status = "lost_competition"
+                buyer_name = self.users[negotiation.buyer_user_id].name
+                print(f"❌ {buyer_name} lost competition (${negotiation.negotiation_state.final_price:.2f})")
+        
+        # Also cancel any still-active negotiations
+        for buyer_id, negotiation_id in list(listing.active_negotiations.items()):
+            if negotiation_id != winner_negotiation_id and negotiation_id in self.negotiations:
+                negotiation = self.negotiations[negotiation_id]
+                negotiation.status = "cancelled_item_sold"
+                buyer_name = self.users[buyer_id].name
+                print(f"🛑 {buyer_name}'s active negotiation cancelled - item sold")
+
     def _create_pending_deal(self, negotiation: ActiveNegotiation) -> None:
         """Create a deal pending human confirmation"""
         deal_id = str(uuid.uuid4())
@@ -374,7 +459,7 @@ class ScalableMarketplaceOrchestrator:
         )
         
         self.pending_deals[deal_id] = deal
-        negotiation.status = "completed"
+        negotiation.status = "pending_confirmation"
         
         # Update listing status
         listing = self.listings[negotiation.listing_id]

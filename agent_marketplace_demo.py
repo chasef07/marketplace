@@ -242,13 +242,15 @@ class AgentMarketplaceDemo:
                 
                 negotiation = self.orchestrator.negotiations[neg_id]
                 
-                if negotiation.status in ["completed", "failed"]:
+                # Check if negotiation is complete (any final status)
+                final_statuses = ["completed", "failed", "lost_competition", "cancelled_item_sold", "pending_confirmation"]
+                if negotiation.status in final_statuses:
                     completed.add(neg_id)
                     
                     listing = self.orchestrator.listings[negotiation.listing_id]
                     buyer_name = self.orchestrator.users[negotiation.buyer_user_id].name
                     
-                    if negotiation.status == "completed":
+                    if negotiation.status in ["completed", "pending_confirmation"]:
                         final_price = negotiation.negotiation_state.final_price
                         print(f"✅ {buyer_name} → {listing.item.name}: ${final_price:.2f}")
                     else:

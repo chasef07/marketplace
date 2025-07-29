@@ -192,9 +192,33 @@ MAX_TOKENS=200    # Longer responses
 - **GPT-4**: ~$0.05 per negotiation
 - **Budget Recommendation**: $10-20 for development
 
+## Winner Selection & Competition
+
+The system currently uses **Option A: Highest Price Wins** - the first buyer to successfully negotiate gets the item immediately, with other negotiations cancelled.
+
+### Future Competition Models
+
+**🏆 Option B: Competition Window + Seller Choice**
+- When first negotiation succeeds, start 30-60 second competition window
+- Collect all successful negotiations during window period
+- Seller gets 24 hours to choose from top 3 offers (price + buyer profile)
+- Enables seller preference beyond pure price maximization
+
+**🎯 Option C: Final Sealed-Bid Auction**  
+- Competition window collects initial successful negotiations
+- Top bidders enter sealed-bid final round (single best offer)
+- Most competitive option - encourages buyers to bid their true maximum
+- Automatic selection of highest sealed bid after deadline
+
+**Implementation Status:**
+- ✅ **Option A**: Highest price wins (current implementation)
+- 🚧 **Option B**: Competition window framework in place, needs seller UI
+- 🚧 **Option C**: Requires sealed-bid negotiation round implementation
+
 ## Next Steps
 
-- Add more complex negotiation factors (delivery, warranty, etc.)
-- Implement different agent personalities
-- Add reinforcement learning for strategy optimization
-- Create web interface for human vs AI negotiations
+- **Competition Enhancement**: Implement Options B & C for more realistic bidding
+- **Market Intelligence**: Add historical price data for smarter agent strategies  
+- **Complex Negotiations**: Add delivery, warranty, condition factors
+- **Web Interface**: Create human vs AI negotiation portal
+- **Reinforcement Learning**: Strategy optimization based on success patterns
