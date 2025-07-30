@@ -18,6 +18,7 @@ from forms import ItemForm, PersonalityForm
 from auth import auth
 from utils.file_handler import save_image, delete_image
 from services.ai_negotiation import schedule_ai_response
+from services.ai_image_analysis import analyze_furniture_image, suggest_pricing, generate_listing_content
 import os
 from datetime import datetime
 
@@ -70,36 +71,80 @@ def homepage():
 @main.route('/create-listing', methods=['GET', 'POST'])
 @login_required
 def create_listing():
-    """Create new furniture listing"""
+    """Create new furniture listing with AI analysis"""
     form = ItemForm()
     
     if form.validate_on_submit():
         # Handle image upload
         image_filename = None
+        analysis_data = None
+        
         if form.image.data:
             success, result = save_image(form.image.data)
             if success:
                 image_filename = result
+                
+                # Analyze image with AI if uploaded
+                image_path = os.path.join('static/uploads', image_filename)
+                try:
+                    analysis_success, analysis_result = analyze_furniture_image(image_path)
+                    if analysis_success:
+                        analysis_data = analysis_result
+                        flash('🤖 AI analysis completed! Check the generated suggestions.', 'info')
+                    else:
+                        flash(f'AI analysis failed: {analysis_result}', 'warning')
+                except Exception as e:
+                    flash(f'AI analysis error: {str(e)}', 'warning')
             else:
                 flash(f'Image upload failed: {result}', 'error')
                 return render_template('create_listing.html', form=form)
         
+        # Use AI-generated content if available, otherwise use form data
+        if analysis_data:
+            pricing_suggestions = suggest_pricing(analysis_data)
+            listing_content = generate_listing_content(analysis_data, pricing_suggestions)
+            
+            item_name = listing_content['title']
+            item_description = listing_content['description']
+            furniture_type_str = listing_content['furniture_type']
+            
+            # Map AI category to our enum
+            furniture_type_mapping = {
+                'couch': 'couch', 'sofa': 'couch',
+                'chair': 'chair', 
+                'table': 'dining_table', 'dining_table': 'dining_table',
+                'bookshelf': 'bookshelf', 'shelf': 'bookshelf',
+                'dresser': 'dresser',
+                'other': 'other'
+            }
+            
+            furniture_type = furniture_type_mapping.get(furniture_type_str, 'other')
+            
+            # Use AI pricing suggestions or form data
+            starting_price = pricing_suggestions.get('suggested_starting_price', form.starting_price.data)
+            min_price = pricing_suggestions.get('suggested_min_price', form.min_price.data)
+        else:
+            # Use form data as fallback
+            item_name = form.name.data
+            item_description = form.description.data
+            furniture_type = form.furniture_type.data
+            starting_price = form.starting_price.data
+            min_price = form.min_price.data
+        
         # Create new item
         item = Item(
             user_id=current_user.id,
-            name=form.name.data,
-            description=form.description.data,
-            furniture_type=FurnitureType(form.furniture_type.data),
-            starting_price=form.starting_price.data,
-            min_price=form.min_price.data,
+            name=item_name,
+            description=item_description,
+            furniture_type=FurnitureType(furniture_type),
+            starting_price=starting_price,
+            min_price=min_price,
             condition=form.condition.data,
             image_path=image_filename
         )
         
         db.session.add(item)
         db.session.commit()
-        
-        # No auto-generation - humans will start negotiations
         
         flash(f'✅ Created listing: {item.name} for ${item.starting_price}', 'success')
         return redirect(url_for('main.homepage'))
@@ -238,6 +283,49 @@ def settings():
     form.buyer_personality.data = current_user.buyer_personality
     
     return render_template('settings.html', form=form)
+
+@main.route('/api/analyze-image', methods=['POST'])
+@login_required
+def analyze_image_api():
+    """API endpoint for real-time image analysis during upload"""
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image uploaded'}), 400
+    
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'error': 'No image selected'}), 400
+    
+    try:
+        # Temporarily save the image
+        success, result = save_image(file)
+        if not success:
+            return jsonify({'error': f'Image upload failed: {result}'}), 400
+        
+        # Analyze the image
+        image_path = os.path.join('static/uploads', result)
+        analysis_success, analysis_result = analyze_furniture_image(image_path)
+        
+        if analysis_success:
+            # Generate pricing suggestions
+            pricing_suggestions = suggest_pricing(analysis_result)
+            listing_content = generate_listing_content(analysis_result, pricing_suggestions)
+            
+            response_data = {
+                'success': True,
+                'analysis': analysis_result,
+                'pricing': pricing_suggestions,
+                'listing': listing_content,
+                'image_filename': result
+            }
+            
+            return jsonify(response_data)
+        else:
+            # Clean up failed image
+            delete_image(result)
+            return jsonify({'error': f'AI analysis failed: {analysis_result}'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': f'Analysis error: {str(e)}'}), 500
 
 @main.route('/api/negotiation/<int:negotiation_id>/status')
 @login_required

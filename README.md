@@ -18,9 +18,17 @@ An intelligent web-based marketplace where AI agents with distinct personalities
 
 ### 🏪 **Web-Based Marketplace**
 - **Flask Web Interface** - modern, responsive design
-- **Create Listings** with photo uploads and detailed descriptions
+- **Smart Photo Upload** with AI-powered furniture analysis
+- **Auto-Generated Listings** - AI creates titles, descriptions, and pricing
 - **Browse Items** from other users with filtering
 - **Real-time Negotiation Pages** with auto-refresh
+
+### 📸 **AI Image Analysis (NEW!)**
+- **GPT-4 Vision Integration** - analyzes uploaded furniture photos instantly
+- **Furniture Recognition** - identifies type, brand, style, materials, condition
+- **Smart Pricing** - estimates original retail price and current market value
+- **Professional Listings** - generates compelling titles and descriptions
+- **One-Click Enhancement** - apply AI suggestions or keep manual input
 
 ### 🤝 **Smart Negotiation System**
 - **Automatic AI Responses** - AI agents respond within seconds
@@ -76,11 +84,13 @@ An intelligent web-based marketplace where AI agents with distinct personalities
 - Choose your AI seller and buyer personalities
 - Complete registration
 
-### 2. Create a Listing
+### 2. Create a Listing (Enhanced with AI!)
 - Click "Create Listing"
-- Add item details and photo (optional)
-- Set your asking price and minimum price
-- Submit listing
+- Upload a photo of your furniture
+- **AI analyzes your photo instantly** - detects type, brand, condition, style
+- **Review AI suggestions** - pricing, title, description automatically generated
+- **Choose**: Use AI suggestions or keep your manual input
+- Submit your enhanced listing
 
 ### 3. Start Negotiating
 - Browse available items
@@ -113,9 +123,10 @@ An intelligent web-based marketplace where AI agents with distinct personalities
 ### Built With
 - **Backend**: Flask, SQLAlchemy, Flask-Login
 - **Database**: SQLite with automatic schema creation
-- **AI**: OpenAI GPT-3.5 for intelligent negotiation
-- **Frontend**: HTML, CSS, JavaScript with auto-refresh
+- **AI**: OpenAI GPT-4 Vision for image analysis + GPT-3.5 for negotiations
+- **Frontend**: HTML, CSS, JavaScript with real-time updates
 - **Images**: Pillow for upload processing and resizing
+- **Computer Vision**: GPT-4 Vision API for furniture recognition
 
 ### Project Structure
 ```
@@ -130,7 +141,8 @@ marketplace/
 │   ├── database.py        # SQLAlchemy models
 │   └── negotiation_state.py # Legacy state management
 ├── services/              # Business logic
-│   └── ai_negotiation.py  # AI negotiation service
+│   ├── ai_negotiation.py  # AI negotiation service
+│   └── ai_image_analysis.py # GPT-4 Vision image analysis
 ├── templates/             # HTML templates
 │   ├── auth/             # Login/register pages
 │   ├── *.html           # Main application pages
@@ -145,15 +157,21 @@ marketplace/
 └── requirements.txt     # Python dependencies
 ```
 
-## 🎮 Example Negotiation Flow
+## 🎮 Enhanced Seller Experience Flow
 
-1. **Human Seller** lists "Vintage Couch" for $1000 (Flexible personality)
-2. **Human Buyer** makes initial offer of $750 (Bargain Hunter personality)
-3. **AI Flexible Seller** responds: *"$850 - I appreciate your offer, let me come down a bit to find middle ground"*
-4. **AI Bargain Hunter Buyer** responds: *"$650 - I've researched similar couches and this is competitive pricing"*
-5. **AI Flexible Seller** responds: *"$800 - Let's work together on this, I can be flexible but need to cover my costs"*
-6. **AI Bargain Hunter Buyer** responds: *"$700 - This is my budget limit, but I can pick up today"*
-7. **Negotiation continues** automatically until deal is reached at $750 after 8 rounds
+### 📸 AI-Powered Listing Creation
+1. **Upload Photo** → Seller uploads furniture image
+2. **AI Analysis** → GPT-4 Vision identifies: "Mid-Century Modern Teak Dining Table, 6-seat, Excellent condition (8/10)"
+3. **Smart Pricing** → AI suggests: Quick Sale $650, Market $850, Premium $1100
+4. **Auto-Generation** → Creates title: "Beautiful Mid-Century Teak Dining Table - Seats 6, Excellent Condition"
+5. **One-Click Apply** → Seller reviews and accepts AI suggestions
+
+### 🤝 Negotiation Example
+1. **AI-Enhanced Listing** created with optimal pricing and description
+2. **Human Buyer** makes initial offer of $750 (Fair personality)
+3. **AI Flexible Seller** responds: *"$800 - This is a genuine mid-century piece in excellent condition"*
+4. **AI Fair Buyer** responds: *"$775 - I appreciate the quality, meeting in the middle?"*
+5. **Deal reached** at $775 after 3 efficient rounds
 
 ## 🔧 Configuration
 
@@ -200,7 +218,15 @@ echo "OPENAI_API_KEY=your_key_here" > .env
 
 ## 🚀 What's New in This Version
 
-### Major Updates
+### 🆕 Latest Features (v2.1)
+- ✅ **GPT-4 Vision Integration** - AI analyzes furniture photos instantly
+- ✅ **Smart Listing Generation** - Auto-creates titles, descriptions, pricing
+- ✅ **Furniture Recognition** - Detects type, brand, style, condition automatically
+- ✅ **Market-Based Pricing** - AI estimates retail and current market values
+- ✅ **One-Click Enhancement** - Apply AI suggestions or keep manual input
+- ✅ **Real-Time Analysis** - Image processing during upload
+
+### Major Updates (v2.0)
 - ✅ **Multiple AI Personalities** - Choose from 9 different AI agent types
 - ✅ **Web-Based Interface** - Full Flask web application with modern UI
 - ✅ **User Authentication** - Secure login/registration system

@@ -5,6 +5,14 @@
 {% block content %}
 <h2>📝 Create New Furniture Listing</h2>
 
+<!-- AI Analysis Results Section (Hidden by default) -->
+<div id="ai-analysis-section" class="ai-analysis-card" style="display: none;">
+    <h3>🤖 AI Analysis Results</h3>
+    <div id="analysis-content"></div>
+    <button type="button" id="use-ai-suggestions" class="btn btn-primary">Use AI Suggestions</button>
+    <button type="button" id="dismiss-analysis" class="btn btn-secondary">Keep My Input</button>
+</div>
+
 <form method="POST" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
     
@@ -60,11 +68,13 @@
 
     <div class="form-group">
         {{ form.image.label(class="form-label") }}
-        {{ form.image(class="form-control", accept="image/*") }}
+        {{ form.image(class="form-control", accept="image/*", id="image-upload") }}
         {% for error in form.image.errors %}
             <div class="error">{{ error }}</div>
         {% endfor %}
-        <small class="form-text">Optional. JPG, PNG only, max 5MB</small>
+        <small class="form-text">Optional. JPG, PNG only, max 5MB. AI will analyze your photo!</small>
+        <div id="upload-status" class="upload-status"></div>
+        <div id="image-preview" class="image-preview"></div>
     </div>
 
     <div class="form-group">
@@ -107,9 +117,98 @@
     font-size: 0.85em;
     margin-top: 5px;
 }
+
+/* AI Analysis Styles */
+.ai-analysis-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.ai-analysis-card h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.analysis-item {
+    background: rgba(255,255,255,0.1);
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.analysis-item strong {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.upload-status {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    display: none;
+}
+
+.upload-status.loading {
+    background: #e3f2fd;
+    color: #1976d2;
+    display: block;
+}
+
+.upload-status.success {
+    background: #e8f5e8;
+    color: #2e7d32;
+    display: block;
+}
+
+.upload-status.error {
+    background: #ffebee;
+    color: #c62828;
+    display: block;
+}
+
+.image-preview {
+    margin-top: 15px;
+}
+
+.image-preview img {
+    max-width: 300px;
+    max-height: 200px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.pricing-item {
+    background: rgba(255,255,255,0.15);
+    padding: 8px;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.pricing-item .price {
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+.pricing-item .label {
+    font-size: 0.9em;
+    opacity: 0.9;
+}
 </style>
 
 <script>
+let currentAnalysis = null;
+
 // Auto-calculate minimum price as 60% of starting price
 document.getElementById('starting_price').addEventListener('input', function() {
     const price = parseFloat(this.value);
@@ -117,6 +216,128 @@ document.getElementById('starting_price').addEventListener('input', function() {
     if (price && !minPriceField.value) {
         minPriceField.value = (price * 0.6).toFixed(2);
     }
+});
+
+// Image upload and analysis
+document.getElementById('image-upload').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Show image preview
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const preview = document.getElementById('image-preview');
+        preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+    };
+    reader.readAsDataURL(file);
+    
+    // Start AI analysis
+    analyzeImage(file);
+});
+
+function analyzeImage(file) {
+    const statusDiv = document.getElementById('upload-status');
+    statusDiv.className = 'upload-status loading';
+    statusDiv.textContent = '🤖 Analyzing your furniture image...';
+    
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    fetch('/api/analyze-image', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            currentAnalysis = data;
+            showAnalysisResults(data);
+            statusDiv.className = 'upload-status success';
+            statusDiv.textContent = '✅ AI analysis complete! Check the suggestions below.';
+        } else {
+            statusDiv.className = 'upload-status error';
+            statusDiv.textContent = `❌ Analysis failed: ${data.error}`;
+        }
+    })
+    .catch(error => {
+        statusDiv.className = 'upload-status error';
+        statusDiv.textContent = `❌ Error: ${error.message}`;
+    });
+}
+
+function showAnalysisResults(data) {
+    const analysisSection = document.getElementById('ai-analysis-section');
+    const analysisContent = document.getElementById('analysis-content');
+    
+    const analysis = data.analysis;
+    const pricing = data.pricing;
+    
+    analysisContent.innerHTML = `
+        <div class="analysis-item">
+            <strong>🎯 Detected Item:</strong> ${analysis.furniture_type}
+        </div>
+        <div class="analysis-item">
+            <strong>🏷️ Brand:</strong> ${analysis.brand}
+        </div>
+        <div class="analysis-item">
+            <strong>🎨 Style:</strong> ${analysis.style} • ${analysis.color} ${analysis.material}
+        </div>
+        <div class="analysis-item">
+            <strong>⭐ Condition:</strong> ${analysis.condition_score}/10 - ${analysis.condition_notes}
+        </div>
+        <div class="analysis-item">
+            <strong>📏 Size:</strong> ${analysis.estimated_dimensions}
+        </div>
+        <div class="analysis-item">
+            <strong>💰 Pricing Suggestions:</strong>
+            <div class="pricing-grid">
+                <div class="pricing-item">
+                    <div class="price">$${pricing.quick_sale_price}</div>
+                    <div class="label">Quick Sale</div>
+                </div>
+                <div class="pricing-item">
+                    <div class="price">$${pricing.market_price}</div>
+                    <div class="label">Market Rate</div>
+                </div>
+                <div class="pricing-item">
+                    <div class="price">$${pricing.premium_price}</div>
+                    <div class="label">Premium</div>
+                </div>
+            </div>
+        </div>
+        <div class="analysis-item">
+            <strong>📝 Suggested Title:</strong> ${data.listing.title}
+        </div>
+    `;
+    
+    analysisSection.style.display = 'block';
+}
+
+// Use AI suggestions button
+document.getElementById('use-ai-suggestions').addEventListener('click', function() {
+    if (!currentAnalysis) return;
+    
+    const data = currentAnalysis;
+    
+    // Fill form fields with AI suggestions
+    document.getElementById('name').value = data.listing.title;
+    document.getElementById('description').value = data.listing.description;
+    document.getElementById('furniture_type').value = data.listing.furniture_type;
+    document.getElementById('starting_price').value = data.pricing.suggested_starting_price;
+    document.getElementById('min_price').value = data.pricing.suggested_min_price;
+    
+    // Hide analysis section
+    document.getElementById('ai-analysis-section').style.display = 'none';
+    
+    // Show success message
+    const statusDiv = document.getElementById('upload-status');
+    statusDiv.className = 'upload-status success';
+    statusDiv.textContent = '🎯 AI suggestions applied to your listing!';
+});
+
+// Dismiss analysis button
+document.getElementById('dismiss-analysis').addEventListener('click', function() {
+    document.getElementById('ai-analysis-section').style.display = 'none';
 });
 </script>
 {% endblock %}
