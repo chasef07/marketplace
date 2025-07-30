@@ -126,11 +126,11 @@ def negotiate_page(item_id):
         flash('❌ This item has already been sold', 'error')
         return redirect(url_for('main.homepage'))
     
-    # Check if negotiation already exists
-    existing_negotiation = Negotiation.query.filter_by(
-        item_id=item_id,
-        buyer_id=current_user.id,
-        status=NegotiationStatus.ACTIVE
+    # Check if negotiation already exists (active or pending)
+    existing_negotiation = Negotiation.query.filter(
+        Negotiation.item_id == item_id,
+        Negotiation.buyer_id == current_user.id,
+        Negotiation.status.in_([NegotiationStatus.ACTIVE, NegotiationStatus.DEAL_PENDING])
     ).first()
     
     return render_template('negotiate.html', item=item, existing_negotiation=existing_negotiation)
@@ -148,11 +148,11 @@ def start_negotiation():
         flash('❌ You cannot negotiate on your own item', 'error')
         return redirect(url_for('main.homepage'))
     
-    # Check if negotiation already exists
-    existing_negotiation = Negotiation.query.filter_by(
-        item_id=item_id,
-        buyer_id=current_user.id,
-        status=NegotiationStatus.ACTIVE
+    # Check if buyer already has an active or pending negotiation for this item
+    existing_negotiation = Negotiation.query.filter(
+        Negotiation.item_id == item_id,
+        Negotiation.buyer_id == current_user.id,
+        Negotiation.status.in_([NegotiationStatus.ACTIVE, NegotiationStatus.DEAL_PENDING])
     ).first()
     
     if existing_negotiation:
@@ -277,15 +277,42 @@ def make_offer():
     
     if action == 'accept':
         # Accept the current offer
-        negotiation.status = NegotiationStatus.COMPLETED
         negotiation.final_price = negotiation.current_offer
         negotiation.completed_at = datetime.now()
         
-        # Mark item as sold
-        negotiation.item.is_sold = True
+        if current_user.id == negotiation.seller_id:
+            # Seller accepts - mark as sold and cancel other negotiations
+            negotiation.status = NegotiationStatus.COMPLETED
+            negotiation.item.is_sold = True
+            from services.ai_negotiation import cancel_other_negotiations
+            cancel_other_negotiations(negotiation.item_id, negotiation.id)
+            flash(f'✅ Deal completed for ${negotiation.final_price}!', 'success')
+        else:
+            # Buyer accepts - pending seller confirmation
+            negotiation.status = NegotiationStatus.DEAL_PENDING
+            flash(f'✅ You accepted the offer for ${negotiation.final_price}! Waiting for seller confirmation.', 'success')
         
         db.session.commit()
-        flash(f'✅ Deal accepted for ${negotiation.final_price}!', 'success')
+        
+    elif action == 'reject_deal':
+        # Seller rejects the pending deal
+        if current_user.id == negotiation.seller_id and negotiation.status == NegotiationStatus.DEAL_PENDING:
+            negotiation.status = NegotiationStatus.CANCELLED
+            
+            # Add rejection message
+            rejection_offer = Offer(
+                negotiation_id=negotiation_id,
+                offer_type=OfferType.SELLER,
+                price=negotiation.current_offer,
+                message="Sorry, I have decided not to accept this deal. Thank you for your interest!",
+                round_number=negotiation.round_number + 1
+            )
+            db.session.add(rejection_offer)
+            db.session.commit()
+            
+            flash('❌ Deal rejected. The buyer has been notified.', 'warning')
+        else:
+            flash('❌ You cannot reject this deal.', 'error')
         
     elif action == 'offer':
         # Make a new offer

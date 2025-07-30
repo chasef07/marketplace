@@ -24,6 +24,36 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def cancel_other_negotiations(item_id: int, accepted_negotiation_id: int):
+    """Cancel all other active and pending negotiations for an item when one is accepted"""
+    other_negotiations = Negotiation.query.filter(
+        Negotiation.item_id == item_id,
+        Negotiation.id != accepted_negotiation_id,
+        Negotiation.status.in_([NegotiationStatus.ACTIVE, NegotiationStatus.DEAL_PENDING])
+    ).all()
+    
+    for negotiation in other_negotiations:
+        was_pending = negotiation.status == NegotiationStatus.DEAL_PENDING
+        negotiation.status = NegotiationStatus.CANCELLED
+        
+        # Add a system message explaining the cancellation
+        if was_pending:
+            message = "Sorry, this item has been sold to another buyer. Your pending deal has been cancelled."
+        else:
+            message = "This item has been sold to another buyer. Thank you for your interest!"
+            
+        cancellation_offer = Offer(
+            negotiation_id=negotiation.id,
+            offer_type=OfferType.SELLER,
+            price=negotiation.current_offer,
+            message=message,
+            round_number=negotiation.round_number + 1
+        )
+        db.session.add(cancellation_offer)
+    
+    db.session.commit()
+    logger.info(f"Cancelled {len(other_negotiations)} other negotiations for item {item_id}")
+
 def get_seller_agent(personality: str) -> SellerAgent:
     """Get seller agent based on personality"""
     agents = {
@@ -134,7 +164,9 @@ class AITurns:
                 negotiation.status = NegotiationStatus.COMPLETED
                 negotiation.final_price = current_offer
                 negotiation.completed_at = datetime.now()
+                # Mark item as sold and cancel other negotiations
                 negotiation.item.is_sold = True
+                cancel_other_negotiations(negotiation.item_id, negotiation.id)
                 
                 # Add acceptance offer
                 offer = Offer(
@@ -147,8 +179,8 @@ class AITurns:
                 db.session.add(offer)
                 
             else:
-                # Check if we've reached max rounds
-                if negotiation.round_number >= negotiation.max_rounds:
+                # Check if we've exceeded max rounds
+                if negotiation.round_number > negotiation.max_rounds:
                     negotiation.status = NegotiationStatus.CANCELLED
                     db.session.commit()
                     return
@@ -172,7 +204,7 @@ class AITurns:
                 db.session.add(offer)
                 
                 # Only schedule buyer response if we haven't reached max rounds
-                if negotiation.round_number < negotiation.max_rounds:
+                if negotiation.round_number <= negotiation.max_rounds:
                     schedule_ai_response(negotiation_id, is_seller_turn=False, delay_seconds=4)
             
             db.session.commit()
@@ -205,11 +237,10 @@ class AITurns:
             should_accept = buyer_agent.should_accept_offer(current_offer, negotiation.item.starting_price)
             
             if should_accept:
-                # Accept the deal
-                negotiation.status = NegotiationStatus.COMPLETED
+                # Buyer accepts - but item isn't sold until seller confirms
+                negotiation.status = NegotiationStatus.DEAL_PENDING
                 negotiation.final_price = current_offer
                 negotiation.completed_at = datetime.now()
-                negotiation.item.is_sold = True
                 
                 # Add acceptance offer
                 offer = Offer(
@@ -222,8 +253,8 @@ class AITurns:
                 db.session.add(offer)
                 
             else:
-                # Check if we've reached max rounds
-                if negotiation.round_number >= negotiation.max_rounds:
+                # Check if we've exceeded max rounds
+                if negotiation.round_number > negotiation.max_rounds:
                     negotiation.status = NegotiationStatus.CANCELLED
                     db.session.commit()
                     return
@@ -247,7 +278,7 @@ class AITurns:
                 db.session.add(offer)
                 
                 # Only schedule seller response if we haven't reached max rounds
-                if negotiation.round_number < negotiation.max_rounds:
+                if negotiation.round_number <= negotiation.max_rounds:
                     schedule_ai_response(negotiation_id, is_seller_turn=True, delay_seconds=4)
             
             db.session.commit()

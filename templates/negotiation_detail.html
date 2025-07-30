@@ -62,7 +62,23 @@
     </div>
     
     <div class="actions">
-        {% if negotiation.status.value == 'active' and not negotiation.is_complete() %}
+        {% if negotiation.status.value == 'deal_pending' %}
+        <div class="card">
+            <h4>🤝 Deal Pending</h4>
+            {% if current_user.id == negotiation.seller_id %}
+            <p><strong>Buyer has accepted your offer of ${{ negotiation.final_price }}!</strong></p>
+            <p>Do you want to complete this deal?</p>
+            <form method="POST" action="{{ url_for('main.make_offer') }}" style="display: inline;">
+                <input type="hidden" name="negotiation_id" value="{{ negotiation.id }}">
+                <button type="submit" name="action" value="accept" class="btn btn-success">✅ Complete Deal</button>
+                <button type="submit" name="action" value="reject_deal" class="btn btn-danger" style="margin-left: 10px;">❌ Reject Deal</button>
+            </form>
+            {% else %}
+            <p><strong>You accepted the offer of ${{ negotiation.final_price }}</strong></p>
+            <p><em>Waiting for seller confirmation...</em></p>
+            {% endif %}
+        </div>
+        {% elif negotiation.status.value == 'active' and not negotiation.is_complete() %}
         <div class="card">
             <h4>Make Your Next Move</h4>
             

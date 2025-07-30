@@ -85,7 +85,7 @@ class Negotiation(db.Model):
     offers = db.relationship('Offer', backref='negotiation', lazy=True, cascade='all, delete-orphan')
     
     def is_complete(self):
-        return self.status in [NegotiationStatus.COMPLETED, NegotiationStatus.CANCELLED] or self.round_number >= self.max_rounds
+        return self.status in [NegotiationStatus.COMPLETED, NegotiationStatus.CANCELLED, NegotiationStatus.DEAL_PENDING] or self.round_number > self.max_rounds
     
     def __repr__(self):
         return f'<Negotiation {self.id}>'
