@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.name }}{% endblock %}
+
+{% block content %}
+<div class="item-detail">
+    <h2>{{ item.name }}</h2>
+    
+    <div class="item-content">
+        {% if item.image_path %}
+        <div class="item-image-container">
+            <img src="{{ url_for('static', filename='uploads/' + item.image_path) }}" alt="{{ item.name }}" class="item-image-large">
+        </div>
+        {% endif %}
+        
+        <div class="item-info">
+            <div class="price-info">
+                <h3>${{ item.starting_price }}</h3>
+                <p class="min-price">Minimum: ${{ item.min_price }}</p>
+            </div>
+            
+            <div class="item-details">
+                <p><strong>Type:</strong> {{ item.furniture_type.value.replace('_', ' ').title() }}</p>
+                <p><strong>Condition:</strong> {{ item.condition.title() }}</p>
+                <p><strong>Listed by:</strong> {{ item.owner.username }}</p>
+                <p><strong>Listed on:</strong> {{ item.created_at.strftime('%B %d, %Y') }}</p>
+            </div>
+            
+            {% if item.description %}
+            <div class="description">
+                <h4>Description</h4>
+                <p>{{ item.description }}</p>
+            </div>
+            {% endif %}
+            
+            <div class="actions">
+                {% if current_user.is_authenticated and current_user.id != item.user_id and not item.is_sold %}
+                <a href="{{ url_for('main.negotiate_page', item_id=item.id) }}" class="btn btn-success">Start Negotiation</a>
+                {% elif item.is_sold %}
+                <span class="badge sold">SOLD</span>
+                {% elif current_user.id == item.user_id %}
+                <p><em>This is your item</em></p>
+                {% else %}
+                <p><a href="{{ url_for('auth.login') }}">Login</a> to negotiate</p>
+                {% endif %}
+                
+                <a href="{{ url_for('main.homepage') }}" class="btn">Back to Dashboard</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.item-content {
+    display: flex;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.item-image-container {
+    flex: 1;
+    max-width: 500px;
+}
+
+.item-image-large {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.item-info {
+    flex: 1;
+    min-width: 300px;
+}
+
+.price-info h3 {
+    font-size: 2em;
+    color: #28a745;
+    margin: 0;
+}
+
+.min-price {
+    color: #666;
+    font-size: 0.9em;
+}
+
+.item-details, .description {
+    margin: 20px 0;
+}
+
+.item-details p {
+    margin: 8px 0;
+}
+
+.actions {
+    margin-top: 30px;
+}
+
+.actions .btn {
+    margin-right: 10px;
+}
+
+@media (max-width: 768px) {
+    .item-content {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

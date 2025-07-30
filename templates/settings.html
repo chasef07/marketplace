@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}AI Settings{% endblock %}
+
+{% block content %}
+<div class="settings-page">
+    <h2>⚙️ AI Personality Settings</h2>
+    
+    <div class="card">
+        <h3>🤖 Configure Your AI Agents</h3>
+        <p>These AI personalities will represent you in negotiations when you're not available to respond immediately.</p>
+        
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            
+            <div class="personality-section">
+                <h4>🏪 AI Seller Personality</h4>
+                <p class="description">This AI represents you when <strong>selling items</strong> and responding to buyer offers.</p>
+                
+                <div class="form-group">
+                    {{ form.seller_personality(class="form-control") }}
+                    {% for error in form.seller_personality.errors %}
+                        <div class="error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                
+                <div class="personality-descriptions">
+                    <div class="personality-card" data-personality="flexible">
+                        <strong>Flexible:</strong> Willing to negotiate and find middle ground. Good for most situations.
+                    </div>
+                    <div class="personality-card" data-personality="aggressive">
+                        <strong>Aggressive:</strong> Holds firm on prices, emphasizes item value. Best for premium items.
+                    </div>
+                    <div class="personality-card" data-personality="quick_sale">
+                        <strong>Quick Sale:</strong> Motivated to sell fast, more flexible on price. Good when you need cash quickly.
+                    </div>
+                    <div class="personality-card" data-personality="premium">
+                        <strong>Premium:</strong> Focuses on quality and craftsmanship. Best for high-end items.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="personality-section">
+                <h4>💰 AI Buyer Personality</h4>
+                <p class="description">This AI represents you when <strong>buying items</strong> and responding to seller counter-offers.</p>
+                
+                <div class="form-group">
+                    {{ form.buyer_personality(class="form-control") }}
+                    {% for error in form.buyer_personality.errors %}
+                        <div class="error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                
+                <div class="personality-descriptions">
+                    <div class="personality-card" data-personality="fair">
+                        <strong>Fair:</strong> Balanced negotiator who seeks win-win deals. Good for most situations.
+                    </div>
+                    <div class="personality-card" data-personality="bargain_hunter">
+                        <strong>Bargain Hunter:</strong> Aggressive about getting low prices. Best for finding deals.
+                    </div>
+                    <div class="personality-card" data-personality="quick">
+                        <strong>Quick Buyer:</strong> Ready to buy fast at reasonable prices. Good when you need items quickly.
+                    </div>
+                    <div class="personality-card" data-personality="premium">
+                        <strong>Premium:</strong> Values quality and willing to pay more. Best for high-end purchases.
+                    </div>
+                    <div class="personality-card" data-personality="student">
+                        <strong>Student:</strong> Budget-conscious but polite. Best when money is tight.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                {{ form.submit(class="btn btn-success") }}
+                <a href="{{ url_for('main.profile') }}" class="btn">Cancel</a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="card">
+        <h3>ℹ️ How It Works</h3>
+        <ul>
+            <li><strong>When selling:</strong> Your AI seller will respond to buyer offers using your chosen personality</li>
+            <li><strong>When buying:</strong> Your AI buyer will respond to seller counter-offers using your chosen personality</li>
+            <li><strong>Automatic negotiation:</strong> AI agents negotiate back and forth until a deal is reached</li>
+            <li><strong>Final approval:</strong> You still get to approve any final deals before completion</li>
+        </ul>
+    </div>
+</div>
+
+<style>
+.personality-section {
+    margin: 30px 0;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #f9f9f9;
+}
+
+.personality-section h4 {
+    margin-top: 0;
+    color: #333;
+}
+
+.description {
+    color: #666;
+    margin-bottom: 15px;
+}
+
+.personality-descriptions {
+    margin-top: 15px;
+}
+
+.personality-card {
+    padding: 10px;
+    margin: 5px 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.error {
+    color: #dc3545;
+    font-size: 0.85em;
+    margin-top: 5px;
+}
+
+.settings-page ul {
+    padding-left: 20px;
+}
+
+.settings-page li {
+    margin: 8px 0;
+}
+</style>
+{% endblock %}

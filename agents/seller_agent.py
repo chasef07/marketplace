@@ -2,10 +2,10 @@ from .base_agent import BaseAgent
 
 
 class SellerAgent(BaseAgent):
-    def __init__(self, name: str = "Seller", minimum_multiplier: float = 0.55):
+    def __init__(self, name: str = "Seller", minimum_multiplier: float = 0.65):
         super().__init__(name, "seller")
         self.minimum_multiplier = minimum_multiplier  # Minimum % of asking price seller will accept
-        self.target_price = 0.75  # Seller really wants to get 85% of asking price
+        self.target_price = 0.85  # Seller really wants to get 85% of asking price
         
     def get_system_prompt(self) -> str:
         return """You are a seller negotiating to sell furniture. Your goal is to get the highest price possible.
@@ -29,8 +29,8 @@ Keep your responses concise and conversational."""
         target_price = item_price * self.target_price
         minimum_price = item_price * self.minimum_multiplier
         
-        # Only accept if it's close to target price or above 90% of target
-        return current_offer >= target_price * 0.9
+        # Only accept if it's at or above target price - be tougher!
+        return current_offer >= target_price
         
     def get_walk_away_price(self, item_price: float) -> float:
         """Price below which seller walks away"""

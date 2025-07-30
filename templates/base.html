@@ -34,9 +34,16 @@
         <div class="header">
             <h1>🏪 AI Agent Marketplace</h1>
             <div class="nav">
-                <a href="{{ url_for('homepage') }}" {% if request.endpoint == 'homepage' %}class="active"{% endif %}>Dashboard</a>
-                <a href="{{ url_for('create_listing') }}" {% if request.endpoint == 'create_listing' %}class="active"{% endif %}>Create Listing</a>
-                <a href="{{ url_for('view_logs') }}" {% if request.endpoint == 'view_logs' %}class="active"{% endif %}>Negotiation Logs</a>
+                <a href="{{ url_for('main.homepage') }}" {% if request.endpoint == 'main.homepage' %}class="active"{% endif %}>Dashboard</a>
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('main.create_listing') }}" {% if request.endpoint == 'main.create_listing' %}class="active"{% endif %}>Create Listing</a>
+                <a href="{{ url_for('main.profile') }}" {% if request.endpoint == 'main.profile' %}class="active"{% endif %}>My Profile</a>
+                <a href="{{ url_for('main.settings') }}" {% if request.endpoint == 'main.settings' %}class="active"{% endif %}>AI Settings</a>
+                <a href="{{ url_for('auth.logout') }}" class="btn-danger">Logout ({{ current_user.username }})</a>
+                {% else %}
+                <a href="{{ url_for('auth.login') }}" {% if request.endpoint == 'auth.login' %}class="active"{% endif %}>Login</a>
+                <a href="{{ url_for('auth.register') }}" {% if request.endpoint == 'auth.register' %}class="active"{% endif %}>Register</a>
+                {% endif %}
             </div>
         </div>
 

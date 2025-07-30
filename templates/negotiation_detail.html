@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block title %}Negotiation for {{ negotiation.item.name }}{% endblock %}
+
+{% block content %}
+<div class="negotiation-detail">
+    <h2>🤝 Negotiation for {{ negotiation.item.name }}</h2>
+    
+    <div class="negotiation-info">
+        <div class="participants">
+            <div class="participant seller">
+                <h4>📦 Seller</h4>
+                <p><strong>{{ negotiation.seller.username }}</strong></p>
+            </div>
+            <div class="vs">⚡</div>
+            <div class="participant buyer">
+                <h4>💰 Buyer</h4>
+                <p><strong>{{ negotiation.buyer.username }}</strong></p>
+            </div>
+        </div>
+        
+        <div class="negotiation-status">
+            <p><strong>Status:</strong> {{ negotiation.status.value.replace('_', ' ').title() }}</p>
+            <p><strong>Round:</strong> {{ negotiation.round_number }}/{{ negotiation.max_rounds }}</p>
+            {% if negotiation.current_offer %}
+            <p><strong>Current Offer:</strong> ${{ negotiation.current_offer }}</p>
+            {% endif %}
+            {% if negotiation.final_price %}
+            <p><strong>Final Price:</strong> ${{ negotiation.final_price }}</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="offers-history">
+        <h3>💬 Negotiation History</h3>
+        
+        {% if offers %}
+        <div class="offers-timeline">
+            {% for offer in offers %}
+            <div class="offer-card {{ offer.offer_type.value }}">
+                <div class="offer-header">
+                    <span class="offer-type">
+                        {% if offer.offer_type.value == 'buyer' %}
+                        💰 Buyer Offer
+                        {% else %}
+                        📦 Seller Counter
+                        {% endif %}
+                    </span>
+                    <span class="offer-round">Round {{ offer.round_number }}</span>
+                    <span class="offer-time">{{ offer.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                <div class="offer-price">${{ offer.price }}</div>
+                {% if offer.message %}
+                <div class="offer-message">{{ offer.message }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>No offers yet.</p>
+        {% endif %}
+    </div>
+    
+    <div class="actions">
+        {% if negotiation.status.value == 'active' and not negotiation.is_complete() %}
+        <div class="card">
+            <h4>Make Your Next Move</h4>
+            
+            {% if current_user.id == negotiation.buyer_id %}
+            <form method="POST" action="{{ url_for('main.make_offer') }}" class="offer-form">
+                <input type="hidden" name="negotiation_id" value="{{ negotiation.id }}">
+                <div class="form-group">
+                    <label for="offer_price">Your Counter Offer ($):</label>
+                    <input type="number" 
+                           id="offer_price" 
+                           name="offer_price" 
+                           step="0.01" 
+                           min="1" 
+                           max="{{ negotiation.item.starting_price }}"
+                           value="{{ negotiation.current_offer }}"
+                           required>
+                </div>
+                <div class="form-group">
+                    <label for="message">Message (optional):</label>
+                    <textarea id="message" name="message" rows="2" placeholder="Add a message..."></textarea>
+                </div>
+                <div class="form-group">
+                    <button type="submit" name="action" value="offer" class="btn btn-primary">Make Offer</button>
+                    <button type="submit" name="action" value="accept" class="btn btn-success">Accept Current Offer</button>
+                </div>
+            </form>
+            {% elif current_user.id == negotiation.seller_id %}
+            <p><em>Waiting for buyer's response...</em></p>
+            <form method="POST" action="{{ url_for('main.make_offer') }}" style="display: inline;">
+                <input type="hidden" name="negotiation_id" value="{{ negotiation.id }}">
+                <button type="submit" name="action" value="accept" class="btn btn-success">Accept Offer</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <a href="{{ url_for('main.profile') }}" class="btn">Back to Profile</a>
+</div>
+
+<!-- Auto-refresh notification -->
+<div id="refresh-status" class="refresh-status">
+    🔄 Checking for AI responses...
+    <button onclick="manualRefresh()" class="manual-refresh-btn">Refresh Now</button>
+</div>
+</div>
+
+<script>
+// Auto-refresh page to show AI responses
+let refreshInterval;
+let refreshCount = 0;
+const maxRefreshes = 20; // Stop after 20 refreshes (1 minute)
+
+function startAutoRefresh() {
+    const statusDiv = document.getElementById('refresh-status');
+    
+    refreshInterval = setInterval(function() {
+        refreshCount++;
+        
+        if (refreshCount >= maxRefreshes) {
+            statusDiv.innerHTML = '✅ Auto-refresh stopped';
+            clearInterval(refreshInterval);
+            return;
+        }
+        
+        // Check if negotiation is still active
+        const statusBadges = document.querySelectorAll('.status-badge.active');
+        if (statusBadges.length === 0) {
+            statusDiv.innerHTML = '✅ Negotiation completed';
+            clearInterval(refreshInterval);
+            return;
+        }
+        
+        statusDiv.innerHTML = `🔄 Checking for AI responses... (${refreshCount}/${maxRefreshes})`;
+        
+        // Refresh the page
+        window.location.reload();
+    }, 3000); // Refresh every 3 seconds
+}
+
+// Start auto-refresh when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Only auto-refresh if negotiation is active
+    const statusBadges = document.querySelectorAll('.status-badge.active');
+    if (statusBadges.length > 0) {
+        startAutoRefresh();
+    }
+    
+    // Stop auto-refresh when user interacts with forms
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function() {
+            clearInterval(refreshInterval);
+            document.getElementById('refresh-status').innerHTML = '⏸️ Auto-refresh paused';
+        });
+    });
+});
+
+// Manual refresh button
+function manualRefresh() {
+    clearInterval(refreshInterval);
+    document.getElementById('refresh-status').innerHTML = '🔄 Refreshing...';
+    window.location.reload();
+}
+</script>
+
+<style>
+.participants {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    margin: 20px 0;
+}
+
+.participant {
+    text-align: center;
+    padding: 15px;
+    border-radius: 8px;
+    min-width: 120px;
+}
+
+.participant.seller {
+    background: #fff3cd;
+}
+
+.participant.buyer {
+    background: #d1ecf1;
+}
+
+.vs {
+    font-size: 2em;
+    font-weight: bold;
+}
+
+.negotiation-status {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.offers-timeline {
+    margin-top: 20px;
+}
+
+.offer-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin: 15px 0;
+    padding: 15px;
+}
+
+.offer-card.buyer {
+    border-left: 4px solid #007bff;
+    background: #f8f9ff;
+}
+
+.offer-card.seller {
+    border-left: 4px solid #28a745;
+    background: #f8fff8;
+}
+
+.offer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.offer-price {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #28a745;
+}
+
+.offer-message {
+    margin-top: 10px;
+    font-style: italic;
+    color: #555;
+}
+
+.offer-form {
+    margin-top: 15px;
+}
+
+.actions {
+    margin-top: 30px;
+}
+
+.refresh-status {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #007bff;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 1000;
+}
+
+.manual-refresh-btn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-left: 10px;
+}
+</style>
+{% endblock %}
