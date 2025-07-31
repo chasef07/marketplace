@@ -13,6 +13,7 @@ Enhanced web UI with user authentication and database storage:
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Blueprint
 from flask_login import LoginManager, login_required, current_user
 from flask_migrate import Migrate
+from flask_cors import CORS
 from models.database import db, User, Item, Negotiation, Offer, FurnitureType, NegotiationStatus, OfferType
 from forms import ItemForm, PersonalityForm
 from auth import auth
@@ -31,6 +32,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Initialize extensions
 db.init_app(app)
 migrate = Migrate(app, db)
+
+# Enable CORS for Next.js frontend  
+CORS(app, origins=['http://localhost:3000', 'http://127.0.0.1:3000'], supports_credentials=True, allow_headers=['Content-Type'])
 
 # Setup Flask-Login
 login_manager = LoginManager()
@@ -285,7 +289,6 @@ def settings():
     return render_template('settings.html', form=form)
 
 @main.route('/api/analyze-image', methods=['POST'])
-@login_required
 def analyze_image_api():
     """API endpoint for real-time image analysis during upload"""
     if 'image' not in request.files:
@@ -326,6 +329,44 @@ def analyze_image_api():
             
     except Exception as e:
         return jsonify({'error': f'Analysis error: {str(e)}'}), 500
+
+@main.route('/api/items')
+def get_items():
+    """API endpoint to get all marketplace items"""
+    items = Item.query.filter_by(is_sold=False).order_by(Item.created_at.desc()).all()
+    
+    items_data = []
+    for item in items:
+        items_data.append({
+            'id': item.id,
+            'name': item.name,
+            'description': item.description,
+            'starting_price': item.starting_price,
+            'min_price': item.min_price,
+            'condition': item.condition.value,
+            'furniture_type': item.furniture_type.value,
+            'image_path': item.image_path,
+            'user_id': item.user_id,
+            'seller_name': item.user.username if item.user else 'Anonymous',
+            'location': 'Local pickup',  # Can be enhanced later
+            'created_at': item.created_at.isoformat(),
+            'is_sold': item.is_sold
+        })
+    
+    return jsonify({'items': items_data})
+
+@main.route('/api/user')
+def get_current_user():
+    """API endpoint to get current user info"""
+    if current_user.is_authenticated:
+        return jsonify({
+            'id': current_user.id,
+            'username': current_user.username,
+            'email': current_user.email,
+            'full_name': current_user.username  # We don't have full_name in the model
+        })
+    else:
+        return jsonify({'error': 'Not authenticated'}), 401
 
 @main.route('/api/negotiation/<int:negotiation_id>/status')
 @login_required
@@ -489,8 +530,8 @@ if __name__ == '__main__':
     print("  - http://localhost:8000")
     print("  - http://127.0.0.1:8000")
     try:
-        app.run(debug=True, host='127.0.0.1', port=8000)
+        app.run(debug=True, host='0.0.0.0', port=8000)
     except OSError as e:
         print(f"Port 8000 might be in use: {e}")
         print("Trying port 5000...")
-        app.run(debug=True, host='127.0.0.1', port=5000)
+        app.run(debug=True, host='0.0.0.0', port=5000)
