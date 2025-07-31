@@ -8,8 +8,20 @@ flask>=2.3.0
 flask-sqlalchemy>=3.0.0
 flask-login>=0.6.0
 flask-migrate>=4.0.0
+flask-cors>=4.0.0
 bcrypt>=4.0.0
 flask-wtf>=1.1.0
 wtforms>=3.0.0
 pillow>=10.0.0
 email_validator>=2.0.0
+# Database drivers
+psycopg2-binary>=2.9.0
+# Connection pooling and monitoring
+sqlalchemy>=2.0.0
+# Environment and configuration
+python-decouple>=3.8
+# Logging and monitoring
+structlog>=23.0.0
+# Background jobs (for future use)
+celery>=5.3.0
+redis>=5.0.0

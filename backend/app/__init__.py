@@ -1,14 +1,5 @@
-#!/usr/bin/env python3
-
 """
-PRODUCTION-READY FLASK WEB INTERFACE FOR MARKETPLACE
-
-Enhanced web UI with user authentication and database storage:
-1. User registration and login system
-2. Database-backed item listings with image uploads
-3. Real user accounts and persistent data
-4. AI agents that read from database
-5. Production-ready configuration and logging
+Marketplace Flask Application Factory
 """
 
 import os
@@ -21,14 +12,10 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_cors import CORS
 
-# Import configuration
-from config import get_config
-from database import DatabaseManager, setup_database_logging
-
-# Import models and components
-from models.database import db, User
-from auth import auth
-from routes import create_main_blueprint
+from .core.config import get_config
+from .core.database import db, DatabaseManager, setup_database_logging
+from .models import User
+from .api import api
 
 
 def create_app(config_name=None):
@@ -62,7 +49,7 @@ def create_app(config_name=None):
     # Setup Flask-Login
     login_manager = LoginManager()
     login_manager.init_app(app)
-    login_manager.login_view = 'auth.login'
+    login_manager.login_view = 'api.login'
     login_manager.login_message = 'Please log in to access this page.'
     login_manager.session_protection = 'strong'
     
@@ -71,11 +58,7 @@ def create_app(config_name=None):
         return User.query.get(int(user_id))
     
     # Register blueprints
-    app.register_blueprint(auth)
-    
-    # Register main blueprint
-    main_bp = create_main_blueprint()
-    app.register_blueprint(main_bp)
+    app.register_blueprint(api)
     
     # Add health check endpoint
     @app.route('/health')
@@ -142,24 +125,3 @@ def setup_logging(app):
         
         app.logger.setLevel(getattr(logging, app.config.get('LOG_LEVEL', 'INFO')))
         app.logger.info('Marketplace application startup')
-
-
-# Create the app instance
-app = create_app()
-
-
-if __name__ == '__main__':
-    # Development server configuration
-    import socket
-    hostname = socket.gethostname()
-    print(f"Starting server on {hostname}")
-    print("Access the app at:")
-    print("  - http://localhost:8000")
-    print("  - http://127.0.0.1:8000")
-    
-    try:
-        app.run(debug=app.config.get('DEBUG', False), host='0.0.0.0', port=8000)
-    except OSError as e:
-        print(f"Port 8000 might be in use: {e}")
-        print("Trying port 5000...")
-        app.run(debug=app.config.get('DEBUG', False), host='0.0.0.0', port=5000)

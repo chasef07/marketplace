@@ -1,6 +1,6 @@
-# 🤖 AI Agent Marketplace
+# 🏪 AI-Powered Furniture Marketplace
 
-An intelligent web-based marketplace where AI agents with distinct personalities negotiate automatically between buyers and sellers, featuring user authentication, real-time negotiations, and database persistence.
+A modern, production-ready full-stack marketplace application with AI-powered features for buying and selling furniture. Features intelligent image analysis, automated negotiations, and a clean, scalable architecture.
 
 ## ✨ Major Features
 
@@ -40,6 +40,7 @@ An intelligent web-based marketplace where AI agents with distinct personalities
 
 ### Prerequisites
 - Python 3.7+
+- Node.js 18+
 - Git
 
 ### Installation & Setup
@@ -50,30 +51,46 @@ An intelligent web-based marketplace where AI agents with distinct personalities
    cd marketplace
    ```
 
-2. **Create and activate virtual environment:**
+2. **Set up the backend:**
    ```bash
+   # Create and activate virtual environment
    python3 -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies:**
-   ```bash
+   
+   # Install Python dependencies
    pip install -r requirements.txt
-   ```
-
-4. **Set up the database:**
-   ```bash
+   
+   # Set up the database
    python fix_database.py
    ```
 
-5. **Start the marketplace:**
+3. **Set up the frontend:**
    ```bash
-   python app.py
+   cd frontend
+   npm install
+   cd ..
    ```
 
-6. **Open your browser:**
+4. **Start the application:**
+   
+   **Backend (Flask API):**
+   ```bash
+   cd backend
+   python3 main.py
    ```
-   http://localhost:8000
+   Access at: http://localhost:8000
+   
+   **Frontend (Next.js):**
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+   Access at: http://localhost:3000
+
+5. **Open your browser:**
+   ```
+   Frontend: http://localhost:3000
+   Backend API: http://localhost:8000
    ```
 
 ## 🎯 How to Use
@@ -128,34 +145,58 @@ An intelligent web-based marketplace where AI agents with distinct personalities
 - **Images**: Pillow for upload processing and resizing
 - **Computer Vision**: GPT-4 Vision API for furniture recognition
 
-### Project Structure
+## 🏗️ **NEW** Clean Project Structure
+
+The codebase has been **completely restructured** for production readiness:
+
 ```
 marketplace/
-├── agents/                 # AI agent personalities
-│   ├── base_agent.py      # Base AI agent class
-│   ├── buyer_agent.py     # Buyer agent logic
-│   ├── seller_agent.py    # Seller agent logic
-│   ├── buyer_personalities.py  # 5 buyer personality types
-│   └── seller_personalities.py # 4 seller personality types
-├── models/                 # Database models
-│   ├── database.py        # SQLAlchemy models
-│   └── negotiation_state.py # Legacy state management
-├── services/              # Business logic
-│   ├── ai_negotiation.py  # AI negotiation service
-│   └── ai_image_analysis.py # GPT-4 Vision image analysis
-├── templates/             # HTML templates
-│   ├── auth/             # Login/register pages
-│   ├── *.html           # Main application pages
-├── static/               
-│   └── uploads/          # User uploaded images
-├── utils/                # Utilities
-│   └── file_handler.py   # Image upload handling
-├── app.py               # Main Flask application
-├── auth.py              # Authentication routes
-├── forms.py             # WTF forms
-├── fix_database.py      # Database setup script
-└── requirements.txt     # Python dependencies
+├── 📁 backend/                     # Flask API Backend
+│   ├── 📁 app/                     # Main application
+│   │   ├── __init__.py             # App factory
+│   │   ├── 📁 api/                 # API routes
+│   │   │   ├── auth.py             # Authentication endpoints  
+│   │   │   ├── items.py            # Item management endpoints
+│   │   │   ├── negotiations.py     # Negotiation endpoints
+│   │   │   └── users.py            # User management endpoints
+│   │   ├── 📁 core/                # Core functionality
+│   │   │   ├── config.py           # Environment configuration
+│   │   │   └── database.py         # Database utilities
+│   │   ├── 📁 models/              # Database models
+│   │   │   ├── user.py             # User model
+│   │   │   ├── item.py             # Item model  
+│   │   │   └── negotiation.py      # Negotiation & Offer models
+│   │   ├── 📁 services/            # Business logic
+│   │   │   ├── ai_analysis.py      # AI image analysis
+│   │   │   ├── ai_negotiation.py   # AI negotiation logic
+│   │   │   └── file_handler.py     # File upload handling
+│   │   └── 📁 utils/               # Utility functions
+│   ├── 📁 migrations/              # Database migrations
+│   ├── 📁 static/uploads/          # User uploaded files
+│   ├── main.py                     # Application entry point
+│   ├── requirements.txt            # Python dependencies
+│   └── .env                        # Environment variables
+├── 📁 frontend/                    # Next.js Frontend (renamed from marketplace-web)
+│   ├── 📁 src/
+│   │   ├── 📁 app/                 # Next.js app directory
+│   │   ├── 📁 components/          # React components
+│   │   └── 📁 lib/                 # Frontend utilities & API client
+│   ├── package.json
+│   └── next.config.ts
+├── 📁 scripts/                     # Management scripts
+│   ├── init_db.py                  # Database initialization
+│   └── manage.py                   # Management commands
+├── 📁 docs/                        # Documentation
+└── README.md                       # This file
 ```
+
+### ✨ **Benefits of New Structure:**
+- **🔧 Modular Design**: Clear separation of concerns
+- **📚 Easy Navigation**: Logical file organization  
+- **🚀 Production Ready**: Professional Flask application factory pattern
+- **🧪 Testable**: Clean architecture for unit testing
+- **📈 Scalable**: Easy to add new features and modules
+- **🛠️ Maintainable**: Clear import paths and dependencies
 
 ## 🎮 Enhanced Seller Experience Flow
 

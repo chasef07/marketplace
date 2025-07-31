@@ -125,17 +125,17 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-white/10 backdrop-blur-sm border-b border-white/20">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">FurnitureMarket</h1>
+            <h1 className="text-2xl font-bold text-white">FurnitureMarket</h1>
             <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm" onClick={() => window.location.href = 'http://localhost:8000/login'}>
+              <Button variant="outline" size="sm" className="border-white/30 text-white hover:bg-white/10" onClick={() => window.location.href = 'http://localhost:8000/login'}>
                 Sign In
               </Button>
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => window.location.href = 'http://localhost:8000'}>
+              <Button size="sm" className="bg-white text-blue-700 hover:bg-blue-50" onClick={() => window.location.href = 'http://localhost:8000'}>
                 Browse Items
               </Button>
             </div>
@@ -154,11 +154,14 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
 
         {step === 'upload' && (
           <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Create a listing and sell your furniture in minutes
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 font-inter">
+              The AI-Powered Furniture Marketplace
             </h2>
-            <p className="text-xl text-gray-600 mb-12">
-              Just upload a photo. Our AI will handle the rest - pricing, descriptions, and details.
+            <p className="text-xl text-blue-100 mb-8 font-inter max-w-3xl mx-auto leading-relaxed">
+              Buy and sell furniture with intelligent AI assistance. Upload a photo and our advanced AI instantly analyzes, prices, and creates professional listings. Smart negotiations powered by AI personalities make every deal smooth and fair.
+            </p>
+            <p className="text-lg text-blue-200 mb-12 font-inter">
+              Experience the future of furniture trading - where artificial intelligence meets marketplace efficiency.
             </p>
 
             {/* Hidden file input */}
@@ -197,14 +200,14 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
                     <Upload className="h-8 w-8 text-blue-600" />
                   )}
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  {loading ? 'Analyzing your photo...' : 'Upload your furniture photo'}
+                <h3 className="text-xl font-semibold text-white mb-2 font-inter">
+                  {loading ? 'AI Analyzing Your Photo...' : 'Upload Your Furniture Photo'}
                 </h3>
-                <p className="text-gray-600 mb-6">
-                  {loading ? 'AI is examining the image and generating listing details' : 'Drag and drop an image here, or click to browse'}
+                <p className="text-blue-100 mb-6 font-inter">
+                  {loading ? 'Advanced AI is examining the image and generating professional listing details' : 'Drag and drop an image here, or click to browse'}
                 </p>
                 {!loading && (
-                  <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Button className="bg-white text-blue-700 hover:bg-blue-50 font-inter font-medium">
                     Choose Photo
                   </Button>
                 )}
@@ -212,9 +215,8 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
             </div>
 
             <div className="mt-12 text-center">
-              <div className="text-6xl mb-4">🪑</div>
-              <p className="text-sm text-gray-500">
-                Try uploading a photo of your furniture
+              <p className="text-sm text-blue-200 font-inter">
+                Try uploading a photo of your furniture to see AI magic in action
               </p>
             </div>
           </div>
@@ -223,10 +225,10 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
         {step === 'preview' && analysisResult && (
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              <h2 className="text-3xl font-bold text-white mb-2 font-inter">
                 ✨ Your listing is ready!
               </h2>
-              <p className="text-gray-600">
+              <p className="text-blue-100 font-inter">
                 AI analyzed your photo and created this professional listing in seconds
               </p>
             </div>
@@ -292,7 +294,7 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
               {/* Details */}
               <div className="space-y-6">
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">AI-Generated Description</h4>
+                  <h4 className="font-semibold text-white mb-3 font-inter">AI-Generated Description</h4>
                   <div className="bg-white rounded-lg p-4 border">
                     <p className="text-gray-700 leading-relaxed">
                       {analysisResult.listing.description}
@@ -301,7 +303,7 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
                 </div>
 
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">Detected Details</h4>
+                  <h4 className="font-semibold text-white mb-3 font-inter">AI-Detected Details</h4>
                   <div className="bg-white rounded-lg p-4 border">
                     <ul className="space-y-2">
                       <li className="text-sm text-gray-700">• Style: {analysisResult.analysis.style}</li>
@@ -328,7 +330,7 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
                   </Button>
                   <Button 
                     onClick={() => setStep('account')}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    className="flex-1 bg-white text-blue-700 hover:bg-blue-50 font-inter font-medium"
                   >
                     Create Listing
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -343,10 +345,10 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
           <div className="max-w-md mx-auto">
             <div className="bg-white rounded-lg p-8 shadow-sm border">
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                <h2 className="text-2xl font-bold text-white mb-2 font-inter">
                   Almost done! 
                 </h2>
-                <p className="text-gray-600">
+                <p className="text-blue-100 font-inter">
                   Create your account to publish this listing
                 </p>
               </div>
@@ -414,7 +416,7 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
                 <Button 
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 py-3"
+                  className="w-full bg-white text-blue-700 hover:bg-blue-50 py-3 font-inter font-medium"
                 >
                   {loading ? (
                     <>
