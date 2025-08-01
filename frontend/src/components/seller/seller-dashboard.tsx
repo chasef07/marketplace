@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Package, TrendingUp, MessageSquare, Eye, ArrowLeft, X, ChevronDown, ChevronUp, Search, Filter, SortAsc } from "lucide-react"
-import { apiClient } from "@/lib/api-client"
+import { apiClient, FurnitureItem } from "@/lib/api-client"
 
 interface User {
   id: number
@@ -12,25 +12,6 @@ interface User {
   email: string
 }
 
-interface SellerInfo {
-  id: number
-  username: string
-}
-
-interface FurnitureItem {
-  id: number
-  name: string
-  description: string
-  starting_price: string
-  condition: string
-  furniture_type: string
-  image_filename: string | null
-  seller_id: number
-  seller?: SellerInfo
-  created_at: string
-  updated_at: string
-  is_available: boolean
-}
 
 interface Negotiation {
   id: number

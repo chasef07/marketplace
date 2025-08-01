@@ -4,28 +4,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Heart, MapPin, Clock, Plus, Sparkles } from "lucide-react"
 import { useState, useEffect } from "react"
-import { apiClient, SearchResponse } from "@/lib/api-client"
+import { apiClient, SearchResponse, FurnitureItem } from "@/lib/api-client"
 import { AISearchBar } from "@/components/search/ai-search-bar"
 
-interface SellerInfo {
-  id: number
-  username: string
-}
-
-interface FurnitureItem {
-  id: number
-  name: string
-  description: string
-  starting_price: string
-  condition: string
-  furniture_type: string
-  image_filename: string | null
-  seller_id: number
-  seller?: SellerInfo
-  created_at: string
-  updated_at: string
-  is_available: boolean
-}
 
 interface User {
   id: number

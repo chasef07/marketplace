@@ -14,12 +14,16 @@ export interface FurnitureItem {
   created_at: string
   updated_at: string
   is_available: boolean
+  dimensions?: string
+  material?: string
+  brand?: string
+  color?: string
+  views_count?: number
 }
 
 export interface SellerInfo {
   id: number
-  name: string
-  email: string
+  username: string
 }
 
 export interface AIAnalysisResult {

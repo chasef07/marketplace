@@ -4,32 +4,8 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Heart, MapPin, User, DollarSign, MessageSquare, ChevronDown, ChevronUp } from "lucide-react"
-import { apiClient } from "@/lib/api-client"
+import { apiClient, FurnitureItem } from "@/lib/api-client"
 
-interface SellerInfo {
-  id: number
-  username: string
-}
-
-interface FurnitureItem {
-  id: number
-  name: string
-  description: string
-  starting_price: string
-  condition: string
-  furniture_type: string
-  image_filename: string | null
-  seller_id: number
-  seller?: SellerInfo
-  created_at: string
-  updated_at: string
-  is_available: boolean
-  dimensions?: string
-  material?: string
-  brand?: string
-  color?: string
-  views_count?: number
-}
 
 interface User {
   id: number
