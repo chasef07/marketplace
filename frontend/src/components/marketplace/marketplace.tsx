@@ -6,6 +6,11 @@ import { Search, Heart, Star, MapPin, Clock, Plus } from "lucide-react"
 import { useState, useEffect } from "react"
 import { apiClient } from "@/lib/api-client"
 
+interface SellerInfo {
+  id: number
+  username: string
+}
+
 interface FurnitureItem {
   id: number
   name: string
@@ -16,6 +21,7 @@ interface FurnitureItem {
   furniture_type: string
   image_filename: string | null
   seller_id: number
+  seller?: SellerInfo
   created_at: string
   updated_at: string
   is_available: boolean
@@ -25,21 +31,30 @@ interface User {
   id: number
   username: string
   email: string
-  full_name: string
+  seller_personality: string
+  buyer_personality: string
+  is_active: boolean
+  created_at: string
+  last_login?: string
 }
 
 interface MarketplaceProps {
   user: User | null
   onCreateListing: () => void
   onLogout: () => void
+  onItemClick?: (itemId: number) => void
+  onSignInClick?: () => void
 }
 
-export function Marketplace({ user, onCreateListing, onLogout }: MarketplaceProps) {
+export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSignInClick }: MarketplaceProps) {
   const [items, setItems] = useState<FurnitureItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
+
+  // Debug user data
+  console.log('Marketplace received user:', user)
 
   const categories = ["All", "couch", "chair", "dining_table", "bookshelf", "dresser", "other"]
   
@@ -109,7 +124,9 @@ export function Marketplace({ user, onCreateListing, onLogout }: MarketplaceProp
             <div className="flex items-center gap-4">
               {user ? (
                 <>
-                  <span className="text-sm text-gray-600">Welcome, {user.full_name}!</span>
+                  <span className="text-sm text-gray-600">
+                    Welcome, {user.username}!
+                  </span>
                   <Button 
                     onClick={onCreateListing}
                     className="bg-blue-600 hover:bg-blue-700"
@@ -123,7 +140,9 @@ export function Marketplace({ user, onCreateListing, onLogout }: MarketplaceProp
                 </>
               ) : (
                 <>
-                  <Button variant="outline" size="sm">Sign In</Button>
+                  <Button variant="outline" size="sm" onClick={onSignInClick}>
+                    Sign In
+                  </Button>
                   <Button 
                     onClick={onCreateListing}
                     size="sm" 
@@ -222,7 +241,10 @@ export function Marketplace({ user, onCreateListing, onLogout }: MarketplaceProp
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredItems.map((item) => (
-                <Card key={item.id} className="bg-white hover:shadow-lg transition-shadow cursor-pointer group">
+                <Card 
+                  key={item.id} 
+                  className="bg-white hover:shadow-lg transition-shadow cursor-pointer group"
+                  onClick={() => onItemClick && onItemClick(item.id)}>
                   <CardContent className="p-0">
                     {/* Image */}
                     <div className="bg-gray-100 h-48 flex items-center justify-center rounded-t-lg overflow-hidden">
@@ -272,10 +294,10 @@ export function Marketplace({ user, onCreateListing, onLogout }: MarketplaceProp
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
                             <span className="text-xs font-medium text-blue-600">
-                              {'Anonymous'?.charAt(0) || 'U'}
+                              {(item.seller?.username || 'U').charAt(0).toUpperCase()}
                             </span>
                           </div>
-                          <span className="text-gray-700">{'Anonymous' || 'Anonymous'}</span>
+                          <span className="text-gray-700">{item.seller?.username || 'Anonymous'}</span>
                         </div>
                         <div className="flex items-center gap-1 text-gray-500">
                           <Clock className="h-3 w-3" />

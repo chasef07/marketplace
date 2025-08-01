@@ -146,8 +146,16 @@ export class ApiClient {
     })
 
     if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Account creation failed')
+      let errorMessage = 'Account creation failed'
+      try {
+        const errorData = await response.json()
+        // Handle different error response formats
+        errorMessage = errorData.detail || errorData.error || errorData.message || 'Account creation failed'
+      } catch (e) {
+        // If JSON parsing fails, use status text
+        errorMessage = `Account creation failed: ${response.status} ${response.statusText}`
+      }
+      throw new Error(errorMessage)
     }
 
     return response.json()
@@ -166,8 +174,14 @@ export class ApiClient {
     })
 
     if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Login failed')
+      let errorMessage = 'Login failed'
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.detail || errorData.error || errorData.message || 'Login failed'
+      } catch (e) {
+        errorMessage = `Login failed: ${response.status} ${response.statusText}`
+      }
+      throw new Error(errorMessage)
     }
 
     const data = await response.json()
@@ -229,17 +243,33 @@ export class ApiClient {
     return response.json()
   }
 
+  async getItem(itemId: number) {
+    const response = await fetch(`${this.baseUrl}/api/items/${itemId}`, {
+      headers: this.getHeaders()
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch item details')
+    }
+    
+    return response.json()
+  }
+
   async getCurrentUser() {
     const response = await fetch(`${this.baseUrl}/api/auth/me`, {
       headers: this.getHeaders()
     })
     
     if (!response.ok) {
+      console.log('getCurrentUser failed:', response.status, response.statusText)
       return null // Not logged in
     }
     
     const data = await response.json()
-    return data.user
+    console.log('getCurrentUser response:', data)
+    
+    // Backend might return user directly or wrapped in { user: ... }
+    return data.user || data
   }
 
   async logout() {

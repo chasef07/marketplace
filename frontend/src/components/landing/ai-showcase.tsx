@@ -10,14 +10,20 @@ interface User {
   id: number
   username: string
   email: string
-  full_name: string
+  seller_personality: string
+  buyer_personality: string
+  is_active: boolean
+  created_at: string
+  last_login?: string
 }
 
 interface AIShowcaseProps {
   onAccountCreated: (user: User) => void
+  onSignInClick?: () => void
+  onBrowseClick?: () => void
 }
 
-export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
+export function AIShowcase({ onAccountCreated, onSignInClick, onBrowseClick }: AIShowcaseProps) {
   const [step, setStep] = useState<'upload' | 'preview' | 'account' | 'success'>('upload')
   const [dragActive, setDragActive] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -135,10 +141,10 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">FurnitureMarket</h1>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:bg-gray-50" onClick={() => window.location.href = 'http://localhost:8000/login'}>
+              <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:bg-gray-50" onClick={onSignInClick}>
                 Sign In
               </Button>
-              <Button size="sm" className="bg-gray-900 text-white hover:bg-gray-800" onClick={() => window.location.href = 'http://localhost:8000'}>
+              <Button size="sm" className="bg-gray-900 text-white hover:bg-gray-800" onClick={onBrowseClick}>
                 Browse Items
               </Button>
             </div>
@@ -380,7 +386,7 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
                     name="full_name"
                     type="text"
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                     placeholder="Enter your name"
                   />
                 </div>
@@ -393,7 +399,7 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
                     name="email"
                     type="email"
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                     placeholder="your@email.com"
                   />
                 </div>
@@ -407,7 +413,7 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
                     type="password"
                     required
                     minLength={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                     placeholder="Choose a password (min 6 characters)"
                   />
                 </div>
@@ -419,7 +425,7 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
                   <input
                     name="location"
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                     placeholder="Brooklyn, NY"
                   />
                 </div>
