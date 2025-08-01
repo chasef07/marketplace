@@ -16,6 +16,7 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<'upload' | 'marketplace'>('upload')
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [marketplaceKey, setMarketplaceKey] = useState(0)
 
   useEffect(() => {
     checkAuthStatus()
@@ -38,6 +39,7 @@ export default function Home() {
   const handleAccountCreated = (newUser: User) => {
     setUser(newUser)
     setCurrentView('marketplace')
+    setMarketplaceKey(prev => prev + 1) // Force refresh
   }
 
   const handleCreateListing = () => {
@@ -52,8 +54,8 @@ export default function Home() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <main className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-gray-400">Loading...</div>
       </main>
     )
   }
@@ -64,6 +66,7 @@ export default function Home() {
         <AIShowcase onAccountCreated={handleAccountCreated} />
       ) : (
         <Marketplace 
+          key={marketplaceKey}
           user={user}
           onCreateListing={handleCreateListing}
           onLogout={handleLogout}

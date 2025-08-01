@@ -120,6 +120,43 @@ def create_main_blueprint():
         
         return render_template('create_listing.html', form=form)
 
+    @main.route('/api/create-listing', methods=['POST'])
+    @login_required  
+    def api_create_listing():
+        """API endpoint to create listing without form validation"""
+        try:
+            data = request.get_json()
+            
+            # Validate required fields
+            required_fields = ['name', 'description', 'furniture_type', 'starting_price', 'min_price', 'condition']
+            for field in required_fields:
+                if not data.get(field):
+                    return jsonify({'error': f'Missing required field: {field}'}), 400
+                    
+            # Create new item
+            item = Item(
+                user_id=current_user.id,
+                name=data['name'],
+                description=data['description'], 
+                furniture_type=FurnitureType(data['furniture_type']),
+                starting_price=float(data['starting_price']),
+                min_price=float(data['min_price']),
+                condition=data['condition'],
+                image_path=data.get('image_filename')  # Use the uploaded image filename
+            )
+            
+            db.session.add(item)
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': f'Created listing: {item.name} for ${item.starting_price}',
+                'item_id': item.id
+            }), 201
+            
+        except Exception as e:
+            return jsonify({'error': f'Failed to create listing: {str(e)}'}), 500
+
     @main.route('/item/<int:item_id>')
     def view_item(item_id):
         """View individual item details"""
@@ -127,6 +164,29 @@ def create_main_blueprint():
         # Increment view count
         item.increment_views()
         return render_template('item_detail.html', item=item)
+
+    @main.route('/delete-item/<int:item_id>', methods=['POST'])
+    @login_required
+    def delete_item(item_id):
+        """Delete an item listing"""
+        item = Item.query.get_or_404(item_id)
+        
+        # Check if user owns the item
+        if item.user_id != current_user.id:
+            flash('❌ You can only delete your own items', 'error')
+            return redirect(url_for('main.homepage'))
+        
+        # Delete associated image file if it exists
+        if item.image_path:
+            from utils.file_handler import delete_image
+            delete_image(item.image_path)
+        
+        # Delete the item
+        db.session.delete(item)
+        db.session.commit()
+        
+        flash(f'✅ Deleted listing: {item.name}', 'success')
+        return redirect(url_for('main.homepage'))
 
     @main.route('/negotiate/<int:item_id>')
     @login_required

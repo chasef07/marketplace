@@ -3,7 +3,7 @@ import uuid
 from werkzeug.utils import secure_filename
 from PIL import Image
 
-UPLOAD_FOLDER = 'static/uploads'
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 MAX_IMAGE_SIZE = (800, 600)  # Max width x height

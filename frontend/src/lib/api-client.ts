@@ -142,25 +142,29 @@ export class ApiClient {
   }
 
   async createListing(data: CreateListingData) {
-    const formData = new FormData()
-    formData.append('name', data.name)
-    formData.append('description', data.description)
-    formData.append('furniture_type', data.furniture_type)
-    formData.append('starting_price', data.starting_price.toString())
-    formData.append('min_price', data.min_price.toString())
-    formData.append('condition', data.condition)
-    
-    const response = await fetch(`${this.baseUrl}/create-listing`, {
+    const response = await fetch(`${this.baseUrl}/api/create-listing`, {
       method: 'POST',
-      body: formData,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: data.name,
+        description: data.description,
+        furniture_type: data.furniture_type,
+        starting_price: data.starting_price,
+        min_price: data.min_price,
+        condition: data.condition,
+        image_filename: data.image_filename
+      }),
       credentials: 'include' // Important for session cookies
     })
 
     if (!response.ok) {
-      throw new Error('Listing creation failed')
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Listing creation failed')
     }
 
-    return response
+    return response.json()
   }
 
   async createAccountAndListing(accountData: CreateAccountData, listingData: CreateListingData) {
@@ -193,7 +197,11 @@ export class ApiClient {
   }
 
   async getCurrentUser() {
-    const response = await fetch(`${this.baseUrl}/api/user`, {
+    // Since the old auth system doesn't have a direct "get current user" endpoint,
+    // we'll need to modify this to work with the existing system
+    // For now, we'll check if we can access a protected endpoint
+    const response = await fetch(`${this.baseUrl}/create-listing`, {
+      method: 'GET',
       credentials: 'include'
     })
     
@@ -201,12 +209,18 @@ export class ApiClient {
       return null // Not logged in
     }
     
-    return response.json()
+    // This is a workaround - we can't get full user info easily from old system
+    // Return a basic user object for now
+    return {
+      id: 1, // placeholder
+      username: 'user',
+      email: 'user@example.com',
+      full_name: 'User'
+    }
   }
 
   async logout() {
     const response = await fetch(`${this.baseUrl}/auth/logout`, {
-      method: 'POST',
       credentials: 'include'
     })
     

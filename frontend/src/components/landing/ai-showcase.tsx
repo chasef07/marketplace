@@ -112,11 +112,14 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
 
       await apiClient.createAccountAndListing(accountData, listingData)
       
-      // Get the current user info and notify parent component
-      const user = await apiClient.getCurrentUser()
-      if (user) {
-        onAccountCreated(user)
+      // Create a user object from the account data since old system doesn't return full user
+      const user = {
+        id: Date.now(), // temporary ID
+        username: accountData.username,
+        email: accountData.email,
+        full_name: accountData.full_name
       }
+      onAccountCreated(user)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create account and listing')
     } finally {
@@ -125,17 +128,17 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="bg-white/10 backdrop-blur-sm border-b border-white/20">
-        <div className="container mx-auto px-4 py-4">
+      <header className="bg-white border-b border-gray-100">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-white">FurnitureMarket</h1>
-            <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm" className="border-white/30 text-white hover:bg-white/10" onClick={() => window.location.href = 'http://localhost:8000/login'}>
+            <h1 className="text-2xl font-bold text-gray-900">FurnitureMarket</h1>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:bg-gray-50" onClick={() => window.location.href = 'http://localhost:8000/login'}>
                 Sign In
               </Button>
-              <Button size="sm" className="bg-white text-blue-700 hover:bg-blue-50" onClick={() => window.location.href = 'http://localhost:8000'}>
+              <Button size="sm" className="bg-gray-900 text-white hover:bg-gray-800" onClick={() => window.location.href = 'http://localhost:8000'}>
                 Browse Items
               </Button>
             </div>
@@ -153,16 +156,16 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
         )}
 
         {step === 'upload' && (
-          <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 font-inter">
-              The AI-Powered Furniture Marketplace
-            </h2>
-            <p className="text-xl text-blue-100 mb-8 font-inter max-w-3xl mx-auto leading-relaxed">
-              Buy and sell furniture with intelligent AI assistance. Upload a photo and our advanced AI instantly analyzes, prices, and creates professional listings. Smart negotiations powered by AI personalities make every deal smooth and fair.
-            </p>
-            <p className="text-lg text-blue-200 mb-12 font-inter">
-              Experience the future of furniture trading - where artificial intelligence meets marketplace efficiency.
-            </p>
+          <div className="max-w-3xl mx-auto text-center">
+            <div className="animate-fade-in-up">
+              <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+                Sell furniture
+                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> with AI</span>
+              </h2>
+              <p className="text-xl text-gray-600 mb-12 max-w-2xl mx-auto leading-relaxed">
+                Upload a photo. AI handles the rest.
+              </p>
+            </div>
 
             {/* Hidden file input */}
             <input
@@ -174,68 +177,77 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
             />
 
             {/* Upload Area */}
-            <div 
-              className={`border-2 border-dashed rounded-xl p-12 transition-colors cursor-pointer ${
-                dragActive 
-                  ? 'border-blue-500 bg-blue-50' 
-                  : 'border-gray-300 hover:border-gray-400'
-              } ${loading ? 'pointer-events-none opacity-50' : ''}`}
-              onDragEnter={(e) => {
-                e.preventDefault()
-                setDragActive(true)
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault()
-                setDragActive(false)
-              }}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={handleDrop}
-              onClick={() => !loading && handleImageUpload()}
-            >
-              <div className="flex flex-col items-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                  {loading ? (
-                    <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
-                  ) : (
-                    <Upload className="h-8 w-8 text-blue-600" />
+            <div className="animate-fade-in-up delay-200">
+              <div 
+                className={`border-2 border-dashed rounded-2xl p-16 transition-all duration-300 cursor-pointer group ${
+                  dragActive 
+                    ? 'border-blue-500 bg-blue-50 scale-105' 
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                } ${loading ? 'pointer-events-none' : ''}`}
+                onDragEnter={(e) => {
+                  e.preventDefault()
+                  setDragActive(true)
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault()
+                  setDragActive(false)
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={handleDrop}
+                onClick={() => !loading && handleImageUpload()}
+              >
+                <div className="flex flex-col items-center relative">
+                  {loading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white/90 rounded-2xl z-10">
+                      <div className="text-center">
+                        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <div className="text-gray-900 font-medium mb-2">AI is analyzing...</div>
+                        <div className="text-sm text-gray-600">Creating your listing</div>
+                      </div>
+                    </div>
                   )}
-                </div>
-                <h3 className="text-xl font-semibold text-white mb-2 font-inter">
-                  {loading ? 'AI Analyzing Your Photo...' : 'Upload Your Furniture Photo'}
-                </h3>
-                <p className="text-blue-100 mb-6 font-inter">
-                  {loading ? 'Advanced AI is examining the image and generating professional listing details' : 'Drag and drop an image here, or click to browse'}
-                </p>
-                {!loading && (
-                  <Button className="bg-white text-blue-700 hover:bg-blue-50 font-inter font-medium">
+                  
+                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6 group-hover:bg-gray-200 transition-colors">
+                    <Upload className="h-10 w-10 text-gray-600" />
+                  </div>
+                  
+                  <h3 className="text-2xl font-semibold text-gray-900 mb-3">
+                    Drop your photo here
+                  </h3>
+                  
+                  <p className="text-gray-500 mb-8">
+                    or click to browse
+                  </p>
+                  
+                  <Button className="bg-gray-900 text-white hover:bg-gray-800 px-8 py-3 text-base font-medium rounded-full">
                     Choose Photo
                   </Button>
-                )}
+                </div>
               </div>
             </div>
 
-            <div className="mt-12 text-center">
-              <p className="text-sm text-blue-200 font-inter">
-                Try uploading a photo of your furniture to see AI magic in action
+            <div className="mt-12 text-center animate-fade-in-up delay-300">
+              <p className="text-sm text-gray-400">
+                Supports JPG, PNG, HEIC • Max 10MB
               </p>
             </div>
           </div>
         )}
 
         {step === 'preview' && analysisResult && (
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2 font-inter">
-                ✨ Your listing is ready!
+          <div className="max-w-5xl mx-auto animate-fade-in-up">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                ✨ Your listing is ready
               </h2>
-              <p className="text-blue-100 font-inter">
-                AI analyzed your photo and created this professional listing in seconds
+              <p className="text-gray-600 text-lg">
+                AI analyzed your photo in seconds
               </p>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-8">
+            <div className="grid lg:grid-cols-2 gap-12">
               {/* Preview Card */}
-              <Card className="bg-white">
+              <Card className="bg-white border-0 shadow-xl">
                 <CardContent className="p-0">
                   {/* Image */}
                   <div className="bg-gray-100 h-64 flex items-center justify-center rounded-t-lg overflow-hidden">
@@ -250,7 +262,7 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
                     )}
                   </div>
                   
-                  <div className="p-6">
+                  <div className="p-8">
                     {/* Price */}
                     <div className="flex items-center justify-between mb-4">
                       <div>
@@ -292,10 +304,10 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
               </Card>
 
               {/* Details */}
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <div>
-                  <h4 className="font-semibold text-white mb-3 font-inter">AI-Generated Description</h4>
-                  <div className="bg-white rounded-lg p-4 border">
+                  <h4 className="font-semibold text-gray-900 mb-4 text-lg">Description</h4>
+                  <div className="bg-gray-50 rounded-xl p-6 border">
                     <p className="text-gray-700 leading-relaxed">
                       {analysisResult.listing.description}
                     </p>
@@ -303,19 +315,18 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
                 </div>
 
                 <div>
-                  <h4 className="font-semibold text-white mb-3 font-inter">AI-Detected Details</h4>
-                  <div className="bg-white rounded-lg p-4 border">
-                    <ul className="space-y-2">
-                      <li className="text-sm text-gray-700">• Style: {analysisResult.analysis.style}</li>
-                      <li className="text-sm text-gray-700">• Material: {analysisResult.analysis.material}</li>
-                      <li className="text-sm text-gray-700">• Brand: {analysisResult.analysis.brand}</li>
-                      <li className="text-sm text-gray-700">• Condition: {analysisResult.analysis.condition_score}/10 ({analysisResult.analysis.condition_notes})</li>
-                      <li className="text-sm text-gray-700">• Type: {analysisResult.analysis.furniture_type}</li>
-                    </ul>
+                  <h4 className="font-semibold text-gray-900 mb-4 text-lg">AI Analysis</h4>
+                  <div className="bg-gray-50 rounded-xl p-6 border">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-sm"><span className="font-medium text-gray-900">Style:</span> <span className="text-gray-600">{analysisResult.analysis.style}</span></div>
+                      <div className="text-sm"><span className="font-medium text-gray-900">Material:</span> <span className="text-gray-600">{analysisResult.analysis.material}</span></div>
+                      <div className="text-sm"><span className="font-medium text-gray-900">Brand:</span> <span className="text-gray-600">{analysisResult.analysis.brand}</span></div>
+                      <div className="text-sm"><span className="font-medium text-gray-900">Condition:</span> <span className="text-gray-600">{analysisResult.analysis.condition_score}/10</span></div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex gap-4 pt-4">
                   <Button 
                     variant="outline" 
                     onClick={() => {
@@ -324,13 +335,13 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
                       setUploadedImage(null)
                       setError(null)
                     }}
-                    className="flex-1"
+                    className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-full py-3"
                   >
-                    Try Another Photo
+                    Try Another
                   </Button>
                   <Button 
                     onClick={() => setStep('account')}
-                    className="flex-1 bg-white text-blue-700 hover:bg-blue-50 font-inter font-medium"
+                    className="flex-1 bg-gray-900 text-white hover:bg-gray-800 rounded-full py-3 font-medium"
                   >
                     Create Listing
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -342,14 +353,14 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
         )}
 
         {step === 'account' && (
-          <div className="max-w-md mx-auto">
-            <div className="bg-white rounded-lg p-8 shadow-sm border">
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-white mb-2 font-inter">
-                  Almost done! 
+          <div className="max-w-md mx-auto animate-fade-in-up">
+            <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold text-gray-900 mb-3">
+                  Almost done
                 </h2>
-                <p className="text-blue-100 font-inter">
-                  Create your account to publish this listing
+                <p className="text-gray-600">
+                  Create your account to publish
                 </p>
               </div>
 
@@ -416,7 +427,7 @@ export function AIShowcase({ onAccountCreated }: AIShowcaseProps) {
                 <Button 
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-white text-blue-700 hover:bg-blue-50 py-3 font-inter font-medium"
+                  className="w-full bg-gray-900 text-white hover:bg-gray-800 py-3 font-medium rounded-full"
                 >
                   {loading ? (
                     <>
