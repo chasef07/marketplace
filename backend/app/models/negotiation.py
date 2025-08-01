@@ -4,7 +4,7 @@ Negotiation and Offer models
 
 from enum import Enum
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Numeric, CheckConstraint, Index
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Numeric, CheckConstraint, Index, Boolean, Text, Enum as SQLEnum
 
 from ..core.database import Base
 
@@ -21,22 +21,22 @@ class OfferType(str, Enum):
     SELLER = "seller"
 
 
-class Negotiation(db.Model):
+class Negotiation(Base):
     __tablename__ = 'negotiations'
     
-    id = db.Column(db.Integer, primary_key=True)
-    item_id = db.Column(db.Integer, db.ForeignKey('items.id', ondelete='CASCADE'), nullable=False, index=True)
-    seller_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
-    buyer_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
-    status = db.Column(db.Enum(NegotiationStatus), default=NegotiationStatus.ACTIVE, nullable=False, index=True)
-    current_offer = db.Column(db.Numeric(10, 2))
-    final_price = db.Column(db.Numeric(10, 2))
-    round_number = db.Column(db.Integer, default=0, nullable=False)
-    max_rounds = db.Column(db.Integer, default=10, nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-    completed_at = db.Column(db.DateTime)
-    expires_at = db.Column(db.DateTime)
+    id = Column(Integer, primary_key=True)
+    item_id = Column(Integer, ForeignKey('items.id', ondelete='CASCADE'), nullable=False, index=True)
+    seller_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    buyer_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    status = Column(SQLEnum(NegotiationStatus), default=NegotiationStatus.ACTIVE, nullable=False, index=True)
+    current_offer = Column(Numeric(10, 2))
+    final_price = Column(Numeric(10, 2))
+    round_number = Column(Integer, default=0, nullable=False)
+    max_rounds = Column(Integer, default=10, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    completed_at = Column(DateTime)
+    expires_at = Column(DateTime)
     
     # Constraints
     __table_args__ = (
@@ -49,9 +49,6 @@ class Negotiation(db.Model):
         Index('idx_negotiation_item_status', 'item_id', 'status'),
     )
     
-    # Relationships
-    offers = db.relationship('Offer', backref='negotiation', lazy='dynamic', cascade='all, delete-orphan', order_by='Offer.created_at')
-    
     def is_complete(self):
         """Check if negotiation is complete."""
         return (self.status in [NegotiationStatus.COMPLETED, NegotiationStatus.CANCELLED, NegotiationStatus.DEAL_PENDING] 
@@ -61,20 +58,6 @@ class Negotiation(db.Model):
     def is_expired(self):
         """Check if negotiation has expired."""
         return self.expires_at and datetime.now(timezone.utc) > self.expires_at
-    
-    def complete_negotiation(self, final_price=None):
-        """Complete the negotiation."""
-        self.status = NegotiationStatus.COMPLETED
-        self.completed_at = datetime.now(timezone.utc)
-        if final_price:
-            self.final_price = final_price
-        db.session.commit()
-    
-    def cancel_negotiation(self):
-        """Cancel the negotiation."""
-        self.status = NegotiationStatus.CANCELLED
-        self.completed_at = datetime.now(timezone.utc)
-        db.session.commit()
     
     def to_dict(self):
         """Convert negotiation to dictionary for API responses."""
@@ -100,18 +83,18 @@ class Negotiation(db.Model):
         return f'<Negotiation {self.id}>'
 
 
-class Offer(db.Model):
+class Offer(Base):
     __tablename__ = 'offers'
     
-    id = db.Column(db.Integer, primary_key=True)
-    negotiation_id = db.Column(db.Integer, db.ForeignKey('negotiations.id', ondelete='CASCADE'), nullable=False, index=True)
-    offer_type = db.Column(db.Enum(OfferType), nullable=False)
-    price = db.Column(db.Numeric(10, 2), nullable=False)
-    message = db.Column(db.Text)
-    round_number = db.Column(db.Integer, nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    is_counter_offer = db.Column(db.Boolean, default=False)
-    response_time_seconds = db.Column(db.Integer)
+    id = Column(Integer, primary_key=True)
+    negotiation_id = Column(Integer, ForeignKey('negotiations.id', ondelete='CASCADE'), nullable=False, index=True)
+    offer_type = Column(SQLEnum(OfferType), nullable=False)
+    price = Column(Numeric(10, 2), nullable=False)
+    message = Column(Text)
+    round_number = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    is_counter_offer = Column(Boolean, default=False)
+    response_time_seconds = Column(Integer)
     
     # Constraints
     __table_args__ = (

@@ -6,6 +6,7 @@ import os
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .core.config import get_config
 from .core.database import initialize_database
@@ -38,6 +39,11 @@ def create_app():
     
     # Include routers
     app.include_router(router, prefix="/api")
+    
+    # Serve static files (uploads)
+    uploads_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads")
+    os.makedirs(uploads_dir, exist_ok=True)
+    app.mount("/static/uploads", StaticFiles(directory=uploads_dir), name="uploads")
     
     # Health check endpoint
     @app.get("/health")

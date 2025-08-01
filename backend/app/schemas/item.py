@@ -27,6 +27,14 @@ class ItemUpdate(BaseModel):
     condition: Optional[str] = None
 
 
+class SellerInfo(BaseModel):
+    id: int
+    username: str
+    
+    class Config:
+        from_attributes = True
+
+
 class ItemResponse(BaseModel):
     id: int
     name: str
@@ -37,6 +45,7 @@ class ItemResponse(BaseModel):
     condition: str
     image_filename: Optional[str] = None
     seller_id: int
+    seller: Optional[SellerInfo] = None
     created_at: datetime
     updated_at: datetime
     is_available: bool

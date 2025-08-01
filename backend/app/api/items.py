@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from ..core.database import get_db
 from ..models import Item, User
-from ..schemas.item import ItemResponse, ItemCreate, AIAnalysisResult
+from ..schemas.item import ItemResponse, ItemCreate, AIAnalysisResult, SellerInfo
 from ..auth import get_current_user
 from ..services.ai_image_analysis import analyze_furniture_image
 from ..services.file_handler import save_image
@@ -19,8 +19,18 @@ router = APIRouter()
 @router.get("/", response_model=List[ItemResponse])
 async def get_items(db: Session = Depends(get_db)):
     """Get all available items"""
-    items = db.query(Item).filter(Item.is_available == True).all()
-    return [ItemResponse.model_validate(item) for item in items]
+    items = db.query(Item).join(User, Item.seller_id == User.id).filter(Item.is_available == True).all()
+    
+    result = []
+    for item in items:
+        # Get seller info
+        seller = db.query(User).filter(User.id == item.seller_id).first()
+        item_dict = ItemResponse.model_validate(item).model_dump()
+        if seller:
+            item_dict['seller'] = SellerInfo.model_validate(seller).model_dump()
+        result.append(ItemResponse.model_validate(item_dict))
+    
+    return result
 
 
 @router.get("/{item_id}", response_model=ItemResponse)
@@ -29,7 +39,14 @@ async def get_item(item_id: int, db: Session = Depends(get_db)):
     item = db.query(Item).filter(Item.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
-    return ItemResponse.model_validate(item)
+    
+    # Get seller info
+    seller = db.query(User).filter(User.id == item.seller_id).first()
+    item_dict = ItemResponse.model_validate(item).model_dump()
+    if seller:
+        item_dict['seller'] = SellerInfo.model_validate(seller).model_dump()
+    
+    return ItemResponse.model_validate(item_dict)
 
 
 @router.post("/", response_model=ItemResponse)

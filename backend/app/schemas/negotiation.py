@@ -1,37 +1,45 @@
 """
-Negotiation schemas
+Pydantic schemas for negotiations and offers
 """
 
-from pydantic import BaseModel
-from typing import Optional, List
+from datetime import datetime
+from typing import Optional
+from pydantic import BaseModel, ConfigDict
 from decimal import Decimal
 
 
-class NegotiationResponse(BaseModel):
-    id: int
-    item_id: int
-    buyer_id: int
-    seller_id: int
-    status: str
-    created_at: str
-    updated_at: str
-
-    class Config:
-        from_attributes = True
+class OfferCreate(BaseModel):
+    price: float
+    message: Optional[str] = None
 
 
 class OfferResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     negotiation_id: int
     offer_type: str
-    amount: Decimal
+    price: float
     message: Optional[str] = None
-    created_at: str
+    round_number: int
+    created_at: datetime
+    is_counter_offer: bool
+    response_time_seconds: Optional[int] = None
 
-    class Config:
-        from_attributes = True
 
-
-class NegotiationDetailResponse(BaseModel):
-    negotiation: NegotiationResponse
-    offers: List[OfferResponse]
+class NegotiationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: int
+    item_id: int
+    seller_id: int
+    buyer_id: int
+    status: str
+    current_offer: Optional[float] = None
+    final_price: Optional[float] = None
+    round_number: int
+    max_rounds: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
