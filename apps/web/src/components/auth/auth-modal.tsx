@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { X, Eye, EyeOff } from "lucide-react"
-import { apiClient } from "@/lib/api-client"
+import { apiClient } from "../../lib/api-client"
 
 interface User {
   id: number

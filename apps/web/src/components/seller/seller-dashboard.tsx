@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Package, TrendingUp, MessageSquare, Eye, ArrowLeft, X, ChevronDown, ChevronUp, Search, Filter, SortAsc } from "lucide-react"
-import { apiClient, FurnitureItem } from "@/lib/api-client"
+import { apiClient, FurnitureItem } from "../../lib/api-client"
 
 interface User {
   id: number

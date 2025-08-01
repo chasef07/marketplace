@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
 import { useState } from "react"
-import { apiClient } from "@/lib/api-client"
+import { apiClient } from "../../lib/api-client"
 
 interface User {
   id: number

@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Upload, ArrowRight, Star, MapPin } from "lucide-react"
 import { useState, useRef } from "react"
-import { apiClient, type AIAnalysisResult } from "@/lib/api-client"
+import { apiClient, type AIAnalysisResult } from "../../lib/api-client"
 
 
 interface AIShowcaseProps {

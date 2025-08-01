@@ -7,7 +7,7 @@ import { AuthPage } from "@/components/auth/auth-page"
 import { AuthModal } from "@/components/auth/auth-modal"
 import { SellerDashboard } from "@/components/seller/seller-dashboard"
 import { useState, useEffect } from "react"
-import { apiClient, type AIAnalysisResult, type CreateListingData } from "@/lib/api-client"
+import { apiClient, type AIAnalysisResult, type CreateListingData } from "../lib/api-client"
 
 interface User {
   id: number
