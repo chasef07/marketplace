@@ -2,9 +2,10 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Search, Heart, Star, MapPin, Clock, Plus } from "lucide-react"
+import { Search, Heart, Star, MapPin, Clock, Plus, Sparkles } from "lucide-react"
 import { useState, useEffect } from "react"
-import { apiClient } from "@/lib/api-client"
+import { apiClient, SearchResponse } from "@/lib/api-client"
+import { AISearchBar } from "@/components/search/ai-search-bar"
 
 interface SellerInfo {
   id: number
@@ -52,6 +53,9 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
+  const [isAISearching, setIsAISearching] = useState(false)
+  const [searchInterpretation, setSearchInterpretation] = useState<string | null>(null)
+  const [isAISearchMode, setIsAISearchMode] = useState(false)
 
   // Debug user data
   console.log('Marketplace received user:', user)
@@ -77,6 +81,8 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
       setLoading(true)
       const response = await apiClient.getMarketplaceItems()
       setItems(response || [])
+      setIsAISearchMode(false)
+      setSearchInterpretation(null)
     } catch (err) {
       setError('Failed to load marketplace items')
     } finally {
@@ -84,7 +90,34 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
     }
   }
 
-  const filteredItems = items.filter(item => {
+  const handleAISearch = async (query: string) => {
+    try {
+      setIsAISearching(true)
+      setLoading(true)
+      setError(null)
+      setIsAISearchMode(true)
+      
+      const searchResponse: SearchResponse = await apiClient.aiSearch({ query })
+      setItems(searchResponse.items)
+      setSearchInterpretation(searchResponse.query_interpretation)
+      setSearchQuery(query)
+      
+    } catch (err) {
+      setError('AI search failed. Please try again.')
+      console.error('AI search error:', err)
+    } finally {
+      setIsAISearching(false)
+      setLoading(false)
+    }
+  }
+
+  const handleBackToAllItems = () => {
+    setSearchQuery("")
+    setSelectedCategory("All")
+    fetchItems()
+  }
+
+  const filteredItems = isAISearchMode ? items : items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          item.description.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesCategory = selectedCategory === "All" || item.furniture_type === selectedCategory
@@ -172,41 +205,64 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
         </div>
       </header>
 
-      {/* Search and Filters */}
-      <section className="bg-white py-8 border-b border-gray-200">
+      {/* AI Search Hero Section */}
+      <section className="bg-gradient-to-br from-blue-50 via-cyan-50 to-sky-50 py-12">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            {/* Search Bar */}
-            <div className="mb-6">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search furniture (e.g., vintage sofa, dining table)"
-                  className="w-full pl-12 pr-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+          <div className="text-center mb-8">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Find Your Perfect Furniture
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Use natural language to describe what you're looking for. Our AI understands context and finds exactly what you need.
+            </p>
+          </div>
+          
+          <AISearchBar 
+            onSearch={handleAISearch}
+            isLoading={isAISearching}
+            className="mb-6"
+          />
+
+          {/* Search Interpretation */}
+          {searchInterpretation && (
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-white/80 backdrop-blur-sm border border-blue-200 rounded-xl p-4 flex items-center gap-3">
+                <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                <p className="text-blue-800 text-sm">
+                  <span className="font-medium">AI understood:</span> {searchInterpretation}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleBackToAllItems}
+                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                >
+                  View All Items
+                </Button>
               </div>
             </div>
+          )}
 
-            {/* Category Filters */}
-            <div className="flex justify-center gap-2 flex-wrap">
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    selectedCategory === category
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {categoryDisplayNames[category]}
-                </button>
-              ))}
+          {/* Category Filters - Only show when not in AI search mode */}
+          {!isAISearchMode && (
+            <div className="max-w-4xl mx-auto mt-8">
+              <div className="flex justify-center gap-2 flex-wrap">
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      selectedCategory === category
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'bg-white/80 backdrop-blur-sm border border-gray-200 text-gray-700 hover:bg-white hover:shadow-md'
+                    }`}
+                  >
+                    {categoryDisplayNames[category]}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
@@ -215,9 +271,11 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-semibold text-gray-900">
-              {searchQuery ? `Search results for "${searchQuery}"` : 'Available Items'}
+              {isAISearchMode ? 'AI Search Results' : searchQuery ? `Search results for "${searchQuery}"` : 'Available Items'}
             </h2>
-            <p className="text-gray-600">{filteredItems.length} items found</p>
+            <p className="text-gray-600">
+              {isAISearchMode ? `${items.length} items found` : `${filteredItems.length} items found`}
+            </p>
           </div>
 
           {loading ? (

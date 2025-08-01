@@ -1,5 +1,5 @@
 // API client for connecting to FastAPI backend
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || ''
 
 export interface AIAnalysisResult {
   success: boolean
@@ -46,6 +46,23 @@ export interface CreateListingData {
   starting_price: number
   condition: string
   image_filename: string
+}
+
+export interface SearchQuery {
+  query: string
+  limit?: number
+  offset?: number
+}
+
+export interface SearchResponse {
+  success: boolean
+  items: any[]
+  total_count: number
+  query_interpretation: string
+}
+
+export interface SearchSuggestion {
+  suggestions: string[]
 }
 
 export class ApiClient {
@@ -199,7 +216,6 @@ export class ApiClient {
         description: data.description,
         furniture_type: data.furniture_type,
         starting_price: data.starting_price,
-        min_price: data.min_price,
         condition: data.condition,
         image_filename: data.image_filename
       })
@@ -314,6 +330,33 @@ export class ApiClient {
       message: message
     })
     return response
+  }
+
+  async aiSearch(searchQuery: SearchQuery): Promise<SearchResponse> {
+    const response = await fetch(`${this.baseUrl}/api/search/ai`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(searchQuery)
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Search failed')
+    }
+
+    return response.json()
+  }
+
+  async getSearchSuggestions(): Promise<SearchSuggestion> {
+    const response = await fetch(`${this.baseUrl}/api/search/suggestions`, {
+      headers: this.getHeaders()
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch search suggestions')
+    }
+
+    return response.json()
   }
 }
 

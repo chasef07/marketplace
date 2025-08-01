@@ -16,6 +16,7 @@ from ..services.file_handler import save_image
 router = APIRouter()
 
 
+@router.get("", response_model=List[ItemResponse])
 @router.get("/", response_model=List[ItemResponse])
 async def get_items(db: Session = Depends(get_db)):
     """Get all available items"""
@@ -67,6 +68,7 @@ async def get_item(item_id: int, db: Session = Depends(get_db)):
     return ItemResponse.model_validate(item_dict)
 
 
+@router.post("", response_model=ItemResponse)
 @router.post("/", response_model=ItemResponse)
 async def create_item(
     item_data: ItemCreate,

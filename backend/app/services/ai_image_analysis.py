@@ -120,7 +120,7 @@ def analyze_furniture_image(image_path):
     except Exception as e:
         return False, f"Image analysis failed: {str(e)}"
 
-def suggest_pricing(analysis_data, user_min_price=None, user_max_price=None):
+def suggest_pricing(analysis_data, user_max_price=None):
     """
     Generate pricing suggestions based on analysis data and user preferences
     """
@@ -158,7 +158,6 @@ def suggest_pricing(analysis_data, user_min_price=None, user_max_price=None):
             'market_price': int(avg_price),
             'premium_price': int(high_price),
             'suggested_starting_price': int(avg_price * 1.1),
-            'suggested_min_price': int(avg_price * 0.7),
             'pricing_explanation': f"Based on {condition_score}/10 condition and current market analysis"
         }
         
@@ -171,7 +170,6 @@ def suggest_pricing(analysis_data, user_min_price=None, user_max_price=None):
             'market_price': 200,
             'premium_price': 350,
             'suggested_starting_price': 220,
-            'suggested_min_price': 140,
             'pricing_explanation': f"Default pricing due to analysis error: {str(e)}"
         }
 
