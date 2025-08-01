@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Search, Heart, Star, MapPin, Clock, Plus, Sparkles } from "lucide-react"
+import { Heart, MapPin, Clock, Plus, Sparkles } from "lucide-react"
 import { useState, useEffect } from "react"
 import { apiClient, SearchResponse } from "@/lib/api-client"
 import { AISearchBar } from "@/components/search/ai-search-bar"
@@ -83,7 +83,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
       setItems(response || [])
       setIsAISearchMode(false)
       setSearchInterpretation(null)
-    } catch (err) {
+    } catch {
       setError('Failed to load marketplace items')
     } finally {
       setLoading(false)
@@ -102,9 +102,9 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
       setSearchInterpretation(searchResponse.query_interpretation)
       setSearchQuery(query)
       
-    } catch (err) {
+    } catch (error) {
       setError('AI search failed. Please try again.')
-      console.error('AI search error:', err)
+      console.error('AI search error:', error)
     } finally {
       setIsAISearching(false)
       setLoading(false)
@@ -213,7 +213,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
               Find Your Perfect Furniture
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Use natural language to describe what you're looking for. Our AI understands context and finds exactly what you need.
+              Use natural language to describe what you&apos;re looking for. Our AI understands context and finds exactly what you need.
             </p>
           </div>
           

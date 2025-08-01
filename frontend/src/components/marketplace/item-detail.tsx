@@ -97,7 +97,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
       setLoading(true)
       const response = await apiClient.getItem(itemId)
       setItem(response)
-    } catch (err) {
+    } catch {
       setError('Failed to load item details')
     } finally {
       setLoading(false)
@@ -113,8 +113,8 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
         neg.item_id === itemId && neg.buyer_id === user.id
       )
       setNegotiation(itemNegotiation || null)
-    } catch (err) {
-      console.error('Failed to fetch negotiation:', err)
+    } catch (error) {
+      console.error('Failed to fetch negotiation:', error)
     }
   }
 
@@ -125,8 +125,8 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
       setLoadingMessages(true)
       const offersData = await apiClient.getNegotiationOffers(negotiation.id)
       setOffers(offersData || [])
-    } catch (err) {
-      console.error('Failed to fetch offers:', err)
+    } catch (error) {
+      console.error('Failed to fetch offers:', error)
     } finally {
       setLoadingMessages(false)
     }
@@ -185,7 +185,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
       setOfferMessage('')
       // Refresh negotiation data after making an offer
       await fetchNegotiation()
-    } catch (err) {
+    } catch {
       alert('Failed to submit offer')
     }
   }

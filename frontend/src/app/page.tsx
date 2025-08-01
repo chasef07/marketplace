@@ -41,7 +41,7 @@ export default function Home() {
         setUser(currentUser)
         setCurrentView('marketplace')
       }
-    } catch (err) {
+    } catch {
       // User not logged in, stay on upload page
     } finally {
       setLoading(false)

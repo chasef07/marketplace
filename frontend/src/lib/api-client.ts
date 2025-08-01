@@ -1,6 +1,27 @@
 // API client for connecting to FastAPI backend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || ''
 
+export interface FurnitureItem {
+  id: number
+  name: string
+  description: string
+  starting_price: string
+  condition: string
+  furniture_type: string
+  image_filename: string | null
+  seller_id: number
+  seller?: SellerInfo
+  created_at: string
+  updated_at: string
+  is_available: boolean
+}
+
+export interface SellerInfo {
+  id: number
+  name: string
+  email: string
+}
+
 export interface AIAnalysisResult {
   success: boolean
   analysis: {
@@ -56,7 +77,7 @@ export interface SearchQuery {
 
 export interface SearchResponse {
   success: boolean
-  items: any[]
+  items: FurnitureItem[]
   total_count: number
   query_interpretation: string
 }
@@ -167,7 +188,7 @@ export class ApiClient {
         const errorData = await response.json()
         // Handle different error response formats
         errorMessage = errorData.detail || errorData.error || errorData.message || 'Account creation failed'
-      } catch (e) {
+      } catch {
         // If JSON parsing fails, use status text
         errorMessage = `Account creation failed: ${response.status} ${response.statusText}`
       }
@@ -194,7 +215,7 @@ export class ApiClient {
       try {
         const errorData = await response.json()
         errorMessage = errorData.detail || errorData.error || errorData.message || 'Login failed'
-      } catch (e) {
+      } catch {
         errorMessage = `Login failed: ${response.status} ${response.statusText}`
       }
       throw new Error(errorMessage)

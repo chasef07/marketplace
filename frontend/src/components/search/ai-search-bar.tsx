@@ -193,7 +193,7 @@ export function AISearchBar({
             {/* Footer tip */}
             <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
               <p className="text-xs text-gray-500">
-                💡 Tip: Use natural language like "looking for", "under $X", "in good condition"
+                💡 Tip: Use natural language like &ldquo;looking for&rdquo;, &ldquo;under $X&rdquo;, &ldquo;in good condition&rdquo;
               </p>
             </div>
           </div>
