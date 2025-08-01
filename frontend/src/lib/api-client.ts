@@ -280,6 +280,34 @@ export class ApiClient {
     this.clearToken()
     return response.ok
   }
+
+  async getMyItems() {
+    const response = await this.get('/api/items/my-items')
+    return response
+  }
+
+  async getMyNegotiations() {
+    const response = await this.get('/api/negotiations/my-negotiations')
+    return response
+  }
+
+  async acceptOffer(negotiationId: number) {
+    const response = await this.post(`/api/negotiations/${negotiationId}/accept`, {})
+    return response
+  }
+
+  async counterOffer(negotiationId: number, price: number, message: string = '') {
+    const response = await this.post(`/api/negotiations/${negotiationId}/counter`, {
+      price: price,
+      message: message
+    })
+    return response
+  }
+
+  async getNegotiationOffers(negotiationId: number) {
+    const response = await this.get(`/api/negotiations/${negotiationId}/offers`)
+    return response
+  }
 }
 
 export const apiClient = new ApiClient()

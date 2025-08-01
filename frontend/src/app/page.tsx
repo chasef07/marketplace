@@ -4,8 +4,10 @@ import { AIShowcase } from "@/components/landing/ai-showcase"
 import { Marketplace } from "@/components/marketplace/marketplace"
 import { ItemDetail } from "@/components/marketplace/item-detail"
 import { AuthPage } from "@/components/auth/auth-page"
+import { AuthModal } from "@/components/auth/auth-modal"
+import { SellerDashboard } from "@/components/seller/seller-dashboard"
 import { useState, useEffect } from "react"
-import { apiClient } from "@/lib/api-client"
+import { apiClient, type AIAnalysisResult, type CreateListingData } from "@/lib/api-client"
 
 interface User {
   id: number
@@ -19,11 +21,13 @@ interface User {
 }
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<'upload' | 'marketplace' | 'item-detail' | 'auth'>('upload')
+  const [currentView, setCurrentView] = useState<'upload' | 'marketplace' | 'item-detail' | 'auth' | 'seller-dashboard'>('upload')
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [marketplaceKey, setMarketplaceKey] = useState(0)
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [pendingListingData, setPendingListingData] = useState<AIAnalysisResult | null>(null)
 
   useEffect(() => {
     checkAuthStatus()
@@ -43,14 +47,13 @@ export default function Home() {
     }
   }
 
-  const handleAccountCreated = (newUser: User) => {
-    setUser(newUser)
-    setCurrentView('marketplace')
-    setMarketplaceKey(prev => prev + 1) // Force refresh
-  }
 
   const handleCreateListing = () => {
-    setCurrentView('upload')
+    if (user) {
+      setCurrentView('upload')
+    } else {
+      setShowAuthModal(true)
+    }
   }
 
   const handleLogout = async () => {
@@ -82,12 +85,51 @@ export default function Home() {
   }
 
   const handleSignInClick = () => {
-    setCurrentView('auth')
+    setShowAuthModal(true)
   }
 
-  const handleAuthSuccess = (newUser: User) => {
+  const handlePendingListing = (analysisData: AIAnalysisResult) => {
+    setPendingListingData(analysisData)
+  }
+
+  const handleSellerDashboard = () => {
+    setCurrentView('seller-dashboard')
+  }
+
+  const handleAuthSuccess = async (newUser: User) => {
     console.log('handleAuthSuccess called with user:', newUser)
     setUser(newUser)
+    setShowAuthModal(false)
+    
+    // If there's pending listing data, create the listing
+    if (pendingListingData) {
+      try {
+        const getConditionFromScore = (score: number): 'excellent' | 'good' | 'fair' | 'poor' => {
+          if (score >= 8) return 'excellent'
+          if (score >= 6) return 'good'
+          if (score >= 4) return 'fair'
+          return 'poor'
+        }
+
+        const listingData: CreateListingData = {
+          name: pendingListingData.listing.title,
+          description: pendingListingData.listing.description,
+          furniture_type: pendingListingData.listing.furniture_type,
+          starting_price: parseFloat(pendingListingData.pricing.suggested_starting_price.toString()),
+          min_price: parseFloat(pendingListingData.pricing.suggested_min_price.toString()),
+          condition: getConditionFromScore(pendingListingData.analysis.condition_score),
+          image_filename: pendingListingData.image_filename
+        }
+
+        await apiClient.createListing(listingData)
+        setPendingListingData(null) // Clear pending data
+        console.log('Listing created successfully')
+      } catch (error) {
+        console.error('Failed to create listing:', error)
+        // Still proceed to marketplace, user can try again
+      }
+    }
+    
     console.log('Setting currentView to marketplace')
     setCurrentView('marketplace')
     setMarketplaceKey(prev => prev + 1)
@@ -105,9 +147,9 @@ export default function Home() {
     <main className="min-h-screen">
       {currentView === 'upload' ? (
         <AIShowcase 
-          onAccountCreated={handleAccountCreated}
           onSignInClick={handleSignInClick}
           onBrowseClick={() => setCurrentView('marketplace')}
+          onPendingListing={handlePendingListing}
         />
       ) : currentView === 'marketplace' ? (
         <Marketplace 
@@ -117,7 +159,16 @@ export default function Home() {
           onLogout={handleLogout}
           onItemClick={handleItemClick}
           onSignInClick={handleSignInClick}
+          onSellerDashboard={handleSellerDashboard}
         />
+      ) : currentView === 'seller-dashboard' ? (
+        user && (
+          <SellerDashboard
+            user={user}
+            onItemClick={handleItemClick}
+            onBackToMarketplace={() => setCurrentView('marketplace')}
+          />
+        )
       ) : currentView === 'auth' ? (
         <AuthPage
           onAuthSuccess={handleAuthSuccess}
@@ -132,6 +183,13 @@ export default function Home() {
           />
         )
       )}
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onAuthSuccess={handleAuthSuccess}
+      />
     </main>
   );
 }

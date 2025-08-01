@@ -189,3 +189,25 @@ async def counter_offer(
     db.refresh(offer)
     
     return OfferResponse.model_validate(offer)
+
+
+@router.get("/negotiations/{negotiation_id}/offers", response_model=List[OfferResponse])
+async def get_negotiation_offers(
+    negotiation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all offers/messages for a negotiation (buyer or seller only)"""
+    negotiation = db.query(Negotiation).filter(Negotiation.id == negotiation_id).first()
+    if not negotiation:
+        raise HTTPException(status_code=404, detail="Negotiation not found")
+    
+    # Only buyer or seller can see the offers
+    if negotiation.buyer_id != current_user.id and negotiation.seller_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to view negotiation offers")
+    
+    offers = db.query(Offer).filter(
+        Offer.negotiation_id == negotiation_id
+    ).order_by(Offer.created_at.asc()).all()
+    
+    return [OfferResponse.model_validate(offer) for offer in offers]

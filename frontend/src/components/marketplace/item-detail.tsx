@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Heart, MapPin, Clock, User, DollarSign, MessageCircle } from "lucide-react"
+import { ArrowLeft, Heart, MapPin, User, DollarSign, MessageSquare, ChevronDown, ChevronUp } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 
 interface SellerInfo {
@@ -43,6 +43,30 @@ interface User {
   last_login?: string
 }
 
+interface Negotiation {
+  id: number
+  item_id: number
+  seller_id: number
+  buyer_id: number
+  current_offer: number
+  final_price?: number
+  status: string
+  round_number: number
+  created_at: string
+  updated_at: string
+}
+
+interface Offer {
+  id: number
+  negotiation_id: number
+  offer_type: string
+  price: number
+  message: string | null
+  round_number: number
+  created_at: string
+  is_counter_offer: boolean
+}
+
 interface ItemDetailProps {
   itemId: number
   user: User | null
@@ -57,10 +81,17 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
   const [showOfferForm, setShowOfferForm] = useState(false)
   const [offerAmount, setOfferAmount] = useState('')
   const [offerMessage, setOfferMessage] = useState('')
+  const [negotiation, setNegotiation] = useState<Negotiation | null>(null)
+  const [offers, setOffers] = useState<Offer[]>([])
+  const [showMessages, setShowMessages] = useState(false)
+  const [loadingMessages, setLoadingMessages] = useState(false)
 
   useEffect(() => {
     fetchItem()
-  }, [itemId])
+    if (user) {
+      fetchNegotiation()
+    }
+  }, [itemId, user])
 
   const fetchItem = async () => {
     try {
@@ -74,16 +105,58 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
     }
   }
 
+  const fetchNegotiation = async () => {
+    if (!user) return
+    
+    try {
+      const negotiations = await apiClient.getMyNegotiations()
+      const itemNegotiation = negotiations?.find((neg: Negotiation) => 
+        neg.item_id === itemId && neg.buyer_id === user.id
+      )
+      setNegotiation(itemNegotiation || null)
+    } catch (err) {
+      console.error('Failed to fetch negotiation:', err)
+    }
+  }
+
+  const fetchOffers = async () => {
+    if (!negotiation) return
+    
+    try {
+      setLoadingMessages(true)
+      const offersData = await apiClient.getNegotiationOffers(negotiation.id)
+      setOffers(offersData || [])
+    } catch (err) {
+      console.error('Failed to fetch offers:', err)
+    } finally {
+      setLoadingMessages(false)
+    }
+  }
+
+  const toggleMessages = async () => {
+    if (!showMessages && negotiation && offers.length === 0) {
+      await fetchOffers()
+    }
+    setShowMessages(!showMessages)
+  }
+
   const formatTimeAgo = (timestamp: string) => {
     const now = new Date()
     const created = new Date(timestamp)
     const diffMinutes = Math.floor((now.getTime() - created.getTime()) / (1000 * 60))
     
+    if (diffMinutes < 0) return 'Just now'
+    if (diffMinutes < 1) return 'Just now'
     if (diffMinutes < 60) return `${diffMinutes}m ago`
+    
     const diffHours = Math.floor(diffMinutes / 60)
     if (diffHours < 24) return `${diffHours}h ago`
+    
     const diffDays = Math.floor(diffHours / 24)
-    return `${diffDays}d ago`
+    if (diffDays < 30) return `${diffDays}d ago`
+    
+    const diffMonths = Math.floor(diffDays / 30)
+    return `${diffMonths}mo ago`
   }
 
   const getConditionColor = (condition: string) => {
@@ -115,6 +188,8 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
       setShowOfferForm(false)
       setOfferAmount('')
       setOfferMessage('')
+      // Refresh negotiation data after making an offer
+      await fetchNegotiation()
     } catch (err) {
       alert('Failed to submit offer')
     }
@@ -214,12 +289,25 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                         size="lg"
                       >
                         <DollarSign className="h-4 w-4 mr-2" />
-                        Make an Offer
+                        {negotiation ? 'Make Another Offer' : 'Make an Offer'}
                       </Button>
-                      <Button variant="outline" className="w-full" size="lg">
-                        <MessageCircle className="h-4 w-4 mr-2" />
-                        Message Seller
-                      </Button>
+                      
+                      {negotiation && (
+                        <Button 
+                          onClick={toggleMessages}
+                          variant="outline"
+                          className="w-full"
+                          size="lg"
+                        >
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          View Messages
+                          {showMessages ? (
+                            <ChevronUp className="h-4 w-4 ml-2" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 ml-2" />
+                          )}
+                        </Button>
+                      )}
                     </>
                   )}
                   {!user && (
@@ -235,6 +323,73 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                 </div>
               </CardContent>
             </Card>
+
+            {/* Message History */}
+            {negotiation && showMessages && (
+              <Card className="bg-white">
+                <CardContent className="p-6 bg-white">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Message History</h3>
+                  {loadingMessages ? (
+                    <div className="text-center py-4">
+                      <div className="text-gray-500">Loading messages...</div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {offers.length > 0 ? (
+                        offers.map((offer) => (
+                          <div key={offer.id} className={`flex ${offer.offer_type === 'buyer' ? 'justify-start' : 'justify-end'}`}>
+                            <div className={`max-w-xs px-3 py-2 rounded-lg ${
+                              offer.offer_type === 'buyer' 
+                                ? 'bg-gray-100 text-gray-900' 
+                                : 'bg-blue-600 text-white'
+                            }`}>
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span className="font-medium">
+                                  {offer.offer_type === 'buyer' ? 'You' : 'Seller'}
+                                </span>
+                                <span className={offer.offer_type === 'buyer' ? 'text-gray-500' : 'text-blue-100'}>
+                                  ${offer.price}
+                                </span>
+                              </div>
+                              {offer.message && (
+                                <p className="text-sm">{offer.message}</p>
+                              )}
+                              <p className={`text-xs mt-1 ${
+                                offer.offer_type === 'buyer' ? 'text-gray-500' : 'text-blue-100'
+                              }`}>
+                                {formatTimeAgo(offer.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-500 text-center py-4">
+                          No messages yet
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {negotiation && (
+                    <div className="mt-4 pt-4 border-t">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          negotiation.status === 'active' ? 'text-blue-600 bg-blue-100' :
+                          negotiation.status === 'deal_pending' ? 'text-green-600 bg-green-100' :
+                          negotiation.status === 'completed' ? 'text-gray-600 bg-gray-100' :
+                          'text-red-600 bg-red-100'
+                        }`}>
+                          {negotiation.status.replace('_', ' ')}
+                        </span>
+                        <span className="text-gray-500">
+                          Round {negotiation.round_number}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Description */}
             <Card className="bg-white">
@@ -311,7 +466,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
 
       {/* Offer Modal */}
       {showOfferForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-gray-100 bg-opacity-95 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md bg-white">
             <CardContent className="p-6 bg-white">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Make an Offer</h3>

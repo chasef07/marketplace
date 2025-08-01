@@ -33,6 +33,24 @@ async def get_items(db: Session = Depends(get_db)):
     return result
 
 
+@router.get("/my-items", response_model=List[ItemResponse])
+async def get_my_items(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all items belonging to the current user"""
+    items = db.query(Item).filter(Item.seller_id == current_user.id).all()
+    
+    result = []
+    for item in items:
+        # Get seller info (current user)
+        item_dict = ItemResponse.model_validate(item).model_dump()
+        item_dict['seller'] = SellerInfo.model_validate(current_user).model_dump()
+        result.append(ItemResponse.model_validate(item_dict))
+    
+    return result
+
+
 @router.get("/{item_id}", response_model=ItemResponse)
 async def get_item(item_id: int, db: Session = Depends(get_db)):
     """Get specific item"""

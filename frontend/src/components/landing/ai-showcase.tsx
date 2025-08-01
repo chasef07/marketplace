@@ -2,29 +2,19 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Upload, ArrowRight, Star, MapPin, Loader2 } from "lucide-react"
+import { Upload, ArrowRight, Star, MapPin } from "lucide-react"
 import { useState, useRef } from "react"
-import { apiClient, type AIAnalysisResult, type CreateAccountData } from "@/lib/api-client"
+import { apiClient, type AIAnalysisResult } from "@/lib/api-client"
 
-interface User {
-  id: number
-  username: string
-  email: string
-  seller_personality: string
-  buyer_personality: string
-  is_active: boolean
-  created_at: string
-  last_login?: string
-}
 
 interface AIShowcaseProps {
-  onAccountCreated: (user: User) => void
   onSignInClick?: () => void
   onBrowseClick?: () => void
+  onPendingListing?: (analysisData: AIAnalysisResult) => void
 }
 
-export function AIShowcase({ onAccountCreated, onSignInClick, onBrowseClick }: AIShowcaseProps) {
-  const [step, setStep] = useState<'upload' | 'preview' | 'account' | 'success'>('upload')
+export function AIShowcase({ onSignInClick, onBrowseClick, onPendingListing }: AIShowcaseProps) {
+  const [step, setStep] = useState<'upload' | 'preview'>('upload')
   const [dragActive, setDragActive] = useState(false)
   const [loading, setLoading] = useState(false)
   const [analysisResult, setAnalysisResult] = useState<AIAnalysisResult | null>(null)
@@ -78,60 +68,6 @@ export function AIShowcase({ onAccountCreated, onSignInClick, onBrowseClick }: A
     }
   }
 
-  const handleCreateAccount = async (formData: FormData) => {
-    if (!analysisResult) {
-      setError('No listing data available')
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-
-    try {
-      const email = formData.get('email') as string
-      const accountData: CreateAccountData = {
-        full_name: formData.get('full_name') as string,
-        email: email,
-        phone: '', // Remove phone requirement
-        location: formData.get('location') as string,
-        username: email.split('@')[0], // Use email prefix as username
-        password: formData.get('password') as string
-      }
-
-      // Convert condition_score to condition string
-      const getConditionFromScore = (score: number): 'excellent' | 'good' | 'fair' | 'poor' => {
-        if (score >= 8) return 'excellent'
-        if (score >= 6) return 'good'
-        if (score >= 4) return 'fair'
-        return 'poor'
-      }
-
-      const listingData = {
-        name: analysisResult.listing.title,
-        description: analysisResult.listing.description,
-        furniture_type: analysisResult.listing.furniture_type,
-        starting_price: analysisResult.pricing.suggested_starting_price,
-        min_price: analysisResult.pricing.suggested_min_price,
-        condition: getConditionFromScore(analysisResult.analysis.condition_score),
-        image_filename: analysisResult.image_filename
-      }
-
-      await apiClient.createAccountAndListing(accountData, listingData)
-      
-      // Create a user object from the account data since old system doesn't return full user
-      const user = {
-        id: Date.now(), // temporary ID
-        username: accountData.username,
-        email: accountData.email,
-        full_name: accountData.full_name
-      }
-      onAccountCreated(user)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create account and listing')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -346,10 +282,15 @@ export function AIShowcase({ onAccountCreated, onSignInClick, onBrowseClick }: A
                     Try Another
                   </Button>
                   <Button 
-                    onClick={() => setStep('account')}
+                    onClick={() => {
+                      if (analysisResult && onPendingListing) {
+                        onPendingListing(analysisResult)
+                      }
+                      onSignInClick?.()
+                    }}
                     className="flex-1 bg-gray-900 text-white hover:bg-gray-800 rounded-full py-3 font-medium"
                   >
-                    Create Listing
+                    Sign Up to Create Listing
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
@@ -358,100 +299,6 @@ export function AIShowcase({ onAccountCreated, onSignInClick, onBrowseClick }: A
           </div>
         )}
 
-        {step === 'account' && (
-          <div className="max-w-md mx-auto animate-fade-in-up">
-            <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-3">
-                  Almost done
-                </h2>
-                <p className="text-gray-600">
-                  Create your account to publish
-                </p>
-              </div>
-
-              <form 
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  const formData = new FormData(e.currentTarget)
-                  handleCreateAccount(formData)
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Full Name *
-                  </label>
-                  <input
-                    name="full_name"
-                    type="text"
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                    placeholder="Enter your name"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email *
-                  </label>
-                  <input
-                    name="email"
-                    type="email"
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                    placeholder="your@email.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Password *
-                  </label>
-                  <input
-                    name="password"
-                    type="password"
-                    required
-                    minLength={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                    placeholder="Choose a password (min 6 characters)"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Your Location
-                  </label>
-                  <input
-                    name="location"
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                    placeholder="Brooklyn, NY"
-                  />
-                </div>
-
-                <Button 
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-gray-900 text-white hover:bg-gray-800 py-3 font-medium rounded-full"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating Account...
-                    </>
-                  ) : (
-                    'Create Account & Publish Listing'
-                  )}
-                </Button>
-              </form>
-
-              <p className="text-xs text-gray-500 text-center mt-4">
-                By creating an account, you agree to our Terms of Service and Privacy Policy
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

@@ -77,14 +77,14 @@ export function AuthPage({ onAuthSuccess }: AuthPageProps) {
       } else {
         throw new Error('Failed to retrieve user information after authentication')
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Authentication error:', err)
       let errorMessage = 'Authentication failed'
       
-      if (err.message) {
+      if (err instanceof Error && err.message) {
         errorMessage = err.message
-      } else if (err.detail) {
-        errorMessage = err.detail
+      } else if (typeof err === 'object' && err !== null && 'detail' in err) {
+        errorMessage = (err as { detail: string }).detail
       } else if (typeof err === 'string') {
         errorMessage = err
       }

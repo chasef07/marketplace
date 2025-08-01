@@ -10,7 +10,11 @@ interface User {
   id: number
   username: string
   email: string
-  full_name: string
+  seller_personality: string
+  buyer_personality: string
+  is_active: boolean
+  created_at: string
+  last_login?: string
 }
 
 interface AuthModalProps {
@@ -83,7 +87,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
         })
         
         // Auto-login after registration
-        const loginResponse = await apiClient.loginUser(formData.username, formData.password)
+        await apiClient.loginUser(formData.username, formData.password)
         const user = await apiClient.getCurrentUser()
         
         if (user) {
@@ -100,8 +104,8 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
           onClose()
         }
       }
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Authentication failed')
     } finally {
       setLoading(false)
     }
@@ -126,7 +130,7 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-gray-100 bg-opacity-95 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-md">
         <CardContent className="p-0">
           {/* Header */}

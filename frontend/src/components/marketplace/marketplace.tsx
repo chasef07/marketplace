@@ -44,9 +44,10 @@ interface MarketplaceProps {
   onLogout: () => void
   onItemClick?: (itemId: number) => void
   onSignInClick?: () => void
+  onSellerDashboard?: () => void
 }
 
-export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSignInClick }: MarketplaceProps) {
+export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSignInClick, onSellerDashboard }: MarketplaceProps) {
   const [items, setItems] = useState<FurnitureItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -96,11 +97,18 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
     const created = new Date(timestamp)
     const diffMinutes = Math.floor((now.getTime() - created.getTime()) / (1000 * 60))
     
+    if (diffMinutes < 0) return 'Just now'
+    if (diffMinutes < 1) return 'Just now'
     if (diffMinutes < 60) return `${diffMinutes}m ago`
+    
     const diffHours = Math.floor(diffMinutes / 60)
     if (diffHours < 24) return `${diffHours}h ago`
+    
     const diffDays = Math.floor(diffHours / 24)
-    return `${diffDays}d ago`
+    if (diffDays < 30) return `${diffDays}d ago`
+    
+    const diffMonths = Math.floor(diffDays / 30)
+    return `${diffMonths}mo ago`
   }
 
   const getConditionColor = (condition: string) => {
@@ -127,6 +135,14 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                   <span className="text-sm text-gray-600">
                     Welcome, {user.username}!
                   </span>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={onSellerDashboard}
+                    className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                  >
+                    Dashboard
+                  </Button>
                   <Button 
                     onClick={onCreateListing}
                     className="bg-blue-600 hover:bg-blue-700"
@@ -264,9 +280,6 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <p className="text-2xl font-bold text-gray-900">${item.starting_price}</p>
-                          {parseFloat(item.min_price) < parseFloat(item.starting_price) && (
-                            <p className="text-sm text-gray-500">Min: ${item.min_price}</p>
-                          )}
                         </div>
                         <button className="p-2 hover:bg-gray-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                           <Heart className="h-5 w-5 text-gray-400 hover:text-red-500" />
