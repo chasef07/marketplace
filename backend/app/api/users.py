@@ -1,60 +1,59 @@
 """
-Users API routes
+FastAPI Users routes
 """
 
-from flask import request, jsonify
-from flask_login import login_required, current_user
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
-from . import api
+from ..core.database import get_db
 from ..models import User
-from ..core.database import db
+from ..schemas.user import UserSettings, UserSettingsUpdate, PublicUserResponse
+from ..schemas.auth import UserResponse
+from ..auth import get_current_user
+
+router = APIRouter()
 
 
-@api.route('/user')
-@login_required
-def get_current_user():
-    """Get current authenticated user"""
-    return jsonify(current_user.to_dict())
+@router.get("/me", response_model=UserResponse)
+async def get_current_user_profile(current_user: User = Depends(get_current_user)):
+    """Get current user profile"""
+    return UserResponse.model_validate(current_user)
 
 
-@api.route('/users/<int:user_id>')
-def get_user(user_id):
+@router.get("/{user_id}", response_model=PublicUserResponse)
+async def get_user(user_id: int, db: Session = Depends(get_db)):
     """Get public user information"""
-    user = User.query.get_or_404(user_id)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
     
-    # Return only public information
-    return jsonify({
-        'id': user.id,
-        'username': user.username,
-        'created_at': user.created_at.isoformat(),
-        'is_active': user.is_active
-    })
+    return PublicUserResponse.model_validate(user)
 
 
-@api.route('/user/settings', methods=['GET', 'PUT'])
-@login_required
-def user_settings():
-    """Get or update user settings"""
-    if request.method == 'GET':
-        return jsonify({
-            'seller_personality': current_user.seller_personality,
-            'buyer_personality': current_user.buyer_personality
-        })
+@router.get("/me/settings", response_model=UserSettings)
+async def get_user_settings(current_user: User = Depends(get_current_user)):
+    """Get user settings"""
+    return UserSettings(
+        seller_personality=current_user.seller_personality,
+        buyer_personality=current_user.buyer_personality
+    )
+
+
+@router.put("/me/settings", response_model=UserSettings)
+async def update_user_settings(
+    settings: UserSettingsUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Update user settings"""
+    if settings.seller_personality:
+        current_user.seller_personality = settings.seller_personality
+    if settings.buyer_personality:
+        current_user.buyer_personality = settings.buyer_personality
     
-    # PUT request - update settings
-    data = request.get_json()
+    db.commit()
     
-    if 'seller_personality' in data:
-        current_user.seller_personality = data['seller_personality']
-    if 'buyer_personality' in data:
-        current_user.buyer_personality = data['buyer_personality']
-    
-    db.session.commit()
-    
-    return jsonify({
-        'message': 'Settings updated successfully',
-        'settings': {
-            'seller_personality': current_user.seller_personality,
-            'buyer_personality': current_user.buyer_personality
-        }
-    })
+    return UserSettings(
+        seller_personality=current_user.seller_personality,
+        buyer_personality=current_user.buyer_personality
+    )

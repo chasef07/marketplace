@@ -4,90 +4,81 @@ Item model for marketplace listings
 
 from enum import Enum
 from datetime import datetime, timezone
-from sqlalchemy import CheckConstraint, Index
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Numeric, CheckConstraint, Index
 
-from ..core.database import db
+from ..core.database import Base
 
 
 class FurnitureType(str, Enum):
     COUCH = "couch"
     DINING_TABLE = "dining_table"
     BOOKSHELF = "bookshelf"
+    COFFEE_TABLE = "coffee_table"
     CHAIR = "chair"
+    DESK = "desk"
     DRESSER = "dresser"
+    WARDROBE = "wardrobe"
+    BED = "bed"
+    NIGHTSTAND = "nightstand"
+    LAMP = "lamp"
     OTHER = "other"
 
 
-class Item(db.Model):
+class Item(Base):
     __tablename__ = 'items'
     
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
-    name = db.Column(db.String(200), nullable=False, index=True)
-    description = db.Column(db.Text)
-    furniture_type = db.Column(db.Enum(FurnitureType), nullable=False, index=True)
-    starting_price = db.Column(db.Numeric(10, 2), nullable=False)
-    min_price = db.Column(db.Numeric(10, 2), nullable=False)
-    condition = db.Column(db.String(50), default='good')
-    image_path = db.Column(db.String(500))
-    is_sold = db.Column(db.Boolean, default=False, nullable=False, index=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
-    sold_at = db.Column(db.DateTime)
-    views_count = db.Column(db.Integer, default=0)
+    id = Column(Integer, primary_key=True)
+    seller_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    name = Column(String(200), nullable=False)
+    description = Column(String(1000))
+    furniture_type = Column(String(50), nullable=False, index=True)
+    starting_price = Column(Numeric(10, 2), nullable=False)
+    min_price = Column(Numeric(10, 2), nullable=False)
+    condition = Column(String(50), default='good')
+    image_filename = Column(String(500))
+    is_available = Column(Boolean, default=True, nullable=False, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    sold_at = Column(DateTime)
+    views_count = Column(Integer, default=0)
     
     # Additional metadata
-    dimensions = db.Column(db.String(100))
-    material = db.Column(db.String(100))
-    brand = db.Column(db.String(100))
-    color = db.Column(db.String(50))
+    dimensions = Column(String(100))
+    material = Column(String(100))
+    brand = Column(String(100))
+    color = Column(String(50))
     
     # Constraints
     __table_args__ = (
         CheckConstraint('starting_price > 0', name='positive_starting_price'),
         CheckConstraint('min_price > 0', name='positive_min_price'),
         CheckConstraint('min_price <= starting_price', name='min_price_le_starting_price'),
-        Index('idx_item_user_created', 'user_id', 'created_at'),
-        Index('idx_item_type_sold', 'furniture_type', 'is_sold'),
+        Index('idx_item_type_availability', 'furniture_type', 'is_available'),
+        Index('idx_item_seller_availability', 'seller_id', 'is_available'),
+        Index('idx_item_created_at', 'created_at'),
     )
-    
-    # Relationships
-    negotiations = db.relationship('Negotiation', backref='item', lazy='dynamic', cascade='all, delete-orphan')
-    
-    def mark_as_sold(self):
-        """Mark item as sold."""
-        self.is_sold = True
-        self.sold_at = datetime.now(timezone.utc)
-        db.session.commit()
-    
-    def increment_views(self):
-        """Increment view count."""
-        self.views_count += 1
-        db.session.commit()
     
     def to_dict(self):
         """Convert item to dictionary for API responses."""
         return {
             'id': self.id,
-            'user_id': self.user_id,
             'name': self.name,
             'description': self.description,
-            'furniture_type': self.furniture_type.value,
+            'furniture_type': self.furniture_type,
             'starting_price': float(self.starting_price),
             'min_price': float(self.min_price),
             'condition': self.condition,
-            'image_path': self.image_path,
-            'is_sold': self.is_sold,
+            'image_filename': self.image_filename,
+            'seller_id': self.seller_id,
+            'is_available': self.is_available,
             'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'sold_at': self.sold_at.isoformat() if self.sold_at else None,
+            'updated_at': self.updated_at.isoformat(),
             'views_count': self.views_count,
             'dimensions': self.dimensions,
             'material': self.material,
             'brand': self.brand,
-            'color': self.color,
-            'seller_name': self.owner.username if self.owner else 'Unknown'
+            'color': self.color
         }
     
     def __repr__(self):
-        return f'<Item {self.name}>'
+        return f'<Item {self.name} (${self.starting_price})>'

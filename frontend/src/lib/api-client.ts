@@ -1,5 +1,5 @@
-// API client for connecting to Flask backend
-const FLASK_API_URL = process.env.NEXT_PUBLIC_FLASK_API_URL || 'http://localhost:8000'
+// API client for connecting to FastAPI backend
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export interface AIAnalysisResult {
   success: boolean
@@ -51,13 +51,44 @@ export interface CreateListingData {
 
 export class ApiClient {
   private baseUrl: string
+  private token: string | null = null
   
-  constructor(baseUrl: string = FLASK_API_URL) {
+  constructor(baseUrl: string = API_URL) {
     this.baseUrl = baseUrl
+    // Load token from localStorage if available
+    if (typeof window !== 'undefined') {
+      this.token = localStorage.getItem('auth_token')
+    }
+  }
+
+  setToken(token: string) {
+    this.token = token
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('auth_token', token)
+    }
+  }
+
+  clearToken() {
+    this.token = null
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token')
+    }
+  }
+
+  private getHeaders(): HeadersInit {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`
+    }
+    return headers
   }
 
   async get(endpoint: string) {
-    const response = await fetch(`${this.baseUrl}${endpoint}`)
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      headers: this.getHeaders()
+    })
     if (!response.ok) {
       throw new Error(`API Error: ${response.statusText}`)
     }
@@ -67,9 +98,7 @@ export class ApiClient {
   async post(endpoint: string, data: unknown) {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: this.getHeaders(),
       body: JSON.stringify(data),
     })
     if (!response.ok) {
@@ -82,10 +111,15 @@ export class ApiClient {
     const formData = new FormData()
     formData.append('image', file)
 
-    const response = await fetch(`${this.baseUrl}/api/analyze-image`, {
+    const headers: HeadersInit = {}
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/items/analyze-image`, {
       method: 'POST',
-      body: formData,
-      credentials: 'include'
+      headers,
+      body: formData
     })
 
     if (!response.ok) {
@@ -97,7 +131,7 @@ export class ApiClient {
   }
 
   async createAccount(data: CreateAccountData) {
-    const response = await fetch(`${this.baseUrl}/auth/register`, {
+    const response = await fetch(`${this.baseUrl}/api/auth/register`, {
       method: 'POST',  
       headers: {
         'Content-Type': 'application/json',
@@ -108,8 +142,7 @@ export class ApiClient {
         password: data.password,
         seller_personality: 'flexible', // Default personality
         buyer_personality: 'fair' // Default personality
-      }),
-      credentials: 'include'
+      })
     })
 
     if (!response.ok) {
@@ -121,7 +154,7 @@ export class ApiClient {
   }
 
   async loginUser(username: string, password: string) {
-    const response = await fetch(`${this.baseUrl}/auth/login`, {
+    const response = await fetch(`${this.baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -129,8 +162,7 @@ export class ApiClient {
       body: JSON.stringify({
         username,
         password
-      }),
-      credentials: 'include' // Important for session cookies
+      })
     })
 
     if (!response.ok) {
@@ -138,15 +170,17 @@ export class ApiClient {
       throw new Error(errorData.error || 'Login failed')
     }
 
-    return response.json()
+    const data = await response.json()
+    if (data.access_token) {
+      this.setToken(data.access_token)
+    }
+    return data
   }
 
   async createListing(data: CreateListingData) {
-    const response = await fetch(`${this.baseUrl}/api/create-listing`, {
+    const response = await fetch(`${this.baseUrl}/api/items/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: this.getHeaders(),
       body: JSON.stringify({
         name: data.name,
         description: data.description,
@@ -155,8 +189,7 @@ export class ApiClient {
         min_price: data.min_price,
         condition: data.condition,
         image_filename: data.image_filename
-      }),
-      credentials: 'include' // Important for session cookies
+      })
     })
 
     if (!response.ok) {
@@ -185,8 +218,8 @@ export class ApiClient {
   }
 
   async getMarketplaceItems() {
-    const response = await fetch(`${this.baseUrl}/api/items`, {
-      credentials: 'include'
+    const response = await fetch(`${this.baseUrl}/api/items/`, {
+      headers: this.getHeaders()
     })
     
     if (!response.ok) {
@@ -197,33 +230,24 @@ export class ApiClient {
   }
 
   async getCurrentUser() {
-    // Since the old auth system doesn't have a direct "get current user" endpoint,
-    // we'll need to modify this to work with the existing system
-    // For now, we'll check if we can access a protected endpoint
-    const response = await fetch(`${this.baseUrl}/create-listing`, {
-      method: 'GET',
-      credentials: 'include'
+    const response = await fetch(`${this.baseUrl}/api/auth/me`, {
+      headers: this.getHeaders()
     })
     
     if (!response.ok) {
       return null // Not logged in
     }
     
-    // This is a workaround - we can't get full user info easily from old system
-    // Return a basic user object for now
-    return {
-      id: 1, // placeholder
-      username: 'user',
-      email: 'user@example.com',
-      full_name: 'User'
-    }
+    const data = await response.json()
+    return data.user
   }
 
   async logout() {
-    const response = await fetch(`${this.baseUrl}/auth/logout`, {
-      credentials: 'include'
+    const response = await fetch(`${this.baseUrl}/api/auth/logout`, {
+      headers: this.getHeaders()
     })
     
+    this.clearToken()
     return response.ok
   }
 }

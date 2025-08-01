@@ -1,12 +1,12 @@
 """
-Negotiation and Offer models for marketplace transactions
+Negotiation and Offer models
 """
 
 from enum import Enum
 from datetime import datetime, timezone
-from sqlalchemy import CheckConstraint, Index
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Numeric, CheckConstraint, Index
 
-from ..core.database import db
+from ..core.database import Base
 
 
 class NegotiationStatus(str, Enum):

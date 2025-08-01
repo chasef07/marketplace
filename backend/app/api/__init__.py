@@ -1,13 +1,19 @@
 """
-API routes package
+FastAPI routes package
 """
 
-from flask import Blueprint
+from fastapi import APIRouter
 
-# Create API blueprint
-api = Blueprint('api', __name__, url_prefix='/api')
+# Create main router
+router = APIRouter()
 
-# Import route modules to register them
-from . import auth, items, negotiations, users
+# Import and include route modules
+from .auth import router as auth_router
+from .items import router as items_router
+from .users import router as users_router
 
-__all__ = ['api']
+router.include_router(auth_router, prefix="/auth", tags=["authentication"])
+router.include_router(items_router, prefix="/items", tags=["items"])
+router.include_router(users_router, prefix="/users", tags=["users"])
+
+__all__ = ['router']

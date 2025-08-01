@@ -3,6 +3,10 @@ Configuration management for different environments
 """
 import os
 from urllib.parse import quote_plus
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 class Config:

@@ -10,16 +10,15 @@ interface FurnitureItem {
   id: number
   name: string
   description: string
-  starting_price: number
-  min_price: number
+  starting_price: string
+  min_price: string
   condition: string
   furniture_type: string
-  image_path: string | null
-  user_id: number
-  seller_name: string
-  location: string
+  image_filename: string | null
+  seller_id: number
   created_at: string
-  is_sold: boolean
+  updated_at: string
+  is_available: boolean
 }
 
 interface User {
@@ -62,7 +61,7 @@ export function Marketplace({ user, onCreateListing, onLogout }: MarketplaceProp
     try {
       setLoading(true)
       const response = await apiClient.getMarketplaceItems()
-      setItems(response.items || [])
+      setItems(response || [])
     } catch (err) {
       setError('Failed to load marketplace items')
     } finally {
@@ -74,7 +73,7 @@ export function Marketplace({ user, onCreateListing, onLogout }: MarketplaceProp
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          item.description.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesCategory = selectedCategory === "All" || item.furniture_type === selectedCategory
-    return matchesSearch && matchesCategory && !item.is_sold
+    return matchesSearch && matchesCategory && item.is_available
   })
 
   const formatTimeAgo = (timestamp: string) => {
@@ -227,9 +226,9 @@ export function Marketplace({ user, onCreateListing, onLogout }: MarketplaceProp
                   <CardContent className="p-0">
                     {/* Image */}
                     <div className="bg-gray-100 h-48 flex items-center justify-center rounded-t-lg overflow-hidden">
-                      {item.image_path ? (
+                      {item.image_filename ? (
                         <img 
-                          src={`http://localhost:8000/static/uploads/${item.image_path}`}
+                          src={`http://localhost:8000/static/uploads/${item.image_filename}`}
                           alt={item.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
@@ -243,7 +242,7 @@ export function Marketplace({ user, onCreateListing, onLogout }: MarketplaceProp
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <p className="text-2xl font-bold text-gray-900">${item.starting_price}</p>
-                          {item.min_price < item.starting_price && (
+                          {parseFloat(item.min_price) < parseFloat(item.starting_price) && (
                             <p className="text-sm text-gray-500">Min: ${item.min_price}</p>
                           )}
                         </div>
@@ -265,7 +264,7 @@ export function Marketplace({ user, onCreateListing, onLogout }: MarketplaceProp
                       {/* Seller and Location */}
                       <div className="flex items-center gap-1 text-sm text-gray-600 mb-2">
                         <MapPin className="h-4 w-4" />
-                        <span>{item.location || 'Local pickup'}</span>
+                        <span>{'Local pickup'}</span>
                       </div>
 
                       {/* Seller Info */}
@@ -273,10 +272,10 @@ export function Marketplace({ user, onCreateListing, onLogout }: MarketplaceProp
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
                             <span className="text-xs font-medium text-blue-600">
-                              {item.seller_name?.charAt(0) || 'U'}
+                              {'Anonymous'?.charAt(0) || 'U'}
                             </span>
                           </div>
-                          <span className="text-gray-700">{item.seller_name || 'Anonymous'}</span>
+                          <span className="text-gray-700">{'Anonymous' || 'Anonymous'}</span>
                         </div>
                         <div className="flex items-center gap-1 text-gray-500">
                           <Clock className="h-3 w-3" />

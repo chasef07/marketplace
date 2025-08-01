@@ -1,77 +1,84 @@
 """
-Authentication API routes
+FastAPI Authentication routes
 """
 
-from flask import request, jsonify
-from flask_login import login_user, logout_user, current_user, login_required
+from datetime import timedelta
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
-from . import api
+from ..core.database import get_db
 from ..models import User
-from ..core.database import db
+from ..schemas.auth import LoginRequest, RegisterRequest, AuthResponse, UserResponse
+from ..auth import create_access_token, get_password_hash, verify_password, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user
+
+router = APIRouter()
 
 
-@api.route('/auth/login', methods=['POST'])
-def login():
+@router.post("/login", response_model=AuthResponse)
+async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
     """User login endpoint"""
-    if current_user.is_authenticated:
-        return jsonify({'error': 'Already authenticated'}), 400
+    user = db.query(User).filter(User.username == login_data.username).first()
     
-    data = request.get_json()
-    if not data.get('username') or not data.get('password'):
-        return jsonify({'error': 'Missing username or password'}), 400
-        
-    user = User.query.filter_by(username=data.get('username')).first()
-    if user and user.check_password(data.get('password')):
-        login_user(user)
-        user.update_last_login()
-        return jsonify({'message': 'Login successful', 'user': user.to_dict()}), 200
-    else:
-        return jsonify({'error': 'Invalid username or password'}), 401
+    if not user or not user.check_password(login_data.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password"
+        )
+    
+    # Create access token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    
+    # Update last login
+    user.update_last_login()
+    db.commit()
+    
+    return AuthResponse(
+        message="Login successful",
+        user=UserResponse.model_validate(user),
+        access_token=access_token
+    )
 
 
-@api.route('/auth/register', methods=['POST'])
-def register():
+@router.post("/register", response_model=AuthResponse)
+async def register(register_data: RegisterRequest, db: Session = Depends(get_db)):
     """User registration endpoint"""
-    if current_user.is_authenticated:
-        return jsonify({'error': 'Already authenticated'}), 400
     
-    data = request.get_json()
-    
-    # Basic validation
-    if not data.get('username') or not data.get('email') or not data.get('password'):
-        return jsonify({'error': 'Missing required fields'}), 400
-        
     # Check if user already exists
-    if User.query.filter_by(username=data.get('username')).first():
-        return jsonify({'error': 'Username already exists'}), 400
-    if User.query.filter_by(email=data.get('email')).first():
-        return jsonify({'error': 'Email already exists'}), 400
+    if db.query(User).filter(User.username == register_data.username).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already exists"
+        )
+    
+    if db.query(User).filter(User.email == register_data.email).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already exists"
+        )
     
     # Create new user
     user = User(
-        username=data.get('username'),
-        email=data.get('email'),
-        seller_personality=data.get('seller_personality', 'flexible'),
-        buyer_personality=data.get('buyer_personality', 'fair')
+        username=register_data.username,
+        email=register_data.email,
+        seller_personality=register_data.seller_personality,
+        buyer_personality=register_data.buyer_personality
     )
-    user.set_password(data.get('password'))
+    user.set_password(register_data.password)
     
-    db.session.add(user)
-    db.session.commit()
+    db.add(user)
+    db.commit()
+    db.refresh(user)
     
-    return jsonify({'message': 'Registration successful', 'user': user.to_dict()}), 201
+    return AuthResponse(
+        message="Registration successful",
+        user=UserResponse.model_validate(user)
+    )
 
 
-@api.route('/auth/logout', methods=['POST'])
-@login_required
-def logout():
-    """User logout endpoint"""
-    logout_user()
-    return jsonify({'message': 'Logout successful'}), 200
-
-
-@api.route('/auth/me')
-@login_required
-def get_current_user():
+@router.get("/me", response_model=UserResponse)
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current authenticated user"""
-    return jsonify({'user': current_user.to_dict()}), 200
+    return UserResponse.model_validate(current_user)

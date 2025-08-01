@@ -1,27 +1,23 @@
-langchain>=0.1.0
-langchain-openai>=0.0.5
-python-dotenv>=1.0.0
-pydantic>=2.0.0
-colorama>=0.4.0
-openai>=1.0.0
-flask>=2.3.0
-flask-sqlalchemy>=3.0.0
-flask-login>=0.6.0
-flask-migrate>=4.0.0
-flask-cors>=4.0.0
-bcrypt>=4.0.0
-flask-wtf>=1.1.0
-wtforms>=3.0.0
-pillow>=10.0.0
-email_validator>=2.0.0
-# Database drivers
-psycopg2-binary>=2.9.0
-# Connection pooling and monitoring
+# FastAPI and web framework
+fastapi>=0.104.0
+uvicorn>=0.24.0
+python-multipart>=0.0.6
+
+# Database and ORM
 sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+
+# Authentication and security
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.6
+
 # Environment and configuration
-python-decouple>=3.8
-# Logging and monitoring
-structlog>=23.0.0
-# Background jobs (for future use)
-celery>=5.3.0
-redis>=5.0.0
+python-dotenv>=1.0.0
+
+# AI and image processing
+openai>=1.0.0
+pillow>=10.0.0
+
+# Validation and serialization
+pydantic>=2.0.0
