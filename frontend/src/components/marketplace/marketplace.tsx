@@ -16,7 +16,6 @@ interface FurnitureItem {
   name: string
   description: string
   starting_price: string
-  min_price: string
   condition: string
   furniture_type: string
   image_filename: string | null
@@ -122,7 +121,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
@@ -200,7 +199,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                     selectedCategory === category
                       ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                   }`}
                 >
                   {categoryDisplayNames[category]}
@@ -263,7 +262,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                   onClick={() => onItemClick && onItemClick(item.id)}>
                   <CardContent className="p-0">
                     {/* Image */}
-                    <div className="bg-gray-100 h-48 flex items-center justify-center rounded-t-lg overflow-hidden">
+                    <div className="bg-white border-b h-48 flex items-center justify-center rounded-t-lg overflow-hidden">
                       {item.image_filename ? (
                         <img 
                           src={`http://localhost:8000/static/uploads/${item.image_filename}`}
@@ -281,7 +280,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                         <div>
                           <p className="text-2xl font-bold text-gray-900">${item.starting_price}</p>
                         </div>
-                        <button className="p-2 hover:bg-gray-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="p-2 hover:bg-gray-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                           <Heart className="h-5 w-5 text-gray-400 hover:text-red-500" />
                         </button>
                       </div>

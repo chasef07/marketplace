@@ -80,7 +80,6 @@ async def create_item(
         description=item_data.description,
         furniture_type=item_data.furniture_type,
         starting_price=item_data.starting_price,
-        min_price=item_data.min_price,
         condition=item_data.condition,
         image_filename=item_data.image_filename
     )

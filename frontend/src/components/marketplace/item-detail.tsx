@@ -16,7 +16,6 @@ interface FurnitureItem {
   name: string
   description: string
   starting_price: string
-  min_price: string
   condition: string
   furniture_type: string
   image_filename: string | null
@@ -165,7 +164,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
       case 'good': return 'text-blue-600 bg-blue-50'  
       case 'fair': return 'text-yellow-600 bg-yellow-50'
       case 'poor': return 'text-red-600 bg-red-50'
-      default: return 'text-gray-600 bg-gray-50'
+      default: return 'text-gray-600 bg-white border'
     }
   }
 
@@ -178,10 +177,6 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
       return
     }
 
-    if (item && amount < parseFloat(item.min_price)) {
-      alert(`Offer must be at least $${item.min_price}`)
-      return
-    }
 
     try {
       await onMakeOffer(itemId, amount, offerMessage)
@@ -199,7 +194,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-gray-500">Loading item details...</div>
       </div>
     )
@@ -207,7 +202,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
 
   if (error || !item) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 mb-4">{error || 'Item not found'}</p>
           <Button onClick={onBack} variant="outline">
@@ -220,7 +215,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
@@ -240,7 +235,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
           <div className="space-y-4">
             <Card className="bg-white">
               <CardContent className="p-0 bg-white">
-                <div className="bg-gray-100 h-96 flex items-center justify-center rounded-lg overflow-hidden">
+                <div className="bg-white border h-96 flex items-center justify-center rounded-lg overflow-hidden">
                   {item.image_filename ? (
                     <img 
                       src={`http://localhost:8000/static/uploads/${item.image_filename}`}
@@ -263,9 +258,6 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <p className="text-3xl font-bold text-gray-900">${item.starting_price}</p>
-                    {parseFloat(item.min_price) < parseFloat(item.starting_price) && (
-                      <p className="text-sm text-gray-500">Minimum acceptable: ${item.min_price}</p>
-                    )}
                   </div>
                   <Button variant="outline" size="sm">
                     <Heart className="h-4 w-4" />
@@ -340,7 +332,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                           <div key={offer.id} className={`flex ${offer.offer_type === 'buyer' ? 'justify-start' : 'justify-end'}`}>
                             <div className={`max-w-xs px-3 py-2 rounded-lg ${
                               offer.offer_type === 'buyer' 
-                                ? 'bg-gray-100 text-gray-900' 
+                                ? 'bg-white border text-gray-900' 
                                 : 'bg-blue-600 text-white'
                             }`}>
                               <div className="flex items-center justify-between text-xs mb-1">
@@ -376,7 +368,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           negotiation.status === 'active' ? 'text-blue-600 bg-blue-100' :
                           negotiation.status === 'deal_pending' ? 'text-green-600 bg-green-100' :
-                          negotiation.status === 'completed' ? 'text-gray-600 bg-gray-100' :
+                          negotiation.status === 'completed' ? 'text-gray-600 bg-white border' :
                           'text-red-600 bg-red-100'
                         }`}>
                           {negotiation.status.replace('_', ' ')}
@@ -466,7 +458,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
 
       {/* Offer Modal */}
       {showOfferForm && (
-        <div className="fixed inset-0 bg-gray-100 bg-opacity-95 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-white bg-opacity-95 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md bg-white">
             <CardContent className="p-6 bg-white">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Make an Offer</h3>
@@ -484,13 +476,9 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                       onChange={(e) => setOfferAmount(e.target.value)}
                       className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                       placeholder="0.00"
-                      min={item.min_price}
                       step="0.01"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Minimum: ${item.min_price}
-                  </p>
                 </div>
 
                 <div>

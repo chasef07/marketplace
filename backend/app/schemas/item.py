@@ -13,7 +13,6 @@ class ItemCreate(BaseModel):
     description: str
     furniture_type: str
     starting_price: Decimal
-    min_price: Decimal
     condition: str
     image_filename: Optional[str] = None
 
@@ -23,7 +22,6 @@ class ItemUpdate(BaseModel):
     description: Optional[str] = None
     furniture_type: Optional[str] = None
     starting_price: Optional[Decimal] = None
-    min_price: Optional[Decimal] = None
     condition: Optional[str] = None
 
 
@@ -41,7 +39,6 @@ class ItemResponse(BaseModel):
     description: str
     furniture_type: str
     starting_price: Decimal
-    min_price: Decimal
     condition: str
     image_filename: Optional[str] = None
     seller_id: int

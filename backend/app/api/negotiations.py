@@ -32,11 +32,11 @@ async def create_offer(
     if item.seller_id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot make offer on your own item")
     
-    # Check if offer is above minimum price
-    if offer_data.price < float(item.min_price):
+    # Allow any positive offer amount
+    if offer_data.price <= 0:
         raise HTTPException(
             status_code=400, 
-            detail=f"Offer must be at least ${item.min_price}"
+            detail="Offer must be greater than $0"
         )
     
     # Check if there's an existing active negotiation

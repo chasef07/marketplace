@@ -28,6 +28,7 @@ export default function Home() {
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [pendingListingData, setPendingListingData] = useState<AIAnalysisResult | null>(null)
+  const [dashboardTab, setDashboardTab] = useState<'items' | 'seller-offers' | 'buyer-offers'>('items')
 
   useEffect(() => {
     checkAuthStatus()
@@ -74,12 +75,12 @@ export default function Home() {
 
   const handleMakeOffer = async (itemId: number, offer: number, message: string) => {
     try {
-      await apiClient.post(`/negotiations/items/${itemId}/offers`, {
-        price: offer,
-        message: message
-      })
-      alert('Offer submitted successfully!')
+      await apiClient.createOffer(itemId, offer, message)
+      // Redirect to dashboard to view the offer in buyer offers tab
+      setDashboardTab('buyer-offers')
+      setCurrentView('seller-dashboard')
     } catch (error) {
+      console.error('Failed to submit offer:', error)
       throw error
     }
   }
@@ -93,6 +94,7 @@ export default function Home() {
   }
 
   const handleSellerDashboard = () => {
+    setDashboardTab('items')
     setCurrentView('seller-dashboard')
   }
 
@@ -116,7 +118,6 @@ export default function Home() {
           description: pendingListingData.listing.description,
           furniture_type: pendingListingData.listing.furniture_type,
           starting_price: parseFloat(pendingListingData.pricing.suggested_starting_price.toString()),
-          min_price: parseFloat(pendingListingData.pricing.suggested_min_price.toString()),
           condition: getConditionFromScore(pendingListingData.analysis.condition_score),
           image_filename: pendingListingData.image_filename
         }
@@ -167,6 +168,7 @@ export default function Home() {
             user={user}
             onItemClick={handleItemClick}
             onBackToMarketplace={() => setCurrentView('marketplace')}
+            defaultTab={dashboardTab}
           />
         )
       ) : currentView === 'auth' ? (

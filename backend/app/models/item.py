@@ -33,7 +33,7 @@ class Item(Base):
     description = Column(String(1000))
     furniture_type = Column(String(50), nullable=False, index=True)
     starting_price = Column(Numeric(10, 2), nullable=False)
-    min_price = Column(Numeric(10, 2), nullable=False)
+    min_price = Column(Numeric(10, 2), nullable=True)  # Deprecated - keeping for DB compatibility
     condition = Column(String(50), default='good')
     image_filename = Column(String(500))
     is_available = Column(Boolean, default=True, nullable=False, index=True)
@@ -51,8 +51,6 @@ class Item(Base):
     # Constraints
     __table_args__ = (
         CheckConstraint('starting_price > 0', name='positive_starting_price'),
-        CheckConstraint('min_price > 0', name='positive_min_price'),
-        CheckConstraint('min_price <= starting_price', name='min_price_le_starting_price'),
         Index('idx_item_type_availability', 'furniture_type', 'is_available'),
         Index('idx_item_seller_availability', 'seller_id', 'is_available'),
         Index('idx_item_created_at', 'created_at'),
@@ -66,7 +64,7 @@ class Item(Base):
             'description': self.description,
             'furniture_type': self.furniture_type,
             'starting_price': float(self.starting_price),
-            'min_price': float(self.min_price),
+            'min_price': float(self.min_price) if self.min_price else None,
             'condition': self.condition,
             'image_filename': self.image_filename,
             'seller_id': self.seller_id,

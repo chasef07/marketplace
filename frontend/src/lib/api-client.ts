@@ -44,7 +44,6 @@ export interface CreateListingData {
   description: string
   furniture_type: string
   starting_price: number
-  min_price: number
   condition: string
   image_filename: string
 }
@@ -306,6 +305,14 @@ export class ApiClient {
 
   async getNegotiationOffers(negotiationId: number) {
     const response = await this.get(`/api/negotiations/${negotiationId}/offers`)
+    return response
+  }
+
+  async createOffer(itemId: number, price: number, message: string = '') {
+    const response = await this.post(`/api/negotiations/items/${itemId}/offers`, {
+      price: price,
+      message: message
+    })
     return response
   }
 }
