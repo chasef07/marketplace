@@ -121,7 +121,7 @@ export function AIShowcase({ onSignInClick, onBrowseClick, onPendingListing }: A
             {/* Upload Area */}
             <div className="animate-fade-in-up delay-200">
               <div 
-                className={`border-2 border-dashed rounded-2xl p-16 transition-all duration-300 cursor-pointer group ${
+                className={`border-2 border-dashed rounded-2xl p-16 transition-all duration-300 cursor-pointer group relative ${
                   dragActive 
                     ? 'border-blue-500 bg-blue-50 scale-105' 
                     : 'border-gray-200 hover:border-gray-300 hover:bg-white'
@@ -138,17 +138,67 @@ export function AIShowcase({ onSignInClick, onBrowseClick, onPendingListing }: A
                 onDrop={handleDrop}
                 onClick={() => !loading && handleImageUpload()}
               >
-                <div className="flex flex-col items-center relative">
-                  {loading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-white/90 rounded-2xl z-10">
-                      <div className="text-center">
-                        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                        <div className="text-gray-900 font-medium mb-2">AI is analyzing...</div>
-                        <div className="text-sm text-gray-600">Creating your listing</div>
+                {loading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-950/98 via-blue-900/98 to-blue-800/98 backdrop-blur-xl rounded-2xl z-50 overflow-hidden">
+                    {/* Animated background pattern */}
+                    <div className="absolute inset-0">
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-blue-400/10 to-blue-600/10 animate-pulse"></div>
+                      <div className="absolute top-0 left-0 w-full h-full">
+                        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl animate-float"></div>
+                        <div className="absolute top-3/4 right-1/4 w-24 h-24 bg-blue-400/20 rounded-full blur-2xl animate-float-delayed"></div>
+                        <div className="absolute bottom-1/4 left-1/3 w-20 h-20 bg-blue-600/20 rounded-full blur-xl animate-float-slow"></div>
                       </div>
                     </div>
-                  )}
-                  
+                    
+                    {/* Main content */}
+                    <div className="relative text-center z-10">
+                      {/* Central AI orb */}
+                      <div className="relative mb-8">
+                        <div className="w-20 h-20 mx-auto relative">
+                          {/* Outer rotating ring */}
+                          <div className="absolute inset-0 rounded-full border-2 border-blue-400 animate-spin-slow opacity-80"></div>
+                          <div className="absolute inset-1 rounded-full border border-blue-300 animate-spin-reverse opacity-60"></div>
+                          
+                          {/* Central core */}
+                          <div className="absolute inset-3 rounded-full bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 animate-pulse shadow-2xl shadow-blue-500/50">
+                            <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/20 to-transparent"></div>
+                            <div className="absolute inset-2 rounded-full bg-gradient-to-br from-blue-300/30 to-blue-500/30 animate-ping"></div>
+                          </div>
+                          
+                          {/* Particle effects */}
+                          <div className="absolute -top-2 -left-2 w-2 h-2 bg-blue-300 rounded-full animate-float opacity-80 blur-sm"></div>
+                          <div className="absolute -top-1 -right-3 w-1.5 h-1.5 bg-blue-400 rounded-full animate-float-delayed opacity-70 blur-sm"></div>
+                          <div className="absolute -bottom-3 -left-1 w-1 h-1 bg-blue-500 rounded-full animate-float-slow opacity-60 blur-sm"></div>
+                          <div className="absolute -bottom-2 -right-2 w-2 h-2 bg-blue-300 rounded-full animate-float opacity-75 blur-sm"></div>
+                        </div>
+                      </div>
+                      
+                      {/* Text with gradient effect */}
+                      <div className="space-y-3">
+                        <div className="text-2xl font-bold bg-gradient-to-r from-blue-200 via-blue-100 to-blue-300 bg-clip-text text-transparent animate-pulse">
+                          AI Neural Processing
+                        </div>
+                        <div className="text-sm text-blue-200/80 font-medium tracking-wide">
+                          Analyzing visual patterns • Extracting features • Generating insights
+                        </div>
+                        
+                        {/* Progress indicator */}
+                        <div className="mt-6 w-64 mx-auto">
+                          <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 rounded-full animate-progress-bar"></div>
+                          </div>
+                          <div className="flex justify-between text-xs text-blue-200/60 mt-2">
+                            <span>Image Recognition</span>
+                            <span>Feature Analysis</span>
+                            <span>Price Estimation</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className={`flex flex-col items-center ${loading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}>
                   <div className="w-20 h-20 bg-white border rounded-full flex items-center justify-center mb-6 group-hover:bg-gray-50 transition-colors">
                     <Upload className="h-10 w-10 text-gray-600" />
                   </div>
