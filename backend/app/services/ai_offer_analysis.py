@@ -176,7 +176,60 @@ def analyze_item_offers(item_data: Dict[str, Any], negotiations: List[Dict[str, 
         return analysis_result
         
     except Exception as e:
-        # Return error response with fallback structure
+        print(f"AI Analysis Error: {str(e)}")  # Debug logging
+        
+        # Provide basic categorization as fallback
+        starting_price = item_data.get("starting_price", 0)
+        if starting_price > 0:
+            priority_offers = []
+            fair_offers = []
+            lowball_offers = []
+            
+            # Simple categorization based on percentage
+            for offer in all_offers:
+                percentage = (offer["price"] / starting_price) * 100
+                buyer_info = f"Buyer {offer.get('buyer_id', 'Unknown')}"
+                
+                offer_item = {
+                    "buyer_info": buyer_info,
+                    "current_offer": offer["price"],
+                    "percentage_of_asking": int(percentage),
+                    "reason": f"{percentage:.1f}% of asking price"
+                }
+                
+                if percentage >= 85:
+                    priority_offers.append(offer_item)
+                elif percentage >= 70:
+                    fair_offers.append(offer_item)
+                else:
+                    lowball_offers.append(offer_item)
+            
+            avg_percentage = sum(o["price"] for o in all_offers) / len(all_offers) / starting_price * 100 if all_offers else 0
+            
+            return {
+                "error": f"AI analysis temporarily unavailable: {str(e)}",
+                "priority_offers": priority_offers,
+                "fair_offers": fair_offers,
+                "lowball_offers": lowball_offers,
+                "recommendations": [
+                    f"Found {len(priority_offers)} high-value offers above 85%",
+                    f"Found {len(fair_offers)} reasonable offers between 70-84%",
+                    f"Found {len(lowball_offers)} low offers below 70%",
+                    "Consider responding to higher percentage offers first"
+                ],
+                "market_insights": {
+                    "average_offer_percentage": int(avg_percentage),
+                    "buyer_engagement_level": "high" if len(all_offers) > 20 else "medium" if len(all_offers) > 10 else "low",
+                    "pricing_strategy": f"Average offer is {avg_percentage:.1f}% of asking price"
+                },
+                "analysis_metadata": {
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                    "total_offers_analyzed": len(all_offers),
+                    "total_buyers_analyzed": len(negotiations)
+                }
+            }
+        
+        # Return basic error response
         return {
             "error": f"Analysis failed: {str(e)}",
             "priority_offers": [],

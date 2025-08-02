@@ -280,9 +280,17 @@ async def get_offer_analysis(
     
     offers_data = []
     for offer in all_offers:
+        # Find the buyer_id for this offer
+        buyer_id = None
+        for neg in negotiations:
+            if neg.id == offer.negotiation_id:
+                buyer_id = neg.buyer_id
+                break
+        
         offers_data.append({
             "id": offer.id,
             "negotiation_id": offer.negotiation_id,
+            "buyer_id": buyer_id,
             "offer_type": offer.offer_type.value if hasattr(offer.offer_type, 'value') else str(offer.offer_type),
             "price": float(offer.price),
             "message": offer.message,

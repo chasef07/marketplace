@@ -35,6 +35,12 @@ interface OfferAnalysisData {
   error?: string
 }
 
+interface ActionableRecommendation {
+  action: string
+  description: string
+  buttonText: string
+}
+
 interface OfferAnalysisCardProps {
   itemId: number
   itemName: string
@@ -149,6 +155,68 @@ export function OfferAnalysisCard({ itemId, itemName }: OfferAnalysisCardProps) 
   if (!analysis) return null
 
   const totalOffers = analysis.priority_offers.length + analysis.fair_offers.length + analysis.lowball_offers.length
+  const otherOffers = [...analysis.fair_offers, ...analysis.lowball_offers]
+  
+  // Generate actionable recommendations
+  const generateActionableRecommendations = (): ActionableRecommendation[] => {
+    const recommendations: ActionableRecommendation[] = []
+    
+    if (analysis.priority_offers.length > 0) {
+      recommendations.push({
+        action: "contact_priority",
+        description: `Reach out to your ${analysis.priority_offers.length} priority buyer${analysis.priority_offers.length > 1 ? 's' : ''} to arrange pickup`,
+        buttonText: "Ask About Pickup"
+      })
+    }
+    
+    if (analysis.priority_offers.length > 1) {
+      recommendations.push({
+        action: "create_bidding",
+        description: "Multiple high offers - let them know others are interested to encourage best offer",
+        buttonText: "Inform of Competition"
+      })
+    }
+    
+    if (analysis.fair_offers.length > 0) {
+      recommendations.push({
+        action: "counter_fair",
+        description: `Counter the ${analysis.fair_offers.length} fair offer${analysis.fair_offers.length > 1 ? 's' : ''} with a price between their offer and asking`,
+        buttonText: "Send Counter Offers"
+      })
+    }
+    
+    if (analysis.lowball_offers.length > 5) {
+      recommendations.push({
+        action: "ignore_lowball",
+        description: `Consider ignoring the ${analysis.lowball_offers.length} lowball offers unless no better options`,
+        buttonText: "Archive Low Offers"
+      })
+    }
+    
+    return recommendations
+  }
+  
+  const actionableRecommendations = generateActionableRecommendations()
+  
+  const handleRecommendationAction = (action: string) => {
+    // Here you would implement the actual actions
+    switch (action) {
+      case "contact_priority":
+        alert("Feature coming soon: Send pickup time request to priority buyers")
+        break
+      case "create_bidding":
+        alert("Feature coming soon: Notify buyers of competing offers")
+        break
+      case "counter_fair":
+        alert("Feature coming soon: Send counter offers to fair bidders")
+        break
+      case "ignore_lowball":
+        alert("Feature coming soon: Archive low offers")
+        break
+      default:
+        console.log("Unknown action:", action)
+    }
+  }
 
   return (
     <Card className="bg-white border border-gray-200 shadow-sm">
@@ -195,22 +263,22 @@ export function OfferAnalysisCard({ itemId, itemName }: OfferAnalysisCardProps) 
             <div className="text-lg font-bold text-green-700">{analysis.priority_offers.length}</div>
           </div>
           
-          <div className="text-center p-3 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">⚖️</div>
-            <div className="text-sm font-medium text-blue-900">Fair</div>
-            <div className="text-lg font-bold text-blue-700">{analysis.fair_offers.length}</div>
+          <div className="text-center p-3 bg-gray-50 rounded-lg">
+            <div className="text-2xl font-bold text-gray-600">📋</div>
+            <div className="text-sm font-medium text-gray-900">Other</div>
+            <div className="text-lg font-bold text-gray-700">{otherOffers.length}</div>
           </div>
           
-          <div className="text-center p-3 bg-orange-50 rounded-lg">
-            <div className="text-2xl font-bold text-orange-600">📉</div>
-            <div className="text-sm font-medium text-orange-900">Lowball</div>
-            <div className="text-lg font-bold text-orange-700">{analysis.lowball_offers.length}</div>
+          <div className="text-center p-3 bg-blue-50 rounded-lg">
+            <div className="text-2xl font-bold text-blue-600">📊</div>
+            <div className="text-sm font-medium text-blue-900">Avg Offer</div>
+            <div className="text-lg font-bold text-blue-700">{analysis.market_insights.average_offer_percentage}%</div>
           </div>
           
           <div className="text-center p-3 bg-purple-50 rounded-lg">
-            <div className="text-2xl font-bold text-purple-600">💡</div>
-            <div className="text-sm font-medium text-purple-900">Tips</div>
-            <div className="text-lg font-bold text-purple-700">{analysis.recommendations.length}</div>
+            <div className="text-2xl font-bold text-purple-600">⚡</div>
+            <div className="text-sm font-medium text-purple-900">Actions</div>
+            <div className="text-lg font-bold text-purple-700">{actionableRecommendations.length}</div>
           </div>
         </div>
 
@@ -245,7 +313,7 @@ export function OfferAnalysisCard({ itemId, itemName }: OfferAnalysisCardProps) 
             {analysis.priority_offers.length > 0 && (
               <div>
                 <h4 className="font-medium text-green-900 mb-2 flex items-center gap-2">
-                  🔥 Priority Offers ({analysis.priority_offers.length})
+                  🔥 Priority Offers ({analysis.priority_offers.length}) - Focus Here First
                 </h4>
                 <div className="space-y-2">
                   {analysis.priority_offers.map((offer, index) => (
@@ -264,67 +332,49 @@ export function OfferAnalysisCard({ itemId, itemName }: OfferAnalysisCardProps) 
               </div>
             )}
 
-            {/* Fair Offers */}
-            {analysis.fair_offers.length > 0 && (
+            {/* Actionable Recommendations */}
+            {actionableRecommendations.length > 0 && (
               <div>
-                <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
-                  ⚖️ Fair Offers ({analysis.fair_offers.length})
+                <h4 className="font-medium text-purple-900 mb-2 flex items-center gap-2">
+                  ⚡ Quick Actions
                 </h4>
                 <div className="space-y-2">
-                  {analysis.fair_offers.map((offer, index) => (
-                    <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="font-medium text-blue-900">{offer.buyer_info}</span>
-                        <div className="text-right">
-                          <div className="font-bold text-blue-700">${offer.current_offer}</div>
-                          <div className="text-xs text-blue-600">{offer.percentage_of_asking}% of asking</div>
-                        </div>
+                  {actionableRecommendations.map((rec, index) => (
+                    <div key={index} className="bg-purple-50 border border-purple-200 rounded-lg p-3 flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm text-purple-800 font-medium">{rec.description}</p>
                       </div>
-                      <p className="text-sm text-blue-700">{offer.reason}</p>
+                      <Button
+                        onClick={() => handleRecommendationAction(rec.action)}
+                        size="sm"
+                        className="bg-purple-600 hover:bg-purple-700 text-white ml-3"
+                      >
+                        {rec.buttonText}
+                      </Button>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Recommendations */}
-            {analysis.recommendations.length > 0 && (
-              <div>
-                <h4 className="font-medium text-purple-900 mb-2 flex items-center gap-2">
-                  <Lightbulb className="h-4 w-4" />
-                  AI Recommendations
-                </h4>
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <ul className="space-y-2">
-                    {analysis.recommendations.map((rec, index) => (
-                      <li key={index} className="text-sm text-purple-800 flex items-start gap-2">
-                        <span className="text-purple-600">•</span>
-                        {rec}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
-
-            {/* Lowball Offers (Collapsed by default) */}
-            {analysis.lowball_offers.length > 0 && (
+            {/* Other Offers (Collapsed by default) */}
+            {otherOffers.length > 0 && (
               <details className="group">
-                <summary className="font-medium text-orange-900 mb-2 flex items-center gap-2 cursor-pointer">
-                  📉 Lowball Offers ({analysis.lowball_offers.length}) 
-                  <span className="text-xs text-gray-500 ml-2">Click to view</span>
+                <summary className="font-medium text-gray-900 mb-2 flex items-center gap-2 cursor-pointer">
+                  📋 Other Offers ({otherOffers.length}) 
+                  <span className="text-xs text-gray-500 ml-2">Click to view all remaining offers</span>
                 </summary>
                 <div className="space-y-2 mt-2">
-                  {analysis.lowball_offers.map((offer, index) => (
-                    <div key={index} className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                  {otherOffers.map((offer, index) => (
+                    <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                       <div className="flex justify-between items-start mb-1">
-                        <span className="font-medium text-orange-900">{offer.buyer_info}</span>
+                        <span className="font-medium text-gray-900">{offer.buyer_info}</span>
                         <div className="text-right">
-                          <div className="font-bold text-orange-700">${offer.current_offer}</div>
-                          <div className="text-xs text-orange-600">{offer.percentage_of_asking}% of asking</div>
+                          <div className="font-bold text-gray-700">${offer.current_offer}</div>
+                          <div className="text-xs text-gray-600">{offer.percentage_of_asking}% of asking</div>
                         </div>
                       </div>
-                      <p className="text-sm text-orange-700">{offer.reason}</p>
+                      <p className="text-sm text-gray-700">{offer.reason}</p>
                     </div>
                   ))}
                 </div>
