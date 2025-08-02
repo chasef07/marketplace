@@ -2,24 +2,43 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Upload, ArrowRight, Star, MapPin } from "lucide-react"
+import { Upload, ArrowRight, Star, MapPin, Plus } from "lucide-react"
 import { useState, useRef } from "react"
-import { apiClient, type AIAnalysisResult } from "@/lib/api-client"
+import { apiClient, type AIAnalysisResult, type CreateListingData } from "@/lib/api-client"
 
-
-interface AIShowcaseProps {
-  onSignInClick?: () => void
-  onBrowseClick?: () => void
-  onPendingListing?: (analysisData: AIAnalysisResult) => void
+interface User {
+  id: number
+  username: string
+  email: string
+  seller_personality: string
+  buyer_personality: string
+  is_active: boolean
+  created_at: string
+  last_login?: string
 }
 
-export function AIShowcase({ onSignInClick, onBrowseClick, onPendingListing }: AIShowcaseProps) {
-  const [step, setStep] = useState<'upload' | 'preview'>('upload')
+interface SellerUploadProps {
+  user: User
+  onLogout: () => void
+  onBackToMarketplace: () => void
+  onSellerDashboard: () => void
+  onListingCreated?: () => void
+}
+
+export function SellerUpload({ 
+  user, 
+  onLogout, 
+  onBackToMarketplace, 
+  onSellerDashboard,
+  onListingCreated 
+}: SellerUploadProps) {
+  const [step, setStep] = useState<'upload' | 'preview' | 'success'>('upload')
   const [dragActive, setDragActive] = useState(false)
   const [loading, setLoading] = useState(false)
   const [analysisResult, setAnalysisResult] = useState<AIAnalysisResult | null>(null)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [creatingListing, setCreatingListing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = async (file: File) => {
@@ -68,20 +87,68 @@ export function AIShowcase({ onSignInClick, onBrowseClick, onPendingListing }: A
     }
   }
 
+  const handleCreateListing = async () => {
+    if (!analysisResult) return
+
+    setCreatingListing(true)
+    setError(null)
+
+    try {
+      const getConditionFromScore = (score: number): 'excellent' | 'good' | 'fair' | 'poor' => {
+        if (score >= 8) return 'excellent'
+        if (score >= 6) return 'good'
+        if (score >= 4) return 'fair'
+        return 'poor'
+      }
+
+      const listingData: CreateListingData = {
+        name: analysisResult.listing.title,
+        description: analysisResult.listing.description,
+        furniture_type: analysisResult.listing.furniture_type,
+        starting_price: parseFloat(analysisResult.pricing.suggested_starting_price.toString()),
+        condition: getConditionFromScore(analysisResult.analysis.condition_score),
+        image_filename: analysisResult.image_filename
+      }
+
+      await apiClient.createListing(listingData)
+      setStep('success')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create listing')
+    } finally {
+      setCreatingListing(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="bg-white border-b border-gray-100">
-        <div className="container mx-auto px-6 py-4">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">FurnitureMarket</h1>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 hover:bg-white" onClick={onSignInClick}>
-                Sign In
+            
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-600">
+                Welcome, {user.username}!
+              </span>
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={onBackToMarketplace}
+                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              >
+                Marketplace
               </Button>
-              <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={onBrowseClick}>
-                Browse Items
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={onSellerDashboard}
+                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              >
+                Dashboard
+              </Button>
+              <Button variant="outline" size="sm" onClick={onLogout}>
+                Sign Out
               </Button>
             </div>
           </div>
@@ -101,7 +168,7 @@ export function AIShowcase({ onSignInClick, onBrowseClick, onPendingListing }: A
           <div className="max-w-3xl mx-auto text-center">
             <div className="animate-fade-in-up">
               <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-                Sell furniture
+                Sell another item
                 <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent"> with AI</span>
               </h2>
               <p className="text-xl text-gray-600 mb-12 max-w-2xl mx-auto leading-relaxed">
@@ -219,7 +286,7 @@ export function AIShowcase({ onSignInClick, onBrowseClick, onPendingListing }: A
                       <div className="text-right">
                         <div className="flex items-center gap-1 text-sm text-gray-600">
                           <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                          <span>New seller</span>
+                          <span>{user.username}</span>
                         </div>
                       </div>
                     </div>
@@ -278,20 +345,26 @@ export function AIShowcase({ onSignInClick, onBrowseClick, onPendingListing }: A
                       setError(null)
                     }}
                     className="flex-1 border-gray-300 text-gray-700 hover:bg-white rounded-full py-3"
+                    disabled={creatingListing}
                   >
                     Try Another
                   </Button>
                   <Button 
-                    onClick={() => {
-                      if (analysisResult && onPendingListing) {
-                        onPendingListing(analysisResult)
-                      }
-                      onSignInClick?.()
-                    }}
+                    onClick={handleCreateListing}
+                    disabled={creatingListing}
                     className="flex-1 bg-blue-600 text-white hover:bg-blue-700 rounded-full py-3 font-medium"
                   >
-                    Sign Up to Create Listing
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    {creatingListing ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        Create Listing
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -299,6 +372,48 @@ export function AIShowcase({ onSignInClick, onBrowseClick, onPendingListing }: A
           </div>
         )}
 
+        {step === 'success' && (
+          <div className="max-w-3xl mx-auto text-center animate-fade-in-up">
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-12 mb-8">
+              <div className="text-6xl mb-6">🎉</div>
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                Listing Created!
+              </h2>
+              <p className="text-gray-600 text-lg mb-8">
+                Your item is now live on the marketplace and ready for buyers.
+              </p>
+              
+              <div className="flex gap-4 justify-center">
+                <Button 
+                  onClick={onBackToMarketplace}
+                  className="bg-blue-600 text-white hover:bg-blue-700 px-6 py-3 rounded-full"
+                >
+                  View Marketplace
+                </Button>
+                <Button 
+                  onClick={onSellerDashboard}
+                  variant="outline"
+                  className="border-blue-600 text-blue-600 hover:bg-blue-50 px-6 py-3 rounded-full"
+                >
+                  Manage Listings
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setStep('upload')
+                    setAnalysisResult(null)
+                    setUploadedImage(null)
+                    setError(null)
+                  }}
+                  variant="outline"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-3 rounded-full"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Sell Another
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

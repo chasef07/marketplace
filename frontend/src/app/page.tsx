@@ -6,6 +6,7 @@ import { ItemDetail } from "@/components/marketplace/item-detail"
 import { AuthPage } from "@/components/auth/auth-page"
 import { AuthModal } from "@/components/auth/auth-modal"
 import { SellerDashboard } from "@/components/seller/seller-dashboard"
+import { SellerUpload } from "@/components/seller/seller-upload"
 import { useState, useEffect } from "react"
 import { apiClient, type AIAnalysisResult, type CreateListingData } from "@/lib/api-client"
 
@@ -21,7 +22,7 @@ interface User {
 }
 
 export default function Home() {
-  const [currentView, setCurrentView] = useState<'upload' | 'marketplace' | 'item-detail' | 'auth' | 'seller-dashboard'>('upload')
+  const [currentView, setCurrentView] = useState<'upload' | 'marketplace' | 'item-detail' | 'auth' | 'seller-dashboard' | 'seller-upload'>('upload')
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [marketplaceKey, setMarketplaceKey] = useState(0)
@@ -51,7 +52,7 @@ export default function Home() {
 
   const handleCreateListing = () => {
     if (user) {
-      setCurrentView('upload')
+      setCurrentView('seller-upload')
     } else {
       setShowAuthModal(true)
     }
@@ -152,6 +153,19 @@ export default function Home() {
           onBrowseClick={() => setCurrentView('marketplace')}
           onPendingListing={handlePendingListing}
         />
+      ) : currentView === 'seller-upload' ? (
+        user && (
+          <SellerUpload
+            user={user}
+            onLogout={handleLogout}
+            onBackToMarketplace={() => setCurrentView('marketplace')}
+            onSellerDashboard={handleSellerDashboard}
+            onListingCreated={() => {
+              setCurrentView('marketplace')
+              setMarketplaceKey(prev => prev + 1)
+            }}
+          />
+        )
       ) : currentView === 'marketplace' ? (
         <Marketplace 
           key={marketplaceKey}

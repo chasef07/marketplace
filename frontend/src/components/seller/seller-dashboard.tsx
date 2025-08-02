@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Package, TrendingUp, MessageSquare, Eye, ArrowLeft, X, ChevronDown, ChevronUp, Search, Filter, SortAsc } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
+import { OfferAnalysisCard } from "./offer-analysis-card"
 
 interface User {
   id: number
@@ -467,7 +468,24 @@ export function SellerDashboard({ user, onItemClick, onBackToMarketplace, defaul
                     <p className="text-gray-500">Offers from buyers will appear here.</p>
                   </div>
                 ) : (
-                  <div className="grid gap-4">
+                  <div className="space-y-6">
+                    {/* AI Offer Analysis Cards */}
+                    {(() => {
+                      const itemsWithOffers = Array.from(new Set(sellerNegotiations.map(neg => neg.item_id)))
+                        .map(itemId => items.find(item => item.id === itemId))
+                        .filter(Boolean)
+                      
+                      return itemsWithOffers.map(item => (
+                        <OfferAnalysisCard 
+                          key={item.id}
+                          itemId={item.id}
+                          itemName={item.name}
+                        />
+                      ))
+                    })()}
+                    
+                    {/* Individual Negotiations */}
+                    <div className="grid gap-4">
                     {sellerNegotiations.map((negotiation) => {
                       const item = items.find(i => i.id === negotiation.item_id)
                       return (
@@ -588,6 +606,7 @@ export function SellerDashboard({ user, onItemClick, onBackToMarketplace, defaul
                         </Card>
                       )
                     })}
+                    </div>
                   </div>
                 )}
               </div>

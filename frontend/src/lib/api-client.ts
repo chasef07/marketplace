@@ -48,6 +48,35 @@ export interface CreateListingData {
   image_filename: string
 }
 
+export interface OfferAnalysisItem {
+  buyer_info: string
+  current_offer: number
+  percentage_of_asking: number
+  reason: string
+}
+
+export interface MarketInsights {
+  average_offer_percentage: number
+  buyer_engagement_level: string
+  pricing_strategy: string
+}
+
+export interface AnalysisMetadata {
+  generated_at: string
+  total_offers_analyzed: number
+  total_buyers_analyzed: number
+}
+
+export interface OfferAnalysisResponse {
+  priority_offers: OfferAnalysisItem[]
+  fair_offers: OfferAnalysisItem[]
+  lowball_offers: OfferAnalysisItem[]
+  recommendations: string[]
+  market_insights: MarketInsights
+  analysis_metadata: AnalysisMetadata
+  error?: string
+}
+
 export interface SearchQuery {
   query: string
   limit?: number
@@ -357,6 +386,11 @@ export class ApiClient {
     }
 
     return response.json()
+  }
+
+  async getOfferAnalysis(itemId: number): Promise<OfferAnalysisResponse> {
+    const response = await this.get(`/api/negotiations/items/${itemId}/offer-analysis`)
+    return response
   }
 }
 

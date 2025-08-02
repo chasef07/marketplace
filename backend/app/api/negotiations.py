@@ -9,8 +9,9 @@ from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..models import Item, User, Negotiation, Offer
 from ..models.negotiation import NegotiationStatus, OfferType
-from ..schemas.negotiation import NegotiationResponse, OfferCreate, OfferResponse
+from ..schemas.negotiation import NegotiationResponse, OfferCreate, OfferResponse, OfferAnalysisResponse
 from ..auth import get_current_user
+from ..services.ai_offer_analysis import analyze_item_offers
 
 router = APIRouter()
 
@@ -211,3 +212,86 @@ async def get_negotiation_offers(
     ).order_by(Offer.created_at.asc()).all()
     
     return [OfferResponse.model_validate(offer) for offer in offers]
+
+
+@router.get("/items/{item_id}/offer-analysis", response_model=OfferAnalysisResponse)
+async def get_offer_analysis(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get AI analysis of all offers for an item (sellers only)"""
+    # Get the item
+    item = db.query(Item).filter(Item.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    # Only seller can get analysis
+    if item.seller_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the seller can view offer analysis")
+    
+    # Get all negotiations for this item
+    negotiations = db.query(Negotiation).filter(
+        Negotiation.item_id == item_id
+    ).all()
+    
+    if not negotiations:
+        # Return empty analysis if no offers
+        return OfferAnalysisResponse(
+            priority_offers=[],
+            fair_offers=[],
+            lowball_offers=[],
+            recommendations=["No offers received yet. Consider adjusting your price or improving your listing photos and description."],
+            market_insights={
+                "average_offer_percentage": 0,
+                "buyer_engagement_level": "none",
+                "pricing_strategy": "No market data available yet"
+            },
+            analysis_metadata={
+                "generated_at": "2024-01-01T00:00:00Z",
+                "total_offers_analyzed": 0,
+                "total_buyers_analyzed": 0
+            }
+        )
+    
+    # Get all offers for all negotiations
+    negotiation_ids = [neg.id for neg in negotiations]
+    all_offers = db.query(Offer).filter(
+        Offer.negotiation_id.in_(negotiation_ids)
+    ).order_by(Offer.created_at.asc()).all()
+    
+    # Prepare data for AI analysis
+    item_data = {
+        "name": item.name,
+        "starting_price": float(item.starting_price),
+        "condition": item.condition,
+        "furniture_type": item.furniture_type
+    }
+    
+    negotiations_data = []
+    for neg in negotiations:
+        negotiations_data.append({
+            "id": neg.id,
+            "buyer_id": neg.buyer_id,
+            "status": neg.status.value if hasattr(neg.status, 'value') else str(neg.status),
+            "current_offer": float(neg.current_offer) if neg.current_offer else 0,
+            "round_number": neg.round_number
+        })
+    
+    offers_data = []
+    for offer in all_offers:
+        offers_data.append({
+            "id": offer.id,
+            "negotiation_id": offer.negotiation_id,
+            "offer_type": offer.offer_type.value if hasattr(offer.offer_type, 'value') else str(offer.offer_type),
+            "price": float(offer.price),
+            "message": offer.message,
+            "round_number": offer.round_number,
+            "created_at": offer.created_at
+        })
+    
+    # Get AI analysis
+    analysis_result = analyze_item_offers(item_data, negotiations_data, offers_data)
+    
+    # Return structured response
+    return OfferAnalysisResponse(**analysis_result)
