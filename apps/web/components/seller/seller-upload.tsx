@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Upload, ArrowRight, Star, MapPin, Plus } from "lucide-react"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { apiClient, type AIAnalysisResult, type CreateListingData } from "@/lib/api-client-new"
 
 interface User {
@@ -40,6 +40,36 @@ export function SellerUpload({
   const [error, setError] = useState<string | null>(null)
   const [creatingListing, setCreatingListing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Check for pending listing data on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const pendingListing = window.localStorage.getItem('pendingListing')
+      if (pendingListing) {
+        try {
+          const parsedData = JSON.parse(pendingListing)
+          
+          // Handle both old format (just AIAnalysisResult) and new format (with imageUrl)
+          if (parsedData.analysisData && parsedData.imageUrl) {
+            // New format with image URL
+            setAnalysisResult(parsedData.analysisData)
+            setUploadedImage(parsedData.imageUrl)
+          } else {
+            // Old format - just AIAnalysisResult
+            setAnalysisResult(parsedData)
+            setUploadedImage('/placeholder-furniture.jpg')
+          }
+          
+          setStep('preview')
+          // Clean up the localStorage
+          window.localStorage.removeItem('pendingListing')
+        } catch (error) {
+          console.error('Failed to parse pending listing data:', error)
+          window.localStorage.removeItem('pendingListing')
+        }
+      }
+    }
+  }, [])
 
   const handleFileSelect = async (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -94,6 +124,14 @@ export function SellerUpload({
     setError(null)
 
     try {
+      // Check if user is properly authenticated
+      const currentUser = await apiClient.getCurrentUser()
+      
+      if (!currentUser) {
+        setError('User not authenticated. Please sign in again.')
+        return
+      }
+
       const getConditionFromScore = (score: number): 'excellent' | 'good' | 'fair' | 'poor' => {
         if (score >= 8) return 'excellent'
         if (score >= 6) return 'good'
@@ -111,7 +149,14 @@ export function SellerUpload({
       }
 
       await apiClient.createListing(listingData)
-      setStep('success')
+      
+      // Navigate immediately to marketplace to see the new listing
+      if (onListingCreated) {
+        onListingCreated()
+      } else {
+        // Fallback - shouldn't happen but just in case
+        setStep('success')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create listing')
     } finally {

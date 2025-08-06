@@ -42,8 +42,6 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
   const [searchInterpretation, setSearchInterpretation] = useState<string | null>(null)
   const [isAISearchMode, setIsAISearchMode] = useState(false)
 
-  // Debug user data
-  console.log('Marketplace received user:', user)
 
   const categories = ["All", "couch", "chair", "dining_table", "bookshelf", "dresser", "other"]
   
@@ -61,6 +59,25 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
     fetchItems()
   }, [])
 
+  // Add an effect to refresh data when the component mounts (e.g., after navigation)
+  useEffect(() => {
+    // Force refresh when component becomes visible after navigation
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchItems()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    // Force immediate refresh on component mount - this ensures new listings appear
+    fetchItems()
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
+
   const fetchItems = async () => {
     try {
       setLoading(true)
@@ -69,6 +86,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
       setIsAISearchMode(false)
       setSearchInterpretation(null)
     } catch (err) {
+      console.error('Error fetching marketplace items:', err)
       setError('Failed to load marketplace items')
     } finally {
       setLoading(false)
@@ -108,6 +126,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
     const matchesCategory = selectedCategory === "All" || item.furniture_type === selectedCategory
     return matchesSearch && matchesCategory && item.is_available
   })
+
 
   const formatTimeAgo = (timestamp: string) => {
     const now = new Date()
