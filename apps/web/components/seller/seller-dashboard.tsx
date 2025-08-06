@@ -44,6 +44,30 @@ interface Negotiation {
   round_number: number
   created_at: string
   updated_at: string
+  items?: {
+    id: number
+    name: string
+    starting_price: number
+    image_filename: string
+  }
+  seller?: {
+    id: string
+    username: string
+    email: string
+  }
+  buyer?: {
+    id: string
+    username: string
+    email: string
+  }
+  offers?: Array<{
+    id: number
+    price: number
+    message: string
+    offer_type: string
+    round_number: number
+    created_at: string
+  }>
 }
 
 interface Offer {
@@ -404,7 +428,7 @@ export function SellerDashboard({ user, onItemClick, onBackToMarketplace, defaul
                             <div className="w-20 h-20 bg-white border rounded-lg flex items-center justify-center flex-shrink-0">
                               {item.image_filename ? (
                                 <img 
-                                  src={`http://localhost:8000/static/uploads/${item.image_filename}`}
+                                  src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${item.image_filename}`}
                                   alt={item.name}
                                   className="w-full h-full object-cover rounded-lg"
                                 />
@@ -487,7 +511,7 @@ export function SellerDashboard({ user, onItemClick, onBackToMarketplace, defaul
                     {/* Individual Negotiations */}
                     <div className="grid gap-4">
                     {sellerNegotiations.map((negotiation) => {
-                      const item = items.find(i => i.id === negotiation.item_id)
+                      const item = negotiation.items // Use embedded item data from API
                       return (
                         <Card key={negotiation.id} className="hover:shadow-md transition-shadow">
                           <CardContent className="p-4">
@@ -497,7 +521,7 @@ export function SellerDashboard({ user, onItemClick, onBackToMarketplace, defaul
                                   <div className="w-16 h-16 bg-white border rounded-lg flex items-center justify-center">
                                     {item?.image_filename ? (
                                       <img 
-                                        src={`http://localhost:8000/static/uploads/${item.image_filename}`}
+                                        src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${item.image_filename}`}
                                         alt={item.name}
                                         className="w-full h-full object-cover rounded-lg"
                                       />
@@ -707,7 +731,7 @@ export function SellerDashboard({ user, onItemClick, onBackToMarketplace, defaul
                     ) : (
                       <div className="grid gap-4">
                         {filteredAndSortedBuyerOffers.map((negotiation) => {
-                          const item = items.find(i => i.id === negotiation.item_id)
+                          const item = negotiation.items // Use embedded item data from API
                           return (
                             <Card key={negotiation.id} className="hover:shadow-md transition-shadow">
                               <CardContent className="p-4">
@@ -717,7 +741,7 @@ export function SellerDashboard({ user, onItemClick, onBackToMarketplace, defaul
                                   <div className="w-16 h-16 bg-white border rounded-lg flex items-center justify-center">
                                     {item?.image_filename ? (
                                       <img 
-                                        src={`http://localhost:8000/static/uploads/${item.image_filename}`}
+                                        src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${item.image_filename}`}
                                         alt={item.name}
                                         className="w-full h-full object-cover rounded-lg"
                                       />

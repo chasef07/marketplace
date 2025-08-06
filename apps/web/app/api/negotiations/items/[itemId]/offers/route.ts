@@ -15,10 +15,28 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid item ID' }, { status: 400 })
     }
 
-    // Get user from session
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Get user from Authorization header
+    const authHeader = request.headers.get('authorization')
+    let user = null
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1]
+      const { data: { user: tokenUser }, error: tokenError } = await supabase.auth.getUser(token)
+      
+      if (!tokenError && tokenUser) {
+        user = tokenUser
+      }
+    }
+    
+    if (!user) {
+      // Fall back to session-based authentication  
+      const { data: { user: sessionUser }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError || !sessionUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      
+      user = sessionUser
     }
 
     // Get item details

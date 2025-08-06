@@ -308,7 +308,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                     <div className="bg-white border-b h-48 flex items-center justify-center rounded-t-lg overflow-hidden">
                       {item.image_filename ? (
                         <img 
-                          src={`http://localhost:8000/static/uploads/${item.image_filename}`}
+                          src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${item.image_filename}`}
                           alt={item.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />

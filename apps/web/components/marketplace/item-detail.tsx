@@ -238,7 +238,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                 <div className="bg-white border h-96 flex items-center justify-center rounded-lg overflow-hidden">
                   {item.image_filename ? (
                     <img 
-                      src={`http://localhost:8000/static/uploads/${item.image_filename}`}
+                      src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${item.image_filename}`}
                       alt={item.name}
                       className="w-full h-full object-cover"
                     />
