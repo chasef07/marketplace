@@ -2,6 +2,36 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase'
 import OpenAI from 'openai'
 
+interface Buyer {
+  username: string
+  buyer_personality: string
+}
+
+interface Offer {
+  price: number
+  message: string | null
+  offer_type: 'buyer' | 'seller'
+  created_at: string
+}
+
+interface Negotiation {
+  id: number
+  item_id: number
+  buyer_id: string
+  seller_id: string
+  current_offer: number
+  status: string
+  buyer: Buyer
+  offers: Offer[]
+}
+
+interface OfferData {
+  buyer_info: string
+  current_offer: number
+  percentage_of_asking: number
+  reason: string
+}
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
@@ -81,14 +111,14 @@ export async function GET(
     }
 
     // Categorize offers
-    const priority_offers: any[] = []
-    const fair_offers: any[] = []
-    const lowball_offers: any[] = []
+    const priority_offers: OfferData[] = []
+    const fair_offers: OfferData[] = []
+    const lowball_offers: OfferData[] = []
 
     let totalOfferValue = 0
     const startingPrice = item.starting_price
 
-    negotiations.forEach((negotiation: any) => {
+    negotiations.forEach((negotiation: Negotiation) => {
       const currentOffer = negotiation.current_offer
       const percentage = (currentOffer / startingPrice) * 100
       

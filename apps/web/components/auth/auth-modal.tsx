@@ -77,15 +77,15 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
 
       if (mode === 'register') {
         // Register new user with Supabase Auth
-        const { data, error: signUpError } = await apiClient.signUp(formData.email, formData.password, formData.username)
+        const authResult = await apiClient.signUp(formData.email, formData.password, formData.username)
         
-        if (signUpError) throw signUpError
+        if (!authResult) throw new Error('Registration failed')
         
         // Check if user needs email confirmation
-        if (data.user && !data.user.email_confirmed_at) {
+        if (authResult.user && !authResult.user.email_confirmed_at) {
           setError('Registration successful! Please check your email and click the confirmation link, then try signing in.')
           setMode('signin') // Switch to sign in mode
-        } else if (data.user) {
+        } else if (authResult.user) {
           // Auto-confirmed, get user profile
           const user = await apiClient.getCurrentUser()
           if (user) {
@@ -95,13 +95,10 @@ export function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
         }
       } else {
         // Sign in existing user
-        const { error: signInError } = await apiClient.signIn(formData.email, formData.password)
+        const authResult = await apiClient.signIn(formData.email, formData.password)
         
-        if (signInError) {
-          if (signInError.message.includes('Email not confirmed')) {
-            throw new Error('Please check your email and click the confirmation link before signing in.')
-          }
-          throw signInError
+        if (!authResult) {
+          throw new Error('Sign in failed')
         }
         
         const user = await apiClient.getCurrentUser()

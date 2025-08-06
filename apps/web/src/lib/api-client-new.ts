@@ -1,5 +1,6 @@
 // New Supabase-based API client
 import { createClient } from './supabase'
+import type { Session } from '@supabase/supabase-js'
 
 export interface AIAnalysisResult {
   success: boolean
@@ -49,17 +50,60 @@ export interface SearchQuery {
   offset?: number
 }
 
+export interface Item {
+  id: number
+  seller_id: string
+  name: string
+  description: string
+  furniture_type: string
+  starting_price: number
+  condition: string
+  image_filename: string
+  is_available: boolean
+  views_count: number
+  dimensions?: string
+  material?: string
+  brand?: string
+  color?: string
+  created_at: string
+  updated_at: string
+  seller?: {
+    id: string
+    username: string
+  }
+}
+
 export interface SearchResponse {
   success: boolean
-  items: any[]
+  items: Item[]
   total_count: number
   query_interpretation: string
 }
 
+export interface Offer {
+  id: number
+  negotiation_id: number
+  offer_type: 'buyer' | 'seller'
+  amount: number
+  message?: string
+  round_number: number
+  is_counter_offer: boolean
+  created_at: string
+  buyer_id?: string
+  seller_id?: string
+}
+
+export interface OfferAnalysisItem {
+  buyer_info: string
+  current_offer: number
+  percentage_of_asking: number
+  reason: string
+}
+
 export interface OfferAnalysisResponse {
-  priority_offers: any[]
-  fair_offers: any[]
-  lowball_offers: any[]
+  priority_offers: OfferAnalysisItem[]
+  fair_offers: OfferAnalysisItem[]
+  lowball_offers: OfferAnalysisItem[]
   recommendations: string[]
   market_insights: {
     average_offer_percentage: number
@@ -72,6 +116,18 @@ export interface OfferAnalysisResponse {
     total_buyers_analyzed: number
   }
   error?: string
+}
+
+export interface Negotiation {
+  id: number
+  item_id: number
+  buyer_id: string
+  seller_id: string
+  status: 'active' | 'deal_pending' | 'completed' | 'cancelled'
+  current_round: number
+  max_rounds: number
+  created_at: string
+  updated_at: string
 }
 
 export class SupabaseApiClient {
@@ -287,7 +343,7 @@ export class SupabaseApiClient {
     // This method would need to be implemented if used
     // For now, we'll return the negotiation data from getMyNegotiations
     const negotiations = await this.getMyNegotiations()
-    return negotiations.find((n: any) => n.id === negotiationId) || null
+    return negotiations.find((n: Negotiation) => n.id === negotiationId) || null
   }
 
   // Authentication methods using Supabase Auth directly
@@ -327,7 +383,7 @@ export class SupabaseApiClient {
     return session
   }
 
-  onAuthStateChange(callback: (session: any) => void) {
+  onAuthStateChange(callback: (session: Session | null) => void) {
     return this._supabase.auth.onAuthStateChange((_event, session) => {
       callback(session)
     })

@@ -2,6 +2,30 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase'
 import OpenAI from 'openai'
 
+interface ItemWithProfile {
+  id: number
+  seller_id: string
+  name: string
+  description: string | null
+  furniture_type: string
+  starting_price: number
+  condition: string | null
+  image_filename: string | null
+  is_available: boolean
+  material: string | null
+  brand: string | null
+  color: string | null
+  created_at: string
+  profiles: {
+    id: string
+    username: string
+  } | null
+}
+
+interface ItemWithSimilarity extends ItemWithProfile {
+  similarity: number
+}
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
@@ -42,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate embeddings for each item and calculate similarity
-    const itemsWithSimilarity: any[] = []
+    const itemsWithSimilarity: ItemWithSimilarity[] = []
     
     for (const item of items) {
       try {
@@ -72,7 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Sort by similarity score (descending)
-    itemsWithSimilarity.sort((a, b) => b.similarity_score - a.similarity_score)
+    itemsWithSimilarity.sort((a, b) => b.similarity - a.similarity)
 
     // Apply pagination
     const paginatedItems = itemsWithSimilarity.slice(offset, offset + limit)

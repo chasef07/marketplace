@@ -219,16 +219,16 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
       setSuccess(null)
 
       if (mode === 'register') {
-        const { data, error: signUpError } = await apiClient.signUp(
+        const authResult = await apiClient.signUp(
           formData.email, 
           formData.password, 
           formData.username
         )
         
-        if (signUpError) throw signUpError
+        if (!authResult) throw new Error('Registration failed')
         
         // Since we're disabling email confirmation, user should be auto-confirmed
-        if (data.user) {
+        if (authResult.user) {
           // Wait a bit for the profile trigger to execute, then retry getting user
           let user = null
           let retries = 0

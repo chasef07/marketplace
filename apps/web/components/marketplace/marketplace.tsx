@@ -4,27 +4,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Search, Heart, Star, MapPin, Clock, Plus, Sparkles } from "lucide-react"
 import { useState, useEffect } from "react"
-import { apiClient, SearchResponse } from "@/lib/api-client-new"
+import { apiClient, SearchResponse, Item } from "@/lib/api-client-new"
 import { AISearchBar } from "@/components/search/ai-search-bar"
 
 interface SellerInfo {
   id: number
   username: string
-}
-
-interface FurnitureItem {
-  id: number
-  name: string
-  description: string
-  starting_price: string
-  condition: string
-  furniture_type: string
-  image_filename: string | null
-  seller_id: number
-  seller?: SellerInfo
-  created_at: string
-  updated_at: string
-  is_available: boolean
 }
 
 interface User {
@@ -48,7 +33,7 @@ interface MarketplaceProps {
 }
 
 export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSignInClick, onSellerDashboard }: MarketplaceProps) {
-  const [items, setItems] = useState<FurnitureItem[]>([])
+  const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
@@ -336,7 +321,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                       {/* Price and Heart */}
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <p className="text-2xl font-bold text-gray-900">${item.starting_price}</p>
+                          <p className="text-2xl font-bold text-gray-900">${item.starting_price.toFixed(2)}</p>
                         </div>
                         <button className="p-2 hover:bg-gray-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                           <Heart className="h-5 w-5 text-gray-400 hover:text-red-500" />

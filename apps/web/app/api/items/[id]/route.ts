@@ -14,8 +14,13 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid item ID' }, { status: 400 })
     }
 
-    // Increment views count
-    await supabase.rpc('increment_views', { item_id: id })
+    // Increment views count (handle gracefully if function doesn't exist)
+    try {
+      await supabase.rpc('increment_views', { item_id: id })
+    } catch (viewError) {
+      console.warn('Views increment failed (function may not exist):', viewError)
+      // Continue without failing - views are nice to have but not critical
+    }
 
     const { data: item, error } = await supabase
       .from('items')
