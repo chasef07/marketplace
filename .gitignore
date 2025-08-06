@@ -1,10 +1,80 @@
 # Environment variables - NEVER commit these!
+.env*
 .env
 .env.local
-.env.production
-backend/.env
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+apps/web/.env*
 
-# Python
+# API Keys and Secrets
+**/secrets/
+**/*.key
+**/*.pem
+**/credentials.json
+**/.credentials
+
+# Node.js / Next.js
+**/node_modules/
+**/.next/
+**/out/
+**/dist/
+**/.vercel/
+**/build/
+**/coverage/
+**/.nyc_output/
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/.pnpm-debug.log*
+**/lerna-debug.log*
+
+# TypeScript
+**/*.tsbuildinfo
+**/next-env.d.ts
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary folders
+tmp/
+temp/
+
+# Supabase (local development)
+supabase/.temp/
+supabase/docker/
+
+# Testing
+.coverage
+.pytest_cache/
+.tox/
+**/coverage/
+
+# Legacy Python files (from old backend)
 __pycache__/
 *.py[cod]
 *$py.class
@@ -15,59 +85,5 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-
-# Database
 *.db
 *.sqlite3
-marketplace_dev.db
-
-# Uploads (keep structure but ignore files)
-backend/uploads/*
-!backend/uploads/.gitkeep
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Logs
-logs/
-*.log
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Node.js (Frontend)
-frontend/node_modules/
-frontend/.next/
-frontend/out/
-frontend/dist/
-frontend/.env*.local
-frontend/npm-debug.log*
-frontend/yarn-debug.log*
-frontend/yarn-error.log*
-
-# Dependencies
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Testing
-.coverage
-.pytest_cache/
-.tox/
-
-# Distribution / packaging
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/

@@ -30,8 +30,21 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# Environment variables - NEVER commit these!
 .env*
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# API Keys and Secrets
+**/secrets/
+**/*.key
+**/*.pem
+**/credentials.json
+**/.credentials
 
 # vercel
 .vercel
@@ -39,3 +52,37 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary folders
+tmp/
+temp/
+
+# Supabase (local development)
+supabase/.temp/
+supabase/docker/
