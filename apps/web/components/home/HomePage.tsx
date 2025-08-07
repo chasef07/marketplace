@@ -7,6 +7,7 @@ import { Marketplace } from '../marketplace/marketplace'
 import { EnhancedAuth } from '../auth/enhanced-auth'
 import { SellerDashboard } from '../seller/seller-dashboard'
 import { ItemDetail } from '../marketplace/item-detail'
+import { SellerChat } from '../chat/seller-chat'
 import { type AIAnalysisResult, apiClient } from "@/lib/api-client-new"
 
 interface User {
@@ -22,7 +23,7 @@ interface User {
 
 export function HomePage() {
   const [user, setUser] = useState<User | null>(null)
-  const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'dashboard' | 'item-detail' | 'listing-preview'>('home')
+  const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'dashboard' | 'item-detail' | 'listing-preview' | 'seller-chat'>('home')
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
   const [previewData, setPreviewData] = useState<{analysisData: AIAnalysisResult, uploadedImage: string} | null>(null)
   const [marketplaceKey, setMarketplaceKey] = useState(0) // Force marketplace re-render
@@ -151,6 +152,7 @@ export function HomePage() {
         onItemClick={handleItemClick}
         onSignInClick={() => setCurrentView('auth')}
         onSellerDashboard={() => setCurrentView('dashboard')}
+        onSellerChat={() => setCurrentView('seller-chat')}
       />
     )
   }
@@ -172,6 +174,15 @@ export function HomePage() {
         user={user}
         onItemClick={handleItemClick}
         onBackToMarketplace={handleBackToMarketplace}
+      />
+    )
+  }
+
+  if (currentView === 'seller-chat' && user) {
+    return (
+      <SellerChat
+        user={user}
+        onBack={handleBackToMarketplace}
       />
     )
   }

@@ -130,6 +130,40 @@ export interface Negotiation {
   updated_at: string
 }
 
+// Chat interfaces
+export interface ChatMessage {
+  id: number
+  conversation_id: number
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  function_calls?: any
+  function_results?: any
+  metadata: Record<string, any>
+  created_at: string
+}
+
+export interface Conversation {
+  id: number
+  seller_id: string
+  title: string
+  created_at: string
+  updated_at: string
+  last_message_at: string
+}
+
+export interface ChatResponse {
+  message: string
+  conversation_id: number
+  function_executed?: string
+  function_results?: any
+}
+
+export interface ChatHistoryResponse {
+  messages: ChatMessage[]
+  conversation_id: string | null
+  conversation?: Conversation
+}
+
 export class SupabaseApiClient {
   private _supabase = createClient()
 
@@ -139,7 +173,7 @@ export class SupabaseApiClient {
   }
 
   // Helper method to get authenticated headers
-  private async getAuthHeaders(includeContentType: boolean = false): Promise<Record<string, string>> {
+  async getAuthHeaders(includeContentType: boolean = false): Promise<Record<string, string>> {
     const { data: { session } } = await this._supabase.auth.getSession()
     
     const headers: Record<string, string> = {}
@@ -378,6 +412,45 @@ export class SupabaseApiClient {
     return this._supabase.auth.onAuthStateChange((_event, session) => {
       callback(session)
     })
+  }
+
+  // Chat methods
+  async sendChatMessage(message: string, conversationId?: number): Promise<ChatResponse> {
+    const headers = await this.getAuthHeaders(true)
+    
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        message,
+        conversation_id: conversationId
+      })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to send chat message')
+    }
+
+    return response.json()
+  }
+
+  async getChatHistory(conversationId?: number, limit?: number): Promise<ChatHistoryResponse> {
+    const headers = await this.getAuthHeaders()
+    const params = new URLSearchParams()
+    if (conversationId) params.append('conversation_id', conversationId.toString())
+    if (limit) params.append('limit', limit.toString())
+
+    const response = await fetch(`/api/chat/history?${params.toString()}`, {
+      headers
+    })
+    
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to fetch chat history')
+    }
+    
+    return response.json()
   }
 }
 

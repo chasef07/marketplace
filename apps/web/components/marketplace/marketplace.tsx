@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Search, Heart, Star, MapPin, Clock, Plus, Sparkles } from "lucide-react"
+import { Search, Heart, Star, MapPin, Clock, Plus, Sparkles, Bot } from "lucide-react"
 import { useState, useEffect } from "react"
 import { apiClient, SearchResponse, Item } from "@/lib/api-client-new"
 import { AISearchBar } from "@/components/search/ai-search-bar"
@@ -30,9 +30,10 @@ interface MarketplaceProps {
   onItemClick?: (itemId: number) => void
   onSignInClick?: () => void
   onSellerDashboard?: () => void
+  onSellerChat?: () => void
 }
 
-export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSignInClick, onSellerDashboard }: MarketplaceProps) {
+export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSignInClick, onSellerDashboard, onSellerChat }: MarketplaceProps) {
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -179,6 +180,16 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                     style={{ borderColor: '#8B4513', color: '#8B4513' }}
                   >
                     Dashboard
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={onSellerChat}
+                    className="hover:bg-opacity-10"
+                    style={{ borderColor: '#8B4513', color: '#8B4513' }}
+                  >
+                    <Bot className="h-4 w-4 mr-2" />
+                    AI Assistant
                   </Button>
                   <Button 
                     onClick={onCreateListing}
