@@ -194,18 +194,18 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-gray-500">Loading item details...</div>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #F7F3E9 0%, #E8DDD4 50%, #DDD1C7 100%)' }}>
+        <div style={{ color: '#6B5A47' }}>Loading item details...</div>
       </div>
     )
   }
 
   if (error || !item) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #F7F3E9 0%, #E8DDD4 50%, #DDD1C7 100%)' }}>
         <div className="text-center">
           <p className="text-red-600 mb-4">{error || 'Item not found'}</p>
-          <Button onClick={onBack} variant="outline">
+          <Button onClick={onBack} variant="outline" style={{ borderColor: '#8B4513', color: '#8B4513' }}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Marketplace
           </Button>
@@ -215,16 +215,16 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #F7F3E9 0%, #E8DDD4 50%, #DDD1C7 100%)' }}>
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <header className="backdrop-blur-md border-b sticky top-0 z-50" style={{ background: 'rgba(247, 243, 233, 0.9)', borderColor: 'rgba(139, 69, 19, 0.1)' }}>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
-            <Button onClick={onBack} variant="outline" size="sm">
+            <Button onClick={onBack} variant="outline" size="sm" style={{ borderColor: '#8B4513', color: '#8B4513' }}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
-            <h1 className="text-xl font-semibold text-gray-900">{item.name}</h1>
+            <h1 className="text-xl font-semibold" style={{ color: '#3C2415' }}>{item.name}</h1>
           </div>
         </div>
       </header>
@@ -257,9 +257,9 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
               <CardContent className="p-6 bg-white">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <p className="text-3xl font-bold text-gray-900">${item.starting_price}</p>
+                    <p className="text-3xl font-bold" style={{ color: '#3C2415' }}>${item.starting_price}</p>
                   </div>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" style={{ borderColor: '#8B4513', color: '#8B4513' }}>
                     <Heart className="h-4 w-4" />
                   </Button>
                 </div>
@@ -277,7 +277,8 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                     <>
                       <Button 
                         onClick={() => setShowOfferForm(true)}
-                        className="w-full bg-blue-600 hover:bg-blue-700"
+                        className="w-full hover:opacity-90"
+                        style={{ background: 'linear-gradient(135deg, #8B4513, #CD853F)', color: '#F7F3E9' }}
                         size="lg"
                       >
                         <DollarSign className="h-4 w-4 mr-2" />
@@ -289,6 +290,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                           onClick={toggleMessages}
                           variant="outline"
                           className="w-full"
+                          style={{ borderColor: '#8B4513', color: '#8B4513' }}
                           size="lg"
                         >
                           <MessageSquare className="h-4 w-4 mr-2" />
@@ -303,13 +305,13 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                     </>
                   )}
                   {!user && (
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700" size="lg">
+                    <Button className="w-full hover:opacity-90" style={{ background: 'linear-gradient(135deg, #8B4513, #CD853F)', color: '#F7F3E9' }} size="lg">
                       Sign in to Make Offer
                     </Button>
                   )}
                   {isOwnItem && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <p className="text-blue-800 text-sm">This is your listing</p>
+                    <div className="rounded-lg p-4" style={{ background: 'rgba(139, 69, 19, 0.1)', border: '1px solid rgba(139, 69, 19, 0.2)' }}>
+                      <p className="text-sm" style={{ color: '#8B4513' }}>This is your listing</p>
                     </div>
                   )}
                 </div>
@@ -320,10 +322,10 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
             {negotiation && showMessages && (
               <Card className="bg-white">
                 <CardContent className="p-6 bg-white">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Message History</h3>
+                  <h3 className="text-lg font-semibold mb-4" style={{ color: '#3C2415' }}>Message History</h3>
                   {loadingMessages ? (
                     <div className="text-center py-4">
-                      <div className="text-gray-500">Loading messages...</div>
+                      <div style={{ color: '#6B5A47' }}>Loading messages...</div>
                     </div>
                   ) : (
                     <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -355,7 +357,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                           </div>
                         ))
                       ) : (
-                        <p className="text-sm text-gray-500 text-center py-4">
+                        <p className="text-sm text-center py-4" style={{ color: '#6B5A47' }}>
                           No messages yet
                         </p>
                       )}
@@ -386,47 +388,47 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
             {/* Description */}
             <Card className="bg-white">
               <CardContent className="p-6 bg-white">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Description</h3>
-                <p className="text-gray-700 whitespace-pre-wrap">{item.description || 'No description provided.'}</p>
+                <h3 className="text-lg font-semibold mb-3" style={{ color: '#3C2415' }}>Description</h3>
+                <p className="whitespace-pre-wrap" style={{ color: '#6B5A47' }}>{item.description || 'No description provided.'}</p>
               </CardContent>
             </Card>
 
             {/* Details */}
             <Card className="bg-white">
               <CardContent className="p-6 bg-white">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Details</h3>
+                <h3 className="text-lg font-semibold mb-3" style={{ color: '#3C2415' }}>Details</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-700 font-medium">Category:</span>
-                    <p className="font-semibold text-gray-900 capitalize">{item.furniture_type.replace('_', ' ')}</p>
+                    <span className="font-medium" style={{ color: '#6B5A47' }}>Category:</span>
+                    <p className="font-semibold capitalize" style={{ color: '#3C2415' }}>{item.furniture_type.replace('_', ' ')}</p>
                   </div>
                   {item.dimensions && (
                     <div>
-                      <span className="text-gray-700 font-medium">Dimensions:</span>
-                      <p className="font-semibold text-gray-900">{item.dimensions}</p>
+                      <span className="font-medium" style={{ color: '#6B5A47' }}>Dimensions:</span>
+                      <p className="font-semibold" style={{ color: '#3C2415' }}>{item.dimensions}</p>
                     </div>
                   )}
                   {item.material && (
                     <div>
-                      <span className="text-gray-700 font-medium">Material:</span>
-                      <p className="font-semibold text-gray-900">{item.material}</p>
+                      <span className="font-medium" style={{ color: '#6B5A47' }}>Material:</span>
+                      <p className="font-semibold" style={{ color: '#3C2415' }}>{item.material}</p>
                     </div>
                   )}
                   {item.brand && (
                     <div>
-                      <span className="text-gray-700 font-medium">Brand:</span>
-                      <p className="font-semibold text-gray-900">{item.brand}</p>
+                      <span className="font-medium" style={{ color: '#6B5A47' }}>Brand:</span>
+                      <p className="font-semibold" style={{ color: '#3C2415' }}>{item.brand}</p>
                     </div>
                   )}
                   {item.color && (
                     <div>
-                      <span className="text-gray-700 font-medium">Color:</span>
-                      <p className="font-semibold text-gray-900">{item.color}</p>
+                      <span className="font-medium" style={{ color: '#6B5A47' }}>Color:</span>
+                      <p className="font-semibold" style={{ color: '#3C2415' }}>{item.color}</p>
                     </div>
                   )}
                   <div>
-                    <span className="text-gray-700 font-medium">Posted:</span>
-                    <p className="font-semibold text-gray-900">{formatTimeAgo(item.created_at)}</p>
+                    <span className="font-medium" style={{ color: '#6B5A47' }}>Posted:</span>
+                    <p className="font-semibold" style={{ color: '#3C2415' }}>{formatTimeAgo(item.created_at)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -435,16 +437,16 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
             {/* Seller Info */}
             <Card className="bg-white">
               <CardContent className="p-6 bg-white">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Seller Information</h3>
+                <h3 className="text-lg font-semibold mb-3" style={{ color: '#3C2415' }}>Seller Information</h3>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-blue-600">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(139, 69, 19, 0.1)' }}>
+                    <span className="text-sm font-medium" style={{ color: '#8B4513' }}>
                       {(item.seller?.username || 'U').charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">{item.seller?.username || 'Anonymous'}</p>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <p className="font-medium" style={{ color: '#3C2415' }}>{item.seller?.username || 'Anonymous'}</p>
+                    <div className="flex items-center gap-2 text-sm" style={{ color: '#6B5A47' }}>
                       <MapPin className="h-3 w-3" />
                       <span>Local pickup</span>
                     </div>
@@ -461,20 +463,21 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
         <div className="fixed inset-0 bg-white bg-opacity-95 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md bg-white">
             <CardContent className="p-6 bg-white">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Make an Offer</h3>
+              <h3 className="text-lg font-semibold mb-4" style={{ color: '#3C2415' }}>Make an Offer</h3>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#6B5A47' }}>
                     Offer Amount
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#6B5A47' }}>$</span>
                     <input
                       type="number"
                       value={offerAmount}
                       onChange={(e) => setOfferAmount(e.target.value)}
-                      className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                      className="w-full pl-8 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white"
+                      style={{ borderColor: 'rgba(139, 69, 19, 0.2)', color: '#3C2415' }}
                       placeholder="0.00"
                       step="0.01"
                     />
@@ -482,13 +485,14 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#6B5A47' }}>
                     Message (optional)
                   </label>
                   <textarea
                     value={offerMessage}
                     onChange={(e) => setOfferMessage(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white"
+                    style={{ borderColor: 'rgba(139, 69, 19, 0.2)', color: '#3C2415' }}
                     rows={3}
                     placeholder="Add a message to the seller..."
                   />
@@ -499,12 +503,14 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                     onClick={() => setShowOfferForm(false)} 
                     variant="outline" 
                     className="flex-1"
+                    style={{ borderColor: '#8B4513', color: '#8B4513' }}
                   >
                     Cancel
                   </Button>
                   <Button 
                     onClick={handleMakeOffer}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    className="flex-1 hover:opacity-90"
+                    style={{ background: 'linear-gradient(135deg, #8B4513, #CD853F)', color: '#F7F3E9' }}
                   >
                     Submit Offer
                   </Button>

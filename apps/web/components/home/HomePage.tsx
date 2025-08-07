@@ -5,7 +5,6 @@ import { HeroSection } from './HeroSection'
 import { ListingPreview } from './ListingPreview'
 import { Marketplace } from '../marketplace/marketplace'
 import { EnhancedAuth } from '../auth/enhanced-auth'
-import { SellerUpload } from '../seller/seller-upload'
 import { SellerDashboard } from '../seller/seller-dashboard'
 import { ItemDetail } from '../marketplace/item-detail'
 import { type AIAnalysisResult, apiClient } from "@/lib/api-client-new"
@@ -23,7 +22,7 @@ interface User {
 
 export function HomePage() {
   const [user, setUser] = useState<User | null>(null)
-  const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'upload' | 'dashboard' | 'item-detail' | 'listing-preview'>('home')
+  const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'dashboard' | 'item-detail' | 'listing-preview'>('home')
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
   const [previewData, setPreviewData] = useState<{analysisData: AIAnalysisResult, uploadedImage: string} | null>(null)
   const [marketplaceKey, setMarketplaceKey] = useState(0) // Force marketplace re-render
@@ -59,7 +58,7 @@ export function HomePage() {
     }
   }
 
-  const handleAuthSuccess = (userData: User) => {
+  const handleAuthSuccess = async (userData: User) => {
     setUser(userData)
     
     // Check if there's a pending listing from photo upload
@@ -73,8 +72,11 @@ export function HomePage() {
           // Clear the pending data
           window.localStorage.removeItem('pendingListing')
           
-          // Create the listing directly
-          createListingAndNavigate(parsedData.analysisData)
+          // Set view to marketplace immediately to prevent home page flash
+          setCurrentView('marketplace')
+          
+          // Create the listing in the background
+          await createListingAndNavigate(parsedData.analysisData)
           return
         } catch (error) {
           console.error('Failed to parse pending listing:', error)
@@ -102,7 +104,7 @@ export function HomePage() {
 
   const handleCreateListing = () => {
     if (user) {
-      setCurrentView('upload')
+      setCurrentView('home')
     } else {
       setCurrentView('auth')
     }
@@ -163,27 +165,13 @@ export function HomePage() {
     )
   }
 
-  if (currentView === 'upload' && user) {
-    return (
-      <SellerUpload
-        user={user}
-        onLogout={handleSignOut}
-        onBackToMarketplace={handleBackToHome}
-        onSellerDashboard={() => setCurrentView('dashboard')}
-        onListingCreated={() => {
-          setMarketplaceKey(prev => prev + 1) // Force marketplace refresh
-          setCurrentView('marketplace')
-        }}
-      />
-    )
-  }
 
   if (currentView === 'dashboard' && user) {
     return (
       <SellerDashboard
         user={user}
         onItemClick={handleItemClick}
-        onBackToMarketplace={handleBackToHome}
+        onBackToMarketplace={handleBackToMarketplace}
       />
     )
   }

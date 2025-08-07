@@ -65,15 +65,21 @@ This is a serverless AI-powered furniture marketplace built as a Next.js monorep
 
 ### API Architecture
 - **RESTful endpoints** under `/api/` deployed as serverless functions
-- **AI Services**: `/api/ai/analyze-image`, `/api/ai/search`, `/api/ai/offer-analysis`
+- **AI Services**: `/api/ai/analyze-image`, `/api/ai/search`
 - **CRUD Operations**: `/api/items/*`, `/api/negotiations/*`, `/api/auth/me`
+- **Advanced Features**: `/api/negotiations/items/{itemId}/offer-analysis` for AI insights
 - **Authentication**: Handled by Supabase Auth, checked in API routes
 - **File Uploads**: Direct to Supabase Storage with signed URLs
 
 ### Component Architecture
 - **App Router**: Uses `app/` directory structure
 - **Components**: Organized by feature in `components/`
-- **Shared UI**: Reusable components in `components/ui/`
+  - `auth/` - Enhanced authentication UI
+  - `home/` - Home page components (HeroSection, HomePage, ListingPreview, etc.)
+  - `marketplace/` - Marketplace views and item details
+  - `search/` - AI-powered search functionality
+  - `seller/` - Seller dashboard with offer analysis
+  - `ui/` - Reusable UI components
 - **API Client**: Modern Supabase-based client in `src/lib/api-client-new.ts`
 - **Type Safety**: Full TypeScript with Supabase-generated types
 
@@ -140,9 +146,26 @@ Run the SQL in `/supabase/schema.sql` in your Supabase project to create:
 5. **Install Dependencies**: `npm install` from `apps/web/`
 6. **Run Development**: `npm run dev`
 
+## Current Project Status
+
+### Recent Changes
+- Streamlined authentication system with enhanced UI components
+- Removed deprecated landing page components (ai-showcase, features, hero)
+- Consolidated home page functionality with improved components
+- Simplified API structure by removing unused suggestion endpoints
+- Updated search functionality with AI-powered semantic search
+- Enhanced seller dashboard with offer analysis capabilities
+
+### Clean Architecture
+- Removed legacy components and unused API routes
+- Focused on core marketplace functionality
+- Streamlined component structure for better maintainability
+- Enhanced type safety with updated TypeScript definitions
+
 ## Migration Notes
 - Successfully migrated from Python FastAPI to Next.js API routes
 - All backend functionality preserved in TypeScript
 - Supabase replaces custom JWT and SQLite database
 - Enhanced with real-time capabilities and better security
 - No Python dependencies required - pure Node.js/TypeScript stack
+- Recent cleanup focused on core marketplace features

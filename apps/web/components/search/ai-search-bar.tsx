@@ -3,10 +3,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Search, Sparkles, Loader2 } from 'lucide-react'
 
-interface SearchSuggestion {
-  text: string
-  type: 'suggestion' | 'example'
-}
 
 interface AISearchBarProps {
   onSearch: (query: string) => void

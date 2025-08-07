@@ -317,15 +317,6 @@ export class SupabaseApiClient {
     return response.json()
   }
 
-  async getSearchSuggestions() {
-    const response = await fetch('/api/ai/search/suggestions')
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch search suggestions')
-    }
-
-    return response.json()
-  }
 
   async getOfferAnalysis(itemId: number): Promise<OfferAnalysisResponse> {
     const response = await fetch(`/api/negotiations/items/${itemId}/offer-analysis`)

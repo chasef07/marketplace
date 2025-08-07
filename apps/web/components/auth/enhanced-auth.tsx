@@ -251,7 +251,7 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
           
           if (user) {
             onAuthSuccess(user)
-            onClose()
+            // Don't call onClose() - let the parent component handle navigation
           } else {
             throw new Error('Profile creation is taking longer than expected. Please try signing in.')
           }
@@ -264,7 +264,7 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
         const user = await apiClient.getCurrentUser()
         if (user) {
           onAuthSuccess(user)
-          onClose()
+          // Don't call onClose() - let the parent component handle navigation
         }
       } else if (mode === 'reset') {
         // Password reset functionality
@@ -305,17 +305,17 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 bg-opacity-95 flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto border-amber-100 shadow-xl">
         <CardContent className="p-0">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b bg-gray-50">
-            <h2 className="text-xl font-semibold text-gray-900">
+          <div className="flex items-center justify-between p-6 border-b border-amber-100 bg-gradient-to-r from-amber-25 to-orange-25">
+            <h2 className="text-xl font-semibold text-amber-900">
               {mode === 'signin' && 'Welcome Back'}
               {mode === 'register' && 'Create Account'}
               {mode === 'reset' && 'Reset Password'}
             </h2>
-            <Button variant="outline" size="sm" onClick={onClose} disabled={loading}>
+            <Button variant="outline" size="sm" onClick={onClose} disabled={loading} className="border-amber-300 text-amber-800 hover:bg-amber-50">
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -340,15 +340,15 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-amber-800 mb-1">
                 Email Address *
               </label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white ${
-                  getFieldError('email') ? 'border-red-300' : 'border-gray-300'
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-amber-900 bg-white ${
+                  getFieldError('email') ? 'border-red-300' : 'border-amber-300'
                 }`}
                 placeholder="Enter your email address"
                 disabled={loading}
@@ -362,15 +362,15 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
             {/* Username (register only) */}
             {mode === 'register' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-amber-800 mb-1">
                   Username *
                 </label>
                 <input
                   type="text"
                   value={formData.username}
                   onChange={(e) => handleInputChange('username', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white ${
-                    getFieldError('username') ? 'border-red-300' : 'border-gray-300'
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-amber-900 bg-white ${
+                    getFieldError('username') ? 'border-red-300' : 'border-amber-300'
                   }`}
                   placeholder="Choose a username"
                   disabled={loading}
@@ -385,15 +385,15 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
             {/* Full Name (register only) */}
             {mode === 'register' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-amber-800 mb-1">
                   Full Name *
                 </label>
                 <input
                   type="text"
                   value={formData.full_name}
                   onChange={(e) => handleInputChange('full_name', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white ${
-                    getFieldError('full_name') ? 'border-red-300' : 'border-gray-300'
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-amber-900 bg-white ${
+                    getFieldError('full_name') ? 'border-red-300' : 'border-amber-300'
                   }`}
                   placeholder="Enter your full name"
                   disabled={loading}
@@ -408,7 +408,7 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
             {/* Password (not for reset) */}
             {mode !== 'reset' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-amber-800 mb-1">
                   Password *
                 </label>
                 <div className="relative">
@@ -416,8 +416,8 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
                     type={showPassword ? 'text' : 'password'}
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
-                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white ${
-                      getFieldError('password') ? 'border-red-300' : 'border-gray-300'
+                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-amber-900 bg-white ${
+                      getFieldError('password') ? 'border-red-300' : 'border-amber-300'
                     }`}
                     placeholder="Enter your password"
                     disabled={loading}
@@ -426,7 +426,7 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-amber-400 hover:text-amber-600"
                     disabled={loading}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -467,7 +467,7 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
             {/* Confirm Password (register only) */}
             {mode === 'register' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-amber-800 mb-1">
                   Confirm Password *
                 </label>
                 <div className="relative">
@@ -475,8 +475,8 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white ${
-                      getFieldError('confirmPassword') ? 'border-red-300' : 'border-gray-300'
+                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-amber-900 bg-white ${
+                      getFieldError('confirmPassword') ? 'border-red-300' : 'border-amber-300'
                     }`}
                     placeholder="Confirm your password"
                     disabled={loading}
@@ -485,7 +485,7 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-amber-400 hover:text-amber-600"
                     disabled={loading}
                   >
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -500,7 +500,11 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
             {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3"
+              className="w-full py-3 text-white"
+              style={{
+                background: 'linear-gradient(135deg, #8B4513, #CD853F)',
+                border: 'none'
+              }}
               disabled={loading}
             >
               {loading ? (
@@ -528,23 +532,23 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
             <div className="text-center pt-4 space-y-2">
               {mode === 'signin' && (
                 <div className="space-y-2">
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-amber-700">
                     Don't have an account?{' '}
                     <button
                       type="button"
                       onClick={() => switchMode('register')}
-                      className="text-blue-600 hover:text-blue-700 font-medium"
+                      className="text-amber-800 hover:text-amber-900 font-medium"
                       disabled={loading}
                     >
                       Create one
                     </button>
                   </p>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-amber-700">
                     Forgot your password?{' '}
                     <button
                       type="button"
                       onClick={() => switchMode('reset')}
-                      className="text-blue-600 hover:text-blue-700 font-medium"
+                      className="text-amber-800 hover:text-amber-900 font-medium"
                       disabled={loading}
                     >
                       Reset it
@@ -554,12 +558,12 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
               )}
               
               {mode === 'register' && (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-amber-700">
                   Already have an account?{' '}
                   <button
                     type="button"
                     onClick={() => switchMode('signin')}
-                    className="text-blue-600 hover:text-blue-700 font-medium"
+                    className="text-amber-800 hover:text-amber-900 font-medium"
                     disabled={loading}
                   >
                     Sign in
@@ -568,12 +572,12 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
               )}
               
               {mode === 'reset' && (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-amber-700">
                   Remember your password?{' '}
                   <button
                     type="button"
                     onClick={() => switchMode('signin')}
-                    className="text-blue-600 hover:text-blue-700 font-medium"
+                    className="text-amber-800 hover:text-amber-900 font-medium"
                     disabled={loading}
                   >
                     Sign in

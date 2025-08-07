@@ -110,16 +110,16 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #F7F3E9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #2563eb, #3b82f6);
+  background: linear-gradient(to bottom, #8B4513, #CD853F);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #1d4ed8, #2563eb);
+  background: linear-gradient(to bottom, #6B3410, #8B4513);
 }
 
 /* Animation classes */

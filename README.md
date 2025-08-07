@@ -22,10 +22,10 @@ A modern, serverless full-stack marketplace application with AI-powered image an
 - **Real-time Updates** - live notifications via Supabase Realtime
 
 ### 🤝 **Advanced Negotiations**
-- **Multi-round Offers** - structured negotiation system
-- **AI Offer Analysis** - strategic insights for sellers
-- **Personality Matching** - buyer/seller compatibility
-- **Real-time Communication** - instant offer updates
+- **Multi-round Offers** - structured negotiation system with offer tracking
+- **AI Offer Analysis** - strategic insights and market intelligence for sellers
+- **Real-time Communication** - instant offer updates via Supabase Realtime
+- **Smart Analytics** - comprehensive negotiation history and metrics
 
 ## 🚀 Quick Start
 
@@ -89,20 +89,27 @@ marketplace/
 │       ├── app/
 │       │   ├── api/           # API routes (serverless functions)
 │       │   │   ├── ai/        # AI-powered endpoints
+│       │   │   │   ├── analyze-image/  # GPT-4 Vision image analysis
+│       │   │   │   └── search/         # Semantic search
 │       │   │   ├── auth/      # Authentication endpoints
-│       │   │   ├── items/     # Marketplace CRUD
-│       │   │   └── negotiations/ # Offer system
+│       │   │   ├── items/     # Marketplace CRUD operations
+│       │   │   ├── negotiations/  # Advanced offer system
+│       │   │   └── users/     # User management
 │       │   ├── globals.css    # Global styles
 │       │   ├── layout.tsx     # Root layout
 │       │   └── page.tsx       # Home page
 │       ├── components/        # React components
-│       │   ├── auth/         # Authentication UI
+│       │   ├── auth/         # Authentication UI (enhanced-auth.tsx)
+│       │   ├── home/         # Home page components
 │       │   ├── marketplace/  # Marketplace views
-│       │   ├── seller/       # Seller dashboard
+│       │   ├── search/       # AI search functionality
+│       │   ├── seller/       # Seller dashboard & analytics
 │       │   └── ui/           # Reusable components
 │       ├── src/lib/          # Utilities and configurations
-│       │   ├── supabase.ts   # Supabase client setup
-│       │   └── database.types.ts # TypeScript types
+│       │   ├── api-client-new.ts  # Modern Supabase client
+│       │   ├── database.types.ts  # Generated TypeScript types
+│       │   ├── supabase.ts        # Supabase client setup
+│       │   └── utils.ts           # Utility functions
 │       ├── package.json      # Dependencies and scripts
 │       └── next.config.ts    # Next.js configuration
 ├── supabase/
@@ -114,9 +121,8 @@ marketplace/
 ## 🔧 API Endpoints
 
 ### AI Services
-- `POST /api/ai/analyze-image` - GPT-4 Vision image analysis
-- `POST /api/ai/search` - Semantic furniture search
-- `GET /api/ai/offer-analysis/{itemId}` - Strategic offer insights
+- `POST /api/ai/analyze-image` - GPT-4 Vision image analysis with structured output
+- `POST /api/ai/search` - Semantic furniture search using OpenAI embeddings
 
 ### Authentication
 - Handled automatically by Supabase Auth
@@ -129,10 +135,11 @@ marketplace/
 - `PUT /api/items/{id}` - Update listing
 
 ### Negotiations
-- `POST /api/negotiations/items/{id}/offers` - Create offer
-- `GET /api/negotiations/my-negotiations` - User's negotiations
-- `POST /api/negotiations/{id}/accept` - Accept offer
-- `POST /api/negotiations/{id}/counter` - Counter offer
+- `POST /api/negotiations/items/{itemId}/offers` - Create new offer
+- `GET /api/negotiations/my-negotiations` - Get user's negotiations
+- `POST /api/negotiations/{negotiationId}/accept` - Accept offer
+- `POST /api/negotiations/{negotiationId}/counter` - Counter offer
+- `GET /api/negotiations/items/{itemId}/offer-analysis` - AI offer insights
 
 ## 🔒 Security Features
 

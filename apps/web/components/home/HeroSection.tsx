@@ -219,13 +219,13 @@ export function HeroSection({
           height: 100vh;
           max-width: 1200px;
           margin: 0 auto;
-          padding: 4rem 2rem 3rem;
+          padding: 5rem 2rem 3rem;
           align-items: center;
           justify-content: flex-start;
           position: relative;
           z-index: 2;
-          gap: 0;
-          overflow-y: auto;
+          gap: 0.25rem;
+          overflow: hidden;
         }
 
         .hero-header {
@@ -233,7 +233,7 @@ export function HeroSection({
           max-width: 800px;
           flex-shrink: 0;
           margin-bottom: 0;
-          margin-top: 2rem;
+          margin-top: 0.5rem;
         }
 
         .hero-center {
@@ -325,9 +325,11 @@ export function HeroSection({
 
         @media (max-width: 768px) {
           .hero-main {
-            padding: 3.5rem 1rem 2rem;
+            padding: 4rem 1rem 2.5rem;
             height: 100vh;
-            gap: 0;
+            gap: 0.125rem;
+            justify-content: flex-start;
+            overflow: hidden;
           }
           
           .hero-center {
@@ -336,7 +338,7 @@ export function HeroSection({
           
           .hero-header {
             margin-bottom: 0;
-            margin-top: 1.5rem;
+            margin-top: 0.5rem;
           }
           
           .hero-title {

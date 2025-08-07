@@ -120,10 +120,15 @@ export function ListingPreview({ analysisData, uploadedImage, onBack, onSignUp }
                 onClick={handleSignUp}
                 className="signup-button"
                 size="lg"
+                variant="ghost"
+                style={{
+                  background: 'linear-gradient(135deg, #8B4513, #CD853F)',
+                  color: 'white',
+                  border: 'none'
+                }}
               >
-                Sign Up to Create Listing
+                Sign in to Create Listing
               </Button>
-              <p className="signup-note">Create your account to publish this listing</p>
             </div>
           </div>
 
@@ -444,9 +449,9 @@ export function ListingPreview({ analysisData, uploadedImage, onBack, onSignUp }
         }
 
         .signup-button {
-          background: linear-gradient(135deg, #8B4513, #CD853F);
-          color: white;
-          border: none;
+          background: linear-gradient(135deg, #8B4513, #CD853F) !important;
+          color: white !important;
+          border: none !important;
           width: 100%;
           padding: 1rem 2rem;
           font-size: 1.1rem;
