@@ -5,10 +5,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Heart, MapPin, User, DollarSign, MessageSquare, ChevronDown, ChevronUp } from "lucide-react"
 import { apiClient } from "@/lib/api-client-new"
+import { SimpleLocationMap } from "@/components/maps/simple-location-map"
 
 interface SellerInfo {
   id: number
   username: string
+  zip_code?: string
 }
 
 interface FurnitureItem {
@@ -438,7 +440,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
             <Card className="bg-white">
               <CardContent className="p-6 bg-white">
                 <h3 className="text-lg font-semibold mb-3" style={{ color: '#3C2415' }}>Seller Information</h3>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(139, 69, 19, 0.1)' }}>
                     <span className="text-sm font-medium" style={{ color: '#8B4513' }}>
                       {(item.seller?.username || 'U').charAt(0).toUpperCase()}
@@ -448,10 +450,18 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                     <p className="font-medium" style={{ color: '#3C2415' }}>{item.seller?.username || 'Anonymous'}</p>
                     <div className="flex items-center gap-2 text-sm" style={{ color: '#6B5A47' }}>
                       <MapPin className="h-3 w-3" />
-                      <span>Local pickup</span>
+                      <span>{item.seller?.zip_code ? `${item.seller.zip_code} area` : 'Local area'}</span>
                     </div>
                   </div>
                 </div>
+                
+                {/* Location Map */}
+                {item.seller?.zip_code && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium" style={{ color: '#6B5A47' }}>Pickup/Delivery Area</p>
+                    <SimpleLocationMap zipCode={item.seller.zip_code} />
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

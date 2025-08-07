@@ -223,16 +223,26 @@ export function SellerDashboard({ user, onItemClick, onBackToMarketplace, defaul
     } else {
       newExpanded.add(negotiationId)
       
-      // Fetch offers if we don't have them yet
+      // Use offers data that's already loaded from the negotiation, or fetch if needed
       if (!negotiationOffers[negotiationId]) {
-        try {
-          const offers = await apiClient.getNegotiationOffers(negotiationId)
+        const negotiation = negotiations.find(n => n.id === negotiationId)
+        if (negotiation?.offers && negotiation.offers.length > 0) {
+          // Use embedded offers data
           setNegotiationOffers(prev => ({
             ...prev,
-            [negotiationId]: offers || []
+            [negotiationId]: negotiation.offers as Offer[]
           }))
-        } catch (err) {
-          console.error('Failed to fetch offers:', err)
+        } else {
+          // Fallback to API call if offers not embedded
+          try {
+            const offers = await apiClient.getNegotiationOffers(negotiationId)
+            setNegotiationOffers(prev => ({
+              ...prev,
+              [negotiationId]: offers || []
+            }))
+          } catch (err) {
+            console.error('Failed to fetch offers:', err)
+          }
         }
       }
     }

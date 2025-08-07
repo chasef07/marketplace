@@ -363,22 +363,30 @@ export class SupabaseApiClient {
     return response.json()
   }
 
-  // For backward compatibility with components that expect this method
+  // Get offers for a specific negotiation
   async getNegotiationOffers(negotiationId: number) {
-    // This method would need to be implemented if used
-    // For now, we'll return the negotiation data from getMyNegotiations
-    const negotiations = await this.getMyNegotiations()
-    return negotiations.find((n: Negotiation) => n.id === negotiationId) || null
+    const headers = await this.getAuthHeaders()
+    const response = await fetch(`/api/negotiations/${negotiationId}/offers`, {
+      method: 'GET',
+      headers
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch negotiation offers: ${response.statusText}`)
+    }
+
+    return response.json()
   }
 
   // Authentication methods using Supabase Auth directly
-  async signUp(email: string, password: string, username: string) {
+  async signUp(email: string, password: string, username: string, zipCode?: string) {
     const { data, error } = await this._supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          username: username
+          username: username,
+          zip_code: zipCode
         }
       }
     })

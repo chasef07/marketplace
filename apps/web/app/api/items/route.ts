@@ -12,7 +12,8 @@ export async function GET() {
         seller:profiles!seller_id (
           id,
           username,
-          email
+          email,
+          zip_code
         )
       `)
       .eq('is_available', true)

@@ -116,6 +116,20 @@ export function HomePage() {
     setCurrentView('item-detail')
   }
 
+  const handleMakeOffer = async (itemId: number, price: number, message?: string) => {
+    try {
+      await apiClient.createOffer(itemId, price, message || '')
+      
+      // Force marketplace refresh to update item data
+      setMarketplaceKey(prev => prev + 1)
+      
+      return { success: true }
+    } catch (error) {
+      console.error('Failed to create offer:', error)
+      throw error
+    }
+  }
+
   const handleBackToHome = () => {
     setCurrentView('home')
     setPreviewData(null)
@@ -193,6 +207,7 @@ export function HomePage() {
         itemId={selectedItemId}
         user={user}
         onBack={handleBackToMarketplace}
+        onMakeOffer={handleMakeOffer}
       />
     )
   }

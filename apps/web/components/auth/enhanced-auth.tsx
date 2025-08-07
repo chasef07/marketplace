@@ -30,6 +30,7 @@ interface FormData {
   password: string
   confirmPassword: string
   full_name: string
+  zip_code: string
 }
 
 interface FieldError {
@@ -57,7 +58,8 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
     email: '',
     password: '',
     confirmPassword: '',
-    full_name: ''
+    full_name: '',
+    zip_code: ''
   })
 
   // Reset form when mode changes
@@ -71,7 +73,8 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
       email: '',
       password: '',
       confirmPassword: '',
-      full_name: ''
+      full_name: '',
+      zip_code: ''
     })
     setError(null)
     setSuccess(null)
@@ -152,6 +155,12 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
         errors.push({ field: 'full_name', message: 'Full name is required' })
       }
 
+      if (!formData.zip_code.trim()) {
+        errors.push({ field: 'zip_code', message: 'Zip code is required' })
+      } else if (!/^\d{5}(-\d{4})?$/.test(formData.zip_code)) {
+        errors.push({ field: 'zip_code', message: 'Please enter a valid zip code (e.g., 12345 or 12345-6789)' })
+      }
+
       if (!formData.password) {
         errors.push({ field: 'password', message: 'Password is required' })
       } else if (formData.password.length < 6) {
@@ -222,7 +231,8 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
         const authResult = await apiClient.signUp(
           formData.email, 
           formData.password, 
-          formData.username
+          formData.username,
+          formData.zip_code
         )
         
         if (!authResult) throw new Error('Registration failed')
@@ -401,6 +411,30 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
                 />
                 {getFieldError('full_name') && (
                   <p className="text-red-600 text-xs mt-1">{getFieldError('full_name')}</p>
+                )}
+              </div>
+            )}
+
+            {/* Zip Code (register only) */}
+            {mode === 'register' && (
+              <div>
+                <label className="block text-sm font-medium text-amber-800 mb-1">
+                  Zip Code *
+                </label>
+                <input
+                  type="text"
+                  value={formData.zip_code}
+                  onChange={(e) => handleInputChange('zip_code', e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-amber-900 bg-white ${
+                    getFieldError('zip_code') ? 'border-red-300' : 'border-amber-300'
+                  }`}
+                  placeholder="Enter your zip code (e.g., 10001)"
+                  disabled={loading}
+                  autoComplete="postal-code"
+                  maxLength={10}
+                />
+                {getFieldError('zip_code') && (
+                  <p className="text-red-600 text-xs mt-1">{getFieldError('zip_code')}</p>
                 )}
               </div>
             )}

@@ -32,6 +32,7 @@ create table if not exists public.profiles (
   email text unique not null,
   seller_personality text default 'flexible' not null,
   buyer_personality text default 'fair' not null,
+  zip_code varchar(10),
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
   last_login timestamp with time zone,

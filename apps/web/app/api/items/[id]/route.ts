@@ -26,10 +26,11 @@ export async function GET(
       .from('items')
       .select(`
         *,
-        profiles:seller_id (
+        seller:profiles!seller_id (
           id,
           username,
-          email
+          email,
+          zip_code
         )
       `)
       .eq('id', id)
