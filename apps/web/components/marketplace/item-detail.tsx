@@ -5,10 +5,11 @@ import dynamic from 'next/dynamic'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Heart, MapPin, User, DollarSign, MessageSquare, ChevronDown, ChevronUp, Edit, Save, X } from "lucide-react"
-import { apiClient } from "@/lib/api-client-new"
+import { apiClient, ImageData } from "@/lib/api-client-new"
 import { FURNITURE_BLUR_DATA_URL } from "@/lib/blur-data"
 import Image from "next/image"
 import { ItemDetailSkeleton } from "@/components/ui/skeleton"
+import { ImageCarousel } from "@/components/ui/ImageCarousel"
 
 // Lazy load the map component
 const SimpleLocationMap = dynamic(() => import('@/components/maps/simple-location-map').then(mod => ({ default: mod.SimpleLocationMap })), {
@@ -31,12 +32,14 @@ interface FurnitureItem {
   starting_price: string
   condition: string
   furniture_type: string
-  image_filename: string | null
+  image_filename: string | null // Backward compatibility
+  images?: ImageData[] // New multiple images support
   seller_id: string
   seller?: SellerInfo
   created_at: string
   updated_at: string
   is_available: boolean
+  style?: string
   dimensions?: string
   material?: string
   brand?: string
@@ -304,7 +307,6 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
-              <h1 className="text-xl font-semibold" style={{ color: '#3C2415' }}>{item.name}</h1>
             </div>
             
             {isOwnItem && (
@@ -350,27 +352,40 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
 
       <div className="container mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {/* Image */}
+          {/* Image Carousel */}
           <div className="space-y-4">
             <Card className="bg-white">
-              <CardContent className="p-0 bg-white">
-                <div className="bg-white border h-96 flex items-center justify-center rounded-lg overflow-hidden relative">
-                  {item.image_filename ? (
-                    <Image 
-                      src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${item.image_filename}`}
-                      alt={item.name}
-                      fill
-                      className="object-cover"
-                      priority
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 50vw"
-                      placeholder="blur"
-                      blurDataURL={FURNITURE_BLUR_DATA_URL}
-                      quality={90}
-                    />
-                  ) : (
-                    <div className="text-8xl">🪑</div>
-                  )}
-                </div>
+              <CardContent className="p-4 bg-white">
+                {(() => {
+                  // Prepare images array for carousel
+                  let carouselImages: string[] = []
+                  
+                  if (item.images && item.images.length > 0) {
+                    // Use new multiple images format
+                    carouselImages = item.images.map(img => 
+                      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${img.filename}`
+                    )
+                  } else if (item.image_filename) {
+                    // Use old single image format
+                    carouselImages = [`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${item.image_filename}`]
+                  }
+                  
+                  if (carouselImages.length > 0) {
+                    return (
+                      <ImageCarousel 
+                        images={carouselImages}
+                        alt={item.name}
+                        className="h-96"
+                      />
+                    )
+                  } else {
+                    return (
+                      <div className="h-96 flex items-center justify-center bg-gray-100 rounded-lg">
+                        <div className="text-8xl">🪑</div>
+                      </div>
+                    )
+                  }
+                })()}
               </CardContent>
             </Card>
           </div>
@@ -380,7 +395,12 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
             {/* Price and Actions */}
             <Card className="bg-white">
               <CardContent className="p-6 bg-white">
-                <div className="flex justify-between items-start mb-4">
+                {/* Title */}
+                <h1 className="text-2xl font-bold mb-4" style={{ color: '#3C2415' }}>
+                  {item.name}
+                </h1>
+                
+                <div className="mb-4">
                   <div>
                     {isEditing ? (
                       <div className="relative">
@@ -399,11 +419,6 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                       <p className="text-3xl font-bold" style={{ color: '#3C2415' }}>${item.starting_price}</p>
                     )}
                   </div>
-                  {!isOwnItem && (
-                    <Button variant="outline" size="sm" style={{ borderColor: '#8B4513', color: '#8B4513' }}>
-                      <Heart className="h-4 w-4" />
-                    </Button>
-                  )}
                 </div>
 
                 {/* Condition */}
@@ -583,6 +598,12 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                     <span className="font-medium" style={{ color: '#6B5A47' }}>Category:</span>
                     <p className="font-semibold capitalize" style={{ color: '#3C2415' }}>{item.furniture_type.replace('_', ' ')}</p>
                   </div>
+                  {item.style && (
+                    <div>
+                      <span className="font-medium" style={{ color: '#6B5A47' }}>Style:</span>
+                      <p className="font-semibold capitalize" style={{ color: '#3C2415' }}>{item.style}</p>
+                    </div>
+                  )}
                   {item.dimensions && (
                     <div>
                       <span className="font-medium" style={{ color: '#6B5A47' }}>Dimensions:</span>

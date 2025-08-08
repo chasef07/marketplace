@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Camera, Sparkles, Upload, Loader2 } from 'lucide-react'
+import { Camera, Sparkles, Upload, Loader2, X, Plus } from 'lucide-react'
 import { apiClient, type AIAnalysisResult } from "@/lib/api-client-new"
 
 interface PolaroidUploadProps {
-  onShowListingPreview: (analysisData: AIAnalysisResult, uploadedImage: string) => void
+  onShowListingPreview: (analysisData: AIAnalysisResult, uploadedImages: string[]) => void
 }
 
 export function PolaroidUpload({ onShowListingPreview }: PolaroidUploadProps) {
@@ -14,11 +14,48 @@ export function PolaroidUpload({ onShowListingPreview }: PolaroidUploadProps) {
   const [loading, setLoading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [previewUrls, setPreviewUrls] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFileSelect = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file')
+  const addFiles = (files: FileList | File[]) => {
+    const fileArray = Array.from(files)
+    const imageFiles = fileArray.filter(file => file.type.startsWith('image/'))
+    
+    if (imageFiles.length === 0) {
+      setError('Please select image files')
+      return
+    }
+
+    // Limit to 3 images total
+    const totalFiles = selectedFiles.length + imageFiles.length
+    if (totalFiles > 3) {
+      const remainingSlots = 3 - selectedFiles.length
+      setError(`Maximum 3 images allowed. You can add ${remainingSlots} more.`)
+      return
+    }
+
+    // Create preview URLs for new files
+    const newPreviewUrls = imageFiles.map(file => URL.createObjectURL(file))
+    
+    setSelectedFiles(prev => [...prev, ...imageFiles])
+    setPreviewUrls(prev => [...prev, ...newPreviewUrls])
+    setError(null)
+  }
+
+  const removeFile = (index: number) => {
+    // Revoke the preview URL to prevent memory leaks
+    if (previewUrls[index]) {
+      URL.revokeObjectURL(previewUrls[index])
+    }
+    
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+    setPreviewUrls(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const analyzeImages = async () => {
+    if (selectedFiles.length === 0) {
+      setError('Please select at least one image')
       return
     }
 
@@ -27,16 +64,15 @@ export function PolaroidUpload({ onShowListingPreview }: PolaroidUploadProps) {
     setIsClicked(true)
 
     try {
-      // Create preview URL
-      const imageUrl = URL.createObjectURL(file)
-
-      // Analyze with AI
-      const result = await apiClient.uploadAndAnalyzeImage(file)
+      // Analyze with AI using multiple images or single image based on availability
+      const result = selectedFiles.length === 1 
+        ? await apiClient.uploadAndAnalyzeImage(selectedFiles[0])
+        : await apiClient.uploadAndAnalyzeImages(selectedFiles)
       
-      // Navigate to full listing preview
-      onShowListingPreview(result, imageUrl)
+      // Navigate to full listing preview with all preview URLs
+      onShowListingPreview(result, previewUrls)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to analyze image')
+      setError(err instanceof Error ? err.message : 'Failed to analyze images')
     } finally {
       setLoading(false)
       setTimeout(() => setIsClicked(false), 300)
@@ -45,16 +81,19 @@ export function PolaroidUpload({ onShowListingPreview }: PolaroidUploadProps) {
 
   const handleClick = () => {
     if (loading) return
-    fileInputRef.current?.click()
+    if (selectedFiles.length === 0) {
+      fileInputRef.current?.click()
+    } else {
+      analyzeImages()
+    }
   }
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setDragActive(false)
     
-    const file = e.dataTransfer.files[0]
-    if (file) {
-      handleFileSelect(file)
+    if (e.dataTransfer.files) {
+      addFiles(e.dataTransfer.files)
     }
   }
 
@@ -75,7 +114,8 @@ export function PolaroidUpload({ onShowListingPreview }: PolaroidUploadProps) {
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
+        multiple
+        onChange={(e) => e.target.files && addFiles(e.target.files)}
         style={{ display: 'none' }}
       />
 
@@ -123,9 +163,40 @@ export function PolaroidUpload({ onShowListingPreview }: PolaroidUploadProps) {
                     <Loader2 className="loading-spinner" />
                     <span className="loading-text">Analyzing your furniture...</span>
                   </div>
+                ) : selectedFiles.length > 0 ? (
+                  <div className="selected-images">
+                    <div className="image-grid">
+                      {previewUrls.map((url, index) => (
+                        <div key={index} className="image-thumbnail">
+                          <img src={url} alt={`Preview ${index + 1}`} />
+                          <button 
+                            className="remove-button" 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              removeFile(index)
+                            }}
+                            type="button"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                      {selectedFiles.length < 3 && (
+                        <div className="add-more-button" onClick={(e) => {
+                          e.stopPropagation()
+                          fileInputRef.current?.click()
+                        }}>
+                          <Plus size={20} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="image-count">
+                      {selectedFiles.length} of 3 photos • Click to analyze
+                    </div>
+                  </div>
                 ) : (
                   <span className="photo-text">
-                    {dragActive ? 'Drop your photo here!' : 'AI will auto-generate your listing instantly'}
+                    {dragActive ? 'Drop your photos here!' : 'Upload 1-3 photos for better AI analysis'}
                   </span>
                 )}
               </div>
@@ -134,10 +205,27 @@ export function PolaroidUpload({ onShowListingPreview }: PolaroidUploadProps) {
           
           {/* Action Text */}
           <div className="camera-action">
-            <span className="action-text">Snap your furniture to get started!</span>
-            <div className="action-subtitle">Drag, drop, or click to upload</div>
+            <span className="action-text">
+              {selectedFiles.length > 0 
+                ? `${selectedFiles.length} photo${selectedFiles.length > 1 ? 's' : ''} ready to analyze!`
+                : 'Snap your furniture to get started!'
+              }
+            </span>
+            <div className="action-subtitle">
+              {selectedFiles.length > 0
+                ? 'Click to create AI listing'
+                : 'Drag, drop, or click to upload 1-3 photos'
+              }
+            </div>
           </div>
         </div>
+        
+        {/* Error Display */}
+        {error && (
+          <div className="error-message">
+            {error}
+          </div>
+        )}
         
         {/* Click Flash Effect */}
         <div className="flash-effect"></div>
@@ -391,6 +479,103 @@ export function PolaroidUpload({ onShowListingPreview }: PolaroidUploadProps) {
           font-size: 0.9rem;
           font-weight: 500;
           text-align: center;
+        }
+
+        .selected-images {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 0.75rem;
+        }
+
+        .image-grid {
+          display: flex;
+          gap: 0.5rem;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
+        }
+
+        .image-thumbnail {
+          position: relative;
+          width: 50px;
+          height: 50px;
+          border-radius: 8px;
+          overflow: hidden;
+          border: 2px solid #8B4513;
+        }
+
+        .image-thumbnail img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .remove-button {
+          position: absolute;
+          top: -5px;
+          right: -5px;
+          background: #DC2626;
+          color: white;
+          border: none;
+          border-radius: 50%;
+          width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          font-size: 10px;
+          transition: all 0.2s ease;
+        }
+
+        .remove-button:hover {
+          background: #B91C1C;
+          transform: scale(1.1);
+        }
+
+        .add-more-button {
+          width: 50px;
+          height: 50px;
+          border: 2px dashed #8B4513;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: #8B4513;
+          background: rgba(139, 69, 19, 0.1);
+          transition: all 0.2s ease;
+        }
+
+        .add-more-button:hover {
+          background: rgba(139, 69, 19, 0.2);
+          border-color: #6B3410;
+        }
+
+        .image-count {
+          font-size: 0.85rem;
+          color: #8B4513;
+          font-weight: 500;
+          text-align: center;
+        }
+
+        .error-message {
+          position: absolute;
+          bottom: -2.5rem;
+          left: 0;
+          right: 0;
+          text-align: center;
+          color: #DC2626;
+          font-size: 0.85rem;
+          font-weight: 500;
+          background: rgba(220, 38, 38, 0.1);
+          padding: 0.5rem;
+          border-radius: 8px;
+          border: 1px solid rgba(220, 38, 38, 0.3);
         }
 
 

@@ -24,7 +24,7 @@ interface HeroSectionProps {
   onCreateListing: () => void
   onBrowseItems: () => void
   onSellerDashboard: () => void
-  onShowListingPreview: (analysisData: AIAnalysisResult, uploadedImage: string) => void
+  onShowListingPreview: (analysisData: AIAnalysisResult, uploadedImages: string[]) => void
 }
 
 export function HeroSection({ 

@@ -61,17 +61,26 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
     has_prev: false
   })
 
+  // Add a timestamp to force fresh data when needed
+  const [refreshTimestamp, setRefreshTimestamp] = useState(Date.now())
+  
   // Use SWR for data fetching with caching
   const { data, error: swrError, mutate } = useSWR(
-    `/api/items?page=${currentPage}&limit=12`,
+    `/api/items?page=${currentPage}&limit=12&_t=${refreshTimestamp}`,
     fetcher,
     {
       revalidateOnFocus: false,
-      dedupingInterval: 60000, // Dedupe requests within 1 minute
+      dedupingInterval: 30000, // Reduced dedupe interval
       errorRetryCount: 3,
       errorRetryInterval: 5000
     }
   )
+
+  // Add effect to force fresh data when component mounts (for refresh after new listings)
+  useEffect(() => {
+    // Force fresh data by updating timestamp - this bypasses all caching
+    setRefreshTimestamp(Date.now())
+  }, [])
 
   const loading = !data && !swrError
   const items = data?.items || []
@@ -107,6 +116,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
 
   // Function to refresh data (replaces fetchItems)
   const refreshItems = useCallback(() => {
+    setRefreshTimestamp(Date.now())
     mutate()
   }, [mutate])
 
@@ -330,32 +340,41 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                   <CardContent className="p-0">
                     {/* Image */}
                     <div className="bg-white border-b h-48 flex items-center justify-center rounded-t-lg overflow-hidden relative">
-                      {item.image_filename ? (
-                        <Image 
-                          src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${item.image_filename}`}
-                          alt={item.name}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
-                          placeholder="blur"
-                          blurDataURL={FURNITURE_BLUR_DATA_URL}
-                          quality={85}
-                          priority={false}
-                        />
-                      ) : (
-                        <div className="text-6xl">🪑</div>
-                      )}
+                      {(() => {
+                        // Get the primary image - prefer new format, fall back to old
+                        let imageUrl = null
+                        if (item.images && item.images.length > 0) {
+                          // Find primary image or use first image
+                          const primaryImage = item.images.find((img: any) => img.is_primary) || item.images[0]
+                          imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${primaryImage.filename}`
+                        } else if (item.image_filename) {
+                          imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${item.image_filename}`
+                        }
+                        
+                        return imageUrl ? (
+                          <Image 
+                            src={imageUrl}
+                            alt={item.name}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
+                            placeholder="blur"
+                            blurDataURL={FURNITURE_BLUR_DATA_URL}
+                            quality={85}
+                            priority={false}
+                          />
+                        ) : (
+                          <div className="text-6xl">🪑</div>
+                        )
+                      })()}
                     </div>
                     
                     <div className="p-4">
-                      {/* Price and Heart */}
+                      {/* Price */}
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <p className="text-2xl font-bold" style={{ color: '#3C2415' }}>${item.starting_price.toFixed(2)}</p>
                         </div>
-                        <button className="p-2 hover:bg-gray-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Heart className="h-5 w-5 text-gray-400 hover:text-red-500" />
-                        </button>
                       </div>
 
                       {/* Title */}
@@ -371,7 +390,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                       {/* Seller and Location */}
                       <div className="flex items-center gap-1 text-sm mb-2" style={{ color: '#6B5A47' }}>
                         <MapPin className="h-4 w-4" />
-                        <span>{'Local pickup'}</span>
+                        <span>{item.seller?.zip_code ? `Near ${item.seller.zip_code}` : 'Local pickup'}</span>
                       </div>
 
                       {/* Seller Info */}

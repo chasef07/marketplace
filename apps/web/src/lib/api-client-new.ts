@@ -2,6 +2,12 @@
 import { createClient } from './supabase'
 import type { Session } from '@supabase/supabase-js'
 
+export interface ImageData {
+  filename: string
+  order: number
+  is_primary: boolean
+}
+
 export interface AIAnalysisResult {
   success: boolean
   analysis: {
@@ -28,7 +34,8 @@ export interface AIAnalysisResult {
     description: string
     furniture_type: string
   }
-  image_filename: string
+  image_filename?: string // Backward compatibility
+  images?: ImageData[] // New multiple images
 }
 
 export interface CreateListingData {
@@ -37,7 +44,9 @@ export interface CreateListingData {
   furniture_type: string
   starting_price: number
   condition: string
-  image_filename: string
+  image_filename?: string // Backward compatibility
+  images?: ImageData[] // New multiple images support
+  style?: string
   material?: string
   brand?: string
   color?: string
@@ -52,9 +61,11 @@ export interface Item {
   furniture_type: string
   starting_price: number
   condition: string
-  image_filename: string
+  image_filename?: string // Backward compatibility
+  images?: ImageData[] // New multiple images support
   is_available: boolean
   views_count: number
+  style?: string
   dimensions?: string
   material?: string
   brand?: string
@@ -178,6 +189,33 @@ export class SupabaseApiClient {
     if (!response.ok) {
       const errorData = await response.json()
       throw new Error(errorData.error || 'Image analysis failed')
+    }
+
+    return response.json()
+  }
+
+  async uploadAndAnalyzeImages(files: File[]): Promise<AIAnalysisResult> {
+    if (files.length === 0) {
+      throw new Error('No images provided')
+    }
+    
+    if (files.length > 3) {
+      throw new Error('Maximum 3 images allowed')
+    }
+
+    const formData = new FormData()
+    files.forEach((file, index) => {
+      formData.append(`image${index}`, file)
+    })
+
+    const response = await fetch('/api/ai/analyze-images', {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Images analysis failed')
     }
 
     return response.json()

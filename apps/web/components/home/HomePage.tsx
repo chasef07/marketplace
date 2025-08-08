@@ -36,7 +36,7 @@ export function HomePage() {
   const [user, setUser] = useState<User | null>(null)
   const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'dashboard' | 'item-detail' | 'listing-preview' | 'seller-chat'>('home')
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
-  const [previewData, setPreviewData] = useState<{analysisData: AIAnalysisResult, uploadedImage: string} | null>(null)
+  const [previewData, setPreviewData] = useState<{analysisData: AIAnalysisResult, uploadedImages: string[]} | null>(null)
   const [marketplaceKey, setMarketplaceKey] = useState(0) // Force marketplace re-render
   const [isLoading, setIsLoading] = useState(true) // Add loading state
 
@@ -110,10 +110,20 @@ export function HomePage() {
         furniture_type: analysisData.listing.furniture_type,
         starting_price: parseFloat(analysisData.pricing.suggested_starting_price.toString()),
         condition: getConditionFromScore(analysisData.analysis.condition_score),
-        image_filename: analysisData.image_filename
+        image_filename: analysisData.image_filename, // Backward compatibility
+        images: analysisData.images, // New multiple images support
+        // Include AI analysis details
+        style: analysisData.analysis.style,
+        material: analysisData.analysis.material,
+        brand: analysisData.analysis.brand,
+        color: analysisData.analysis.color,
+        dimensions: analysisData.analysis.estimated_dimensions
       }
 
       await apiClient.createListing(listingData)
+      
+      // Small delay to ensure database transaction is committed
+      await new Promise(resolve => setTimeout(resolve, 500))
       
       // Force marketplace refresh and navigate
       setMarketplaceKey(prev => prev + 1)
@@ -143,7 +153,10 @@ export function HomePage() {
           // Set view to marketplace immediately to prevent home page flash
           setCurrentView('marketplace')
           
-          // Create the listing in the background
+          // Wait a bit longer to ensure auth session is fully established
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          
+          // Create the listing in the background with the new user
           await createListingAndNavigate(parsedData.analysisData)
           return
         } catch (error) {
@@ -213,17 +226,17 @@ export function HomePage() {
     setCurrentView('marketplace')
   }
 
-  const handleShowListingPreview = (analysisData: AIAnalysisResult, uploadedImage: string) => {
-    setPreviewData({ analysisData, uploadedImage })
+  const handleShowListingPreview = (analysisData: AIAnalysisResult, uploadedImages: string[]) => {
+    setPreviewData({ analysisData, uploadedImages })
     setCurrentView('listing-preview')
   }
 
   const handleListingPreviewSignUp = (editedData: AIAnalysisResult) => {
-    // Store the edited data and image URL for after authentication
+    // Store the edited data and image URLs for after authentication
     if (typeof window !== 'undefined') {
       const pendingData = {
         analysisData: editedData,
-        imageUrl: previewData?.uploadedImage || ''
+        imageUrls: previewData?.uploadedImages || []
       }
       window.localStorage.setItem('pendingListing', JSON.stringify(pendingData))
     }
@@ -302,9 +315,11 @@ export function HomePage() {
     return (
       <ListingPreview
         analysisData={previewData.analysisData}
-        uploadedImage={previewData.uploadedImage}
+        uploadedImages={previewData.uploadedImages}
+        user={user}
         onBack={handleBackToHome}
         onSignUp={handleListingPreviewSignUp}
+        onCreateListing={createListingAndNavigate}
       />
     )
   }

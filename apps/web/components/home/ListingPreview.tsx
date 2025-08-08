@@ -2,24 +2,52 @@
 
 import { useState } from 'react'
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Edit, Save, MapPin, Star, Camera } from 'lucide-react'
+import { ArrowLeft, Edit, Save, Camera, ChevronLeft, ChevronRight } from 'lucide-react'
 import { type AIAnalysisResult } from "@/lib/api-client-new"
 import Image from "next/image"
 
-interface ListingPreviewProps {
-  analysisData: AIAnalysisResult
-  uploadedImage: string
-  onBack: () => void
-  onSignUp: (editedData: AIAnalysisResult) => void
+interface User {
+  id: string
+  username: string
+  email: string
+  seller_personality: string
+  buyer_personality: string
+  is_active: boolean
+  created_at: string
+  last_login?: string
 }
 
-export function ListingPreview({ analysisData, uploadedImage, onBack, onSignUp }: ListingPreviewProps) {
+interface ListingPreviewProps {
+  analysisData: AIAnalysisResult
+  uploadedImages: string[]
+  user: User | null
+  onBack: () => void
+  onSignUp: (editedData: AIAnalysisResult) => void
+  onCreateListing?: (editedData: AIAnalysisResult) => void
+}
+
+export function ListingPreview({ analysisData, uploadedImages, user, onBack, onSignUp, onCreateListing }: ListingPreviewProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedData, setEditedData] = useState<AIAnalysisResult>(analysisData)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
 
   const handleSignUp = () => {
     onSignUp(editedData)
+  }
+
+  const handleCreateListing = () => {
+    if (onCreateListing) {
+      onCreateListing(editedData)
+    }
+  }
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % uploadedImages.length)
+  }
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + uploadedImages.length) % uploadedImages.length)
   }
 
   const handleInputChange = (field: string, value: string | number, nested?: string) => {
@@ -86,18 +114,54 @@ export function ListingPreview({ analysisData, uploadedImage, onBack, onSignUp }
           {/* Left Column - Image and Basic Info */}
           <div className="preview-left">
             <div className="image-section">
-              <div className="main-image relative">
-                <Image 
-                  src={uploadedImage} 
-                  alt="Your furniture" 
-                  fill
-                  className="object-cover rounded-lg"
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                />
-                <div className="image-overlay">
-                  <Camera className="w-6 h-6" />
-                  <span>Primary Photo</span>
+              <div className="image-carousel relative">
+                <div className="main-image relative">
+                  <Image 
+                    src={uploadedImages[currentImageIndex]} 
+                    alt={`Furniture view ${currentImageIndex + 1}`} 
+                    fill
+                    className="object-cover rounded-lg"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                  <div className="image-overlay">
+                    <Camera className="w-6 h-6" />
+                    <span>Photo {currentImageIndex + 1} of {uploadedImages.length}</span>
+                  </div>
+                  
+                  {/* Navigation arrows - only show if more than 1 image */}
+                  {uploadedImages.length > 1 && (
+                    <>
+                      <button 
+                        className="nav-arrow nav-arrow-left"
+                        onClick={prevImage}
+                        type="button"
+                      >
+                        <ChevronLeft size={20} />
+                      </button>
+                      <button 
+                        className="nav-arrow nav-arrow-right"
+                        onClick={nextImage}
+                        type="button"
+                      >
+                        <ChevronRight size={20} />
+                      </button>
+                    </>
+                  )}
                 </div>
+                
+                {/* Image dots indicator - only show if more than 1 image */}
+                {uploadedImages.length > 1 && (
+                  <div className="image-dots">
+                    {uploadedImages.map((_, index) => (
+                      <button
+                        key={index}
+                        className={`dot ${index === currentImageIndex ? 'active' : ''}`}
+                        onClick={() => setCurrentImageIndex(index)}
+                        type="button"
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             
@@ -123,19 +187,35 @@ export function ListingPreview({ analysisData, uploadedImage, onBack, onSignUp }
             
             {/* Action Buttons */}
             <div className="action-section">
-              <Button 
-                onClick={handleSignUp}
-                className="signup-button"
-                size="lg"
-                variant="ghost"
-                style={{
-                  background: 'linear-gradient(135deg, #8B4513, #CD853F)',
-                  color: 'white',
-                  border: 'none'
-                }}
-              >
-                Sign in to Create Listing
-              </Button>
+              {user ? (
+                <Button 
+                  onClick={handleCreateListing}
+                  className="signup-button"
+                  size="lg"
+                  variant="ghost"
+                  style={{
+                    background: 'linear-gradient(135deg, #8B4513, #CD853F)',
+                    color: 'white',
+                    border: 'none'
+                  }}
+                >
+                  Create Listing
+                </Button>
+              ) : (
+                <Button 
+                  onClick={handleSignUp}
+                  className="signup-button"
+                  size="lg"
+                  variant="ghost"
+                  style={{
+                    background: 'linear-gradient(135deg, #8B4513, #CD853F)',
+                    color: 'white',
+                    border: 'none'
+                  }}
+                >
+                  Sign in to Create Listing
+                </Button>
+              )}
             </div>
           </div>
 
@@ -170,17 +250,6 @@ export function ListingPreview({ analysisData, uploadedImage, onBack, onSignUp }
               </div>
             </div>
 
-            {/* Location and Rating */}
-            <div className="meta-section">
-              <div className="location">
-                <MapPin className="w-4 h-4" />
-                <span>Your Location</span>
-              </div>
-              <div className="rating">
-                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                <span>New Seller</span>
-              </div>
-            </div>
 
             {/* Description */}
             <div className="description-section">
@@ -399,6 +468,66 @@ export function ListingPreview({ analysisData, uploadedImage, onBack, onSignUp }
           font-size: 0.9rem;
         }
 
+        .image-carousel {
+          position: relative;
+        }
+
+        .nav-arrow {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          background: rgba(0, 0, 0, 0.5);
+          color: white;
+          border: none;
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          z-index: 2;
+          transition: all 0.2s ease;
+        }
+
+        .nav-arrow:hover {
+          background: rgba(0, 0, 0, 0.7);
+          transform: translateY(-50%) scale(1.1);
+        }
+
+        .nav-arrow-left {
+          left: 10px;
+        }
+
+        .nav-arrow-right {
+          right: 10px;
+        }
+
+        .image-dots {
+          display: flex;
+          justify-content: center;
+          gap: 0.5rem;
+          margin-top: 1rem;
+        }
+
+        .dot {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          border: none;
+          background: rgba(139, 69, 19, 0.3);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .dot:hover {
+          background: rgba(139, 69, 19, 0.6);
+        }
+
+        .dot.active {
+          background: #8B4513;
+        }
+
         .price-card {
           background: white;
           border-radius: 16px;
@@ -543,21 +672,6 @@ export function ListingPreview({ analysisData, uploadedImage, onBack, onSignUp }
           border-color: #8B4513;
         }
 
-        .meta-section {
-          display: flex;
-          gap: 2rem;
-          margin-bottom: 2rem;
-          padding-bottom: 1.5rem;
-          border-bottom: 1px solid #E8DDD4;
-        }
-
-        .location, .rating {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          font-size: 0.9rem;
-          color: #6B5A47;
-        }
 
         .description-section, .analysis-section, .dimensions-section {
           margin-bottom: 2rem;

@@ -50,8 +50,8 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Add caching headers
-    response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=600') // 5 min client, 10 min CDN
+    // Add caching headers - shorter cache for better UX when new items are added
+    response.headers.set('Cache-Control', 'public, max-age=30, s-maxage=60') // 30 sec client, 1 min CDN
     return response
     } catch (error) {
       console.error('Items fetch error:', error)
@@ -133,6 +133,20 @@ export async function POST(request: NextRequest) {
       furnitureType = 'other'
     }
 
+    // Handle images - support both old and new format
+    let imagesData = []
+    if (body.images && Array.isArray(body.images)) {
+      // New format with multiple images
+      imagesData = body.images
+    } else if (body.image_filename) {
+      // Old format with single image - convert to new format
+      imagesData = [{
+        filename: body.image_filename,
+        order: 1,
+        is_primary: true
+      }]
+    }
+
     // Log the data being inserted for debugging
     console.log('Attempting to insert item with data:', {
       seller_id: user.id,
@@ -142,7 +156,9 @@ export async function POST(request: NextRequest) {
       original_furniture_type: body.furniture_type,
       starting_price: body.starting_price,
       condition: body.condition,
-      image_filename: body.image_filename,
+      image_filename: body.image_filename, // Keep for backward compatibility
+      images: imagesData, // New multiple images support
+      style: body.style,
       material: body.material,
       brand: body.brand,
       color: body.color,
@@ -158,7 +174,9 @@ export async function POST(request: NextRequest) {
         furniture_type: furnitureType,
         starting_price: body.starting_price,
         condition: body.condition,
-        image_filename: body.image_filename,
+        image_filename: body.image_filename || (imagesData[0]?.filename), // Backward compatibility
+        images: imagesData, // New multiple images support
+        style: body.style,
         material: body.material,
         brand: body.brand,
         color: body.color,
