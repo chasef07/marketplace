@@ -80,6 +80,20 @@ export interface SearchResponse {
   query_interpretation: string
 }
 
+export interface PaginationInfo {
+  page: number
+  limit: number
+  total: number
+  total_pages: number
+  has_next: boolean
+  has_prev: boolean
+}
+
+export interface PaginatedResponse<T> {
+  items: T[]
+  pagination: PaginationInfo
+}
+
 export interface Offer {
   id: number
   negotiation_id: number
@@ -223,8 +237,13 @@ export class SupabaseApiClient {
     return response.json()
   }
 
-  async getMarketplaceItems() {
-    const response = await fetch('/api/items')
+  async getMarketplaceItems(page: number = 1, limit: number = 12): Promise<PaginatedResponse<Item>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString()
+    })
+    
+    const response = await fetch(`/api/items?${params}`)
     
     if (!response.ok) {
       throw new Error('Failed to fetch marketplace items')

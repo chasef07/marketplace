@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = createSupabaseServerClient()
+    const { searchParams } = new URL(request.url)
+    
+    // Parse pagination parameters
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '12')
+    const offset = (page - 1) * limit
 
-    const { data: items, error } = await supabase
+    // Validate pagination parameters
+    const validatedLimit = Math.min(Math.max(limit, 1), 50) // Max 50 items per page
+    const validatedOffset = Math.max(offset, 0)
+
+    const { data: items, error, count } = await supabase
       .from('items')
       .select(`
         *,
@@ -15,16 +25,28 @@ export async function GET() {
           email,
           zip_code
         )
-      `)
+      `, { count: 'exact' })
       .eq('is_available', true)
       .order('created_at', { ascending: false })
+      .range(validatedOffset, validatedOffset + validatedLimit - 1)
 
     if (error) {
       console.error('Error fetching items:', error)
       return NextResponse.json({ error: 'Failed to fetch items' }, { status: 500 })
     }
 
-    return NextResponse.json(items)
+    // Return paginated response with metadata
+    return NextResponse.json({
+      items: items || [],
+      pagination: {
+        page,
+        limit: validatedLimit,
+        total: count || 0,
+        total_pages: Math.ceil((count || 0) / validatedLimit),
+        has_next: validatedOffset + validatedLimit < (count || 0),
+        has_prev: page > 1
+      }
+    })
   } catch (error) {
     console.error('Items fetch error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

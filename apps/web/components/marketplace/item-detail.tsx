@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft, Heart, MapPin, User, DollarSign, MessageSquare, ChevronDown, ChevronUp } from "lucide-react"
 import { apiClient } from "@/lib/api-client-new"
 import { SimpleLocationMap } from "@/components/maps/simple-location-map"
+import Image from "next/image"
+import { ItemDetailSkeleton } from "@/components/ui/skeleton"
 
 interface SellerInfo {
   id: number
@@ -195,11 +197,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
   const isOwnItem = user && item && user.id === item.seller_id
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #F7F3E9 0%, #E8DDD4 50%, #DDD1C7 100%)' }}>
-        <div style={{ color: '#6B5A47' }}>Loading item details...</div>
-      </div>
-    )
+    return <ItemDetailSkeleton />
   }
 
   if (error || !item) {
@@ -237,12 +235,15 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
           <div className="space-y-4">
             <Card className="bg-white">
               <CardContent className="p-0 bg-white">
-                <div className="bg-white border h-96 flex items-center justify-center rounded-lg overflow-hidden">
+                <div className="bg-white border h-96 flex items-center justify-center rounded-lg overflow-hidden relative">
                   {item.image_filename ? (
-                    <img 
+                    <Image 
                       src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${item.image_filename}`}
                       alt={item.name}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      priority
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 50vw"
                     />
                   ) : (
                     <div className="text-8xl">🪑</div>
@@ -456,12 +457,21 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                 </div>
                 
                 {/* Location Map */}
-                {item.seller?.zip_code && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium" style={{ color: '#6B5A47' }}>Pickup/Delivery Area</p>
-                    <SimpleLocationMap zipCode={item.seller.zip_code} />
-                  </div>
-                )}
+                <div className="space-y-2 p-4 border-2 border-blue-500 bg-blue-50">
+                  <p className="text-lg font-bold text-blue-800">🗺️ PICKUP/DELIVERY AREA 🗺️</p>
+                  {item.seller?.zip_code ? (
+                    <div className="space-y-2">
+                      <p className="text-green-600 font-semibold">✅ ZIP CODE FOUND: {item.seller.zip_code}</p>
+                      <SimpleLocationMap zipCode={item.seller.zip_code} />
+                      <p className="text-xs text-gray-600">Map should be above this text</p>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-red-100 rounded-lg text-center border-2 border-red-500">
+                      <p className="text-lg font-bold text-red-600">❌ DEBUG: NO ZIP CODE FOUND</p>
+                      <p className="text-sm text-gray-700 mt-2">Seller data: {JSON.stringify(item.seller)}</p>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>

@@ -4,8 +4,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Search, Heart, Star, MapPin, Clock, Plus, Sparkles, Bot } from "lucide-react"
 import { useState, useEffect } from "react"
-import { apiClient, SearchResponse, Item } from "@/lib/api-client-new"
+import { apiClient, SearchResponse, Item, PaginatedResponse, PaginationInfo } from "@/lib/api-client-new"
 import { AISearchBar } from "@/components/search/ai-search-bar"
+import Image from "next/image"
+import { ItemSkeleton } from "@/components/ui/skeleton"
 
 interface SellerInfo {
   id: number
@@ -42,6 +44,14 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
   const [isAISearching, setIsAISearching] = useState(false)
   const [searchInterpretation, setSearchInterpretation] = useState<string | null>(null)
   const [isAISearchMode, setIsAISearchMode] = useState(false)
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    page: 1,
+    limit: 12,
+    total: 0,
+    total_pages: 0,
+    has_next: false,
+    has_prev: false
+  })
 
 
   const categories = ["All", "couch", "chair", "dining_table", "bookshelf", "dresser", "other"]
@@ -79,11 +89,12 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
     }
   }, [])
 
-  const fetchItems = async () => {
+  const fetchItems = async (page: number = 1) => {
     try {
       setLoading(true)
-      const response = await apiClient.getMarketplaceItems()
-      setItems(response || [])
+      const response = await apiClient.getMarketplaceItems(page, 12)
+      setItems(response.items || [])
+      setPagination(response.pagination)
       setIsAISearchMode(false)
       setSearchInterpretation(null)
     } catch (err) {
@@ -302,15 +313,17 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-12">
-              <div style={{ color: '#6B5A47' }}>Loading marketplace...</div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(12)].map((_, i) => (
+                <ItemSkeleton key={i} />
+              ))}
             </div>
           ) : error ? (
             <div className="text-center py-12">
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 inline-block">
                 <p className="text-red-800">{error}</p>
                 <Button 
-                  onClick={fetchItems}
+                  onClick={() => fetchItems()}
                   className="mt-2 bg-red-600 hover:bg-red-700"
                 >
                   Try Again
@@ -344,12 +357,14 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                   onClick={() => onItemClick && onItemClick(item.id)}>
                   <CardContent className="p-0">
                     {/* Image */}
-                    <div className="bg-white border-b h-48 flex items-center justify-center rounded-t-lg overflow-hidden">
+                    <div className="bg-white border-b h-48 flex items-center justify-center rounded-t-lg overflow-hidden relative">
                       {item.image_filename ? (
-                        <img 
+                        <Image 
                           src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${item.image_filename}`}
                           alt={item.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
                         />
                       ) : (
                         <div className="text-6xl">🪑</div>
@@ -402,6 +417,70 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {!isAISearchMode && pagination.total_pages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-8">
+              <Button
+                variant="outline"
+                onClick={() => fetchItems(pagination.page - 1)}
+                disabled={!pagination.has_prev || loading}
+                className="text-sm"
+              >
+                Previous
+              </Button>
+              
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const maxVisiblePages = 5
+                  const totalPages = pagination.total_pages
+                  const currentPage = pagination.page
+                  
+                  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2))
+                  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1)
+                  
+                  // Adjust startPage if we're near the end
+                  if (endPage - startPage + 1 < maxVisiblePages) {
+                    startPage = Math.max(1, endPage - maxVisiblePages + 1)
+                  }
+                  
+                  const pages = []
+                  for (let i = startPage; i <= endPage; i++) {
+                    pages.push(i)
+                  }
+                  
+                  return pages.map((pageNum) => (
+                    <Button
+                      key={`page-${pageNum}`}
+                      variant={pagination.page === pageNum ? "default" : "outline"}
+                      onClick={() => fetchItems(pageNum)}
+                      disabled={loading}
+                      className="w-10 h-10 text-sm"
+                      style={pagination.page === pageNum ? {
+                        background: 'linear-gradient(135deg, #8B4513, #CD853F)',
+                        color: '#F7F3E9'
+                      } : {}}
+                    >
+                      {pageNum}
+                    </Button>
+                  ))
+                })()}
+              </div>
+              
+              <Button
+                variant="outline"
+                onClick={() => fetchItems(pagination.page + 1)}
+                disabled={!pagination.has_next || loading}
+                className="text-sm"
+              >
+                Next
+              </Button>
+              
+              <div className="text-sm text-gray-600 ml-4">
+                Page {pagination.page} of {pagination.total_pages} ({pagination.total} items)
+              </div>
             </div>
           )}
         </div>

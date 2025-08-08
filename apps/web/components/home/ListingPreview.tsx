@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Edit, Save, MapPin, Star, Camera } from 'lucide-react'
 import { type AIAnalysisResult } from "@/lib/api-client-new"
+import Image from "next/image"
 
 interface ListingPreviewProps {
   analysisData: AIAnalysisResult
@@ -85,8 +86,14 @@ export function ListingPreview({ analysisData, uploadedImage, onBack, onSignUp }
           {/* Left Column - Image and Basic Info */}
           <div className="preview-left">
             <div className="image-section">
-              <div className="main-image">
-                <img src={uploadedImage} alt="Your furniture" />
+              <div className="main-image relative">
+                <Image 
+                  src={uploadedImage} 
+                  alt="Your furniture" 
+                  fill
+                  className="object-cover rounded-lg"
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                />
                 <div className="image-overlay">
                   <Camera className="w-6 h-6" />
                   <span>Primary Photo</span>
