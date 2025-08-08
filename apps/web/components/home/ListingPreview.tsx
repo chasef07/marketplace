@@ -30,15 +30,24 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
   const [isEditing, setIsEditing] = useState(false)
   const [editedData, setEditedData] = useState<AIAnalysisResult>(analysisData)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [isCreatingListing, setIsCreatingListing] = useState(false)
 
 
   const handleSignUp = () => {
     onSignUp(editedData)
   }
 
-  const handleCreateListing = () => {
-    if (onCreateListing) {
-      onCreateListing(editedData)
+  const handleCreateListing = async () => {
+    if (onCreateListing && !isCreatingListing) {
+      setIsCreatingListing(true)
+      try {
+        await onCreateListing(editedData)
+      } catch (error) {
+        // Error handling is done in parent component
+      } finally {
+        // Don't reset loading state here since we'll navigate away
+        // setIsCreatingListing(false)
+      }
     }
   }
 
@@ -77,7 +86,12 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
           <Button 
             variant="ghost" 
             onClick={onBack}
+            disabled={isCreatingListing}
             className="back-button"
+            style={{ 
+              opacity: isCreatingListing ? 0.5 : 1,
+              cursor: isCreatingListing ? 'not-allowed' : 'pointer'
+            }}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Upload
@@ -190,16 +204,20 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
               {user ? (
                 <Button 
                   onClick={handleCreateListing}
+                  disabled={isCreatingListing}
                   className="signup-button"
                   size="lg"
                   variant="ghost"
                   style={{
-                    background: 'linear-gradient(135deg, #8B4513, #CD853F)',
+                    background: isCreatingListing 
+                      ? 'rgba(139, 69, 19, 0.5)' 
+                      : 'linear-gradient(135deg, #8B4513, #CD853F)',
                     color: 'white',
-                    border: 'none'
+                    border: 'none',
+                    cursor: isCreatingListing ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  Create Listing
+                  {isCreatingListing ? 'Creating Listing...' : 'Create Listing'}
                 </Button>
               ) : (
                 <Button 

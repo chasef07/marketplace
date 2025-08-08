@@ -9,8 +9,8 @@ export const trackWebVitals = () => {
     for (const entry of list.getEntries()) {
       const metric = {
         name: entry.name,
-        value: entry.value,
-        rating: getRating(entry.name, entry.value),
+        value: (entry as any).value || 0,
+        rating: getRating(entry.name, (entry as any).value || 0),
         url: window.location.pathname,
         timestamp: Date.now(),
       };

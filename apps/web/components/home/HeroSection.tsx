@@ -24,6 +24,7 @@ interface HeroSectionProps {
   onCreateListing: () => void
   onBrowseItems: () => void
   onSellerDashboard: () => void
+  onViewProfile: () => void
   onShowListingPreview: (analysisData: AIAnalysisResult, uploadedImages: string[]) => void
 }
 
@@ -35,6 +36,7 @@ export function HeroSection({
   onCreateListing, 
   onBrowseItems,
   onSellerDashboard,
+  onViewProfile,
   onShowListingPreview
 }: HeroSectionProps) {
   
@@ -64,6 +66,13 @@ export function HeroSection({
                   className="nav-button nav-button-ghost"
                 >
                   Dashboard
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={onViewProfile}
+                  className="nav-button nav-button-ghost"
+                >
+                  Profile
                 </Button>
                 <Button 
                   variant="ghost" 

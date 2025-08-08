@@ -31,12 +31,13 @@ interface MarketplaceProps {
   onSignInClick?: () => void
   onSellerDashboard?: () => void
   onSellerChat?: () => void
+  onViewProfile?: () => void
 }
 
 // Fetcher function for SWR
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
-export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSignInClick, onSellerDashboard, onSellerChat }: MarketplaceProps) {
+export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSignInClick, onSellerDashboard, onSellerChat, onViewProfile }: MarketplaceProps) {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchInput, setSearchInput] = useState("")
@@ -129,7 +130,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
 
   // Memoize expensive filtering operation
   const filteredItems = useMemo(() => {
-    return items.filter(item => {
+    return items.filter((item: Item) => {
       const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            item.description.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesCategory = selectedCategory === "All" || item.furniture_type === selectedCategory
@@ -191,6 +192,15 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                     style={{ borderColor: '#8B4513', color: '#8B4513' }}
                   >
                     Dashboard
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={onViewProfile}
+                    className="hover:bg-opacity-10"
+                    style={{ borderColor: '#8B4513', color: '#8B4513' }}
+                  >
+                    Profile
                   </Button>
                   <Button 
                     variant="outline"
@@ -332,7 +342,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredItems.map((item) => (
+              {filteredItems.map((item: Item) => (
                 <Card 
                   key={item.id} 
                   className="bg-white hover:shadow-lg transition-shadow cursor-pointer group"

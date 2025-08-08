@@ -75,6 +75,8 @@ export interface Item {
   seller?: {
     id: string
     username: string
+    email: string
+    zip_code?: string
   }
 }
 
@@ -301,20 +303,66 @@ export class SupabaseApiClient {
     return response.json()
   }
 
+  private _lastUserFetch = 0
+  private _getUserCache: any = null
+  private _consecutiveAuthErrors = 0
+  private _authCircuitBreakerUntil = 0
+  private readonly MAX_AUTH_ERRORS = 3
+  private readonly CIRCUIT_BREAKER_DURATION = 60000 // 1 minute
+  
   async getCurrentUser() {
-    const headers = await this.getAuthHeaders()
-    const response = await fetch('/api/auth/me', { headers })
+    const now = Date.now()
     
-    if (!response.ok) {
-      if (response.status === 404) {
-        // Profile not found, might be a timing issue with new user creation
-        throw new Error('User profile not found')
-      }
-      return null // Not logged in
+    // Circuit breaker - stop making requests if we've had too many errors
+    if (now < this._authCircuitBreakerUntil) {
+      return null
     }
     
-    const data = await response.json()
-    return data.user || data
+    // Prevent rapid successive calls that could create infinite loops
+    if (now - this._lastUserFetch < 2000) {
+      return this._getUserCache
+    }
+    
+    this._lastUserFetch = now
+    
+    try {
+      const headers = await this.getAuthHeaders()
+      const response = await fetch('/api/auth/me', { headers })
+      
+      if (!response.ok) {
+        this._getUserCache = null
+        this._consecutiveAuthErrors++
+        
+        // If we've had too many consecutive errors, activate circuit breaker
+        if (this._consecutiveAuthErrors >= this.MAX_AUTH_ERRORS) {
+          this._authCircuitBreakerUntil = now + this.CIRCUIT_BREAKER_DURATION
+        }
+        
+        if (response.status === 404) {
+          // Profile not found, might be a timing issue with new user creation
+          throw new Error('User profile not found')
+        }
+        return null // Not logged in
+      }
+      
+      // Reset error counter on successful response
+      this._consecutiveAuthErrors = 0
+      
+      const data = await response.json()
+      const userData = data.user || data
+      this._getUserCache = userData
+      return userData
+    } catch (error) {
+      this._getUserCache = null
+      this._consecutiveAuthErrors++
+      
+      // Activate circuit breaker on network errors too
+      if (this._consecutiveAuthErrors >= this.MAX_AUTH_ERRORS) {
+        this._authCircuitBreakerUntil = now + this.CIRCUIT_BREAKER_DURATION
+      }
+      
+      throw error
+    }
   }
 
   async getMyItems() {
@@ -438,8 +486,20 @@ export class SupabaseApiClient {
   }
 
   async signOut() {
-    const { error } = await this._supabase.auth.signOut()
-    if (error) throw error
+    // Clear internal cache and circuit breaker state
+    this._getUserCache = null
+    this._lastUserFetch = 0
+    this._consecutiveAuthErrors = 0
+    this._authCircuitBreakerUntil = 0
+    
+    // Sign out from Supabase with explicit scope
+    const { error } = await this._supabase.auth.signOut({ scope: 'global' })
+    if (error) {
+      throw error
+    }
+    
+    // Wait a moment for the signOut to complete and let the periodic check handle the state update
+    await new Promise(resolve => setTimeout(resolve, 1000))
   }
 
   async getSession() {

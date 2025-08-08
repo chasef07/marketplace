@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, memo } from 'react'
 import { MapPin } from 'lucide-react'
 
 interface SimpleLocationMapProps {
@@ -35,18 +35,22 @@ const loadLeaflet = async () => {
   return L
 }
 
-function InteractiveMap({ zipCode }: { zipCode: string }) {
+const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: string }) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
   const isInitializingRef = useRef(false)
-  const mapId = `map-${zipCode.replace(/\D/g, '')}-${Math.random().toString(36).substr(2, 9)}`
+  const currentZipCodeRef = useRef<string>('')
+  const mapId = `map-${zipCode.replace(/\D/g, '')}`
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Geocode the zip code
+  // Geocode the zip code only when it changes
   useEffect(() => {
     const fetchCoordinates = async () => {
+      // Skip if same zip code
+      if (currentZipCodeRef.current === zipCode) return
+      
       try {
         setLoading(true)
         setError(null)
@@ -58,8 +62,8 @@ function InteractiveMap({ zipCode }: { zipCode: string }) {
         }
         
         const data = await response.json()
-        console.log('Geocoding successful:', data)
         setCoordinates({ lat: data.lat, lng: data.lng })
+        currentZipCodeRef.current = zipCode
       } catch (err) {
         console.error('Geocoding error:', err)
         setError('Unable to locate zip code')
@@ -68,7 +72,7 @@ function InteractiveMap({ zipCode }: { zipCode: string }) {
       }
     }
 
-    if (zipCode) {
+    if (zipCode && zipCode !== currentZipCodeRef.current) {
       fetchCoordinates()
     }
   }, [zipCode])
@@ -77,8 +81,11 @@ function InteractiveMap({ zipCode }: { zipCode: string }) {
   useEffect(() => {
     if (!coordinates || !mapRef.current) return
 
-    // Skip if already initializing or initialized
-    if (isInitializingRef.current || mapInstanceRef.current) return
+    // Skip if already initializing, or if map exists for this zip code
+    if (isInitializingRef.current) return
+    
+    // If map exists and is for the same zip code, just return
+    if (mapInstanceRef.current && currentZipCodeRef.current === zipCode) return
 
     const initMap = async () => {
       try {
@@ -111,7 +118,7 @@ function InteractiveMap({ zipCode }: { zipCode: string }) {
         await new Promise(resolve => setTimeout(resolve, 200))
 
         // Final safety check
-        if (!mapRef.current || isInitializingRef.current === false) {
+        if (!mapRef.current || !isInitializingRef.current) {
           console.log('Map initialization cancelled')
           return
         }
@@ -228,7 +235,7 @@ function InteractiveMap({ zipCode }: { zipCode: string }) {
 
     initMap()
 
-    // Cleanup on unmount or coordinate/zipCode change
+    // Cleanup function
     return () => {
       isInitializingRef.current = false
       if (mapInstanceRef.current) {
@@ -241,7 +248,23 @@ function InteractiveMap({ zipCode }: { zipCode: string }) {
         mapInstanceRef.current = null
       }
     }
-  }, [coordinates, zipCode])
+  }, [coordinates?.lat, coordinates?.lng, zipCode])
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isInitializingRef.current = false
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.off()
+          mapInstanceRef.current.remove()
+        } catch (e) {
+          console.warn('Error during cleanup:', e)
+        }
+        mapInstanceRef.current = null
+      }
+    }
+  }, [])
 
   if (loading) {
     return (
@@ -271,12 +294,12 @@ function InteractiveMap({ zipCode }: { zipCode: string }) {
       <div ref={mapRef} id={mapId} className="w-full h-full" />
     </div>
   )
-}
+})
 
-export function SimpleLocationMap({ zipCode, className = '' }: SimpleLocationMapProps) {
+export const SimpleLocationMap = memo(function SimpleLocationMap({ zipCode, className = '' }: SimpleLocationMapProps) {
   return (
     <div className={className}>
       <InteractiveMap zipCode={zipCode} />
     </div>
   )
-}
+})

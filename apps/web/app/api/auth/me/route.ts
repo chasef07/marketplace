@@ -54,7 +54,10 @@ export async function GET(request: NextRequest) {
         last_login: profile.last_login
       }
     })
-    response.headers.set('Cache-Control', 'private, max-age=300')
+    // No caching to ensure fresh user data
+    response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
     return response
   } catch (error) {
     console.error('Get current user error:', error)
