@@ -21,6 +21,14 @@ const SellerChat = dynamic(() => import('../chat/seller-chat').then(mod => ({ de
   loading: () => <div className="h-96 bg-gray-100 animate-pulse rounded-lg" />
 })
 
+const ProfileView = dynamic(() => import('../profile/profile-view'), {
+  loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
+})
+
+const ProfileEdit = dynamic(() => import('../profile/profile-edit'), {
+  loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
+})
+
 interface User {
   id: string
   username: string
@@ -34,15 +42,19 @@ interface User {
 
 export function HomePage() {
   const [user, setUser] = useState<User | null>(null)
-  const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'dashboard' | 'item-detail' | 'listing-preview' | 'seller-chat'>('home')
+  const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'dashboard' | 'item-detail' | 'listing-preview' | 'seller-chat' | 'profile-view' | 'profile-edit'>('home')
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
+  const [selectedUsername, setSelectedUsername] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<{analysisData: AIAnalysisResult, uploadedImages: string[]} | null>(null)
   const [marketplaceKey, setMarketplaceKey] = useState(0) // Force marketplace re-render
   const [isLoading, setIsLoading] = useState(true) // Add loading state
+  const [error, setError] = useState<string | null>(null)
 
   // Initialize auth state and listen for changes
   useEffect(() => {
     let mounted = true
+    let lastAuthCheck = 0 // Throttle auth checks to prevent infinite loops
+    const AUTH_CHECK_THROTTLE = 2000 // Only allow auth checks every 2 seconds
 
     // Check current session
     const initializeAuth = async () => {
@@ -55,7 +67,10 @@ export function HomePage() {
           }
         }
       } catch (error) {
-        console.error('Auth initialization error:', error)
+        // Don't retry on auth errors during initialization
+        if (mounted) {
+          setUser(null)
+        }
       } finally {
         if (mounted) {
           setIsLoading(false)
@@ -63,35 +78,42 @@ export function HomePage() {
       }
     }
 
-    // Set up auth state listener
-    const { data: { subscription } } = apiClient.onAuthStateChange(async (session) => {
+    // Use periodic session check instead of reactive auth state listener
+    // This prevents infinite loops while still maintaining auth state sync
+    const sessionCheckInterval = setInterval(async () => {
       if (!mounted) return
-
-      if (session?.user) {
-        try {
-          const userData = await apiClient.getCurrentUser()
-          if (mounted && userData) {
-            setUser(userData)
-          }
-        } catch (error) {
-          console.error('Error getting user data:', error)
-          if (mounted) {
-            setUser(null)
+      
+      try {
+        const session = await apiClient.getSession()
+        
+        // If there's a session but no user, try to get user data
+        if (session?.user && !user) {
+          const now = Date.now()
+          if (now - lastAuthCheck > AUTH_CHECK_THROTTLE) {
+            lastAuthCheck = now
+            const userData = await apiClient.getCurrentUser()
+            if (mounted && userData) {
+              setUser(userData)
+            }
           }
         }
-      } else {
-        if (mounted) {
+        // If there's no session but we have a user, clear it
+        else if (!session?.user && user) {
           setUser(null)
           setCurrentView('home')
         }
+      } catch (error) {
+        // Ignore errors from periodic check to prevent logging noise
       }
-    })
+    }, 2000) // Check every 2 seconds for responsive auth state updates
 
     initializeAuth()
 
     return () => {
       mounted = false
-      subscription?.unsubscribe()
+      if (sessionCheckInterval) {
+        clearInterval(sessionCheckInterval)
+      }
     }
   }, [])
 
@@ -173,10 +195,19 @@ export function HomePage() {
   const handleSignOut = async () => {
     try {
       await apiClient.signOut()
-      // Auth state change listener will handle clearing user state
+      
+      // Clear local state immediately (periodic check will also handle this)
+      setUser(null)
+      setCurrentView('home')
+      
+      // Clear any cached data
+      setMarketplaceKey(prev => prev + 1)
+      setSelectedItemId(null)
+      setSelectedUsername(null)
+      setPreviewData(null)
+      setError(null)
     } catch (error) {
-      console.error('Sign out error:', error)
-      // Still clear local state even if API call fails
+      // Always clear user state even if sign out fails
       setUser(null)
       setCurrentView('home')
     }
@@ -191,11 +222,9 @@ export function HomePage() {
   }
 
   const handleCreateListing = () => {
-    if (user) {
-      setCurrentView('home')
-    } else {
-      setCurrentView('auth')
-    }
+    // Always go to home page for listing creation
+    // User will be prompted to sign in when they submit the listing
+    setCurrentView('home')
   }
 
   const handleItemClick = (itemId: number) => {
@@ -220,16 +249,42 @@ export function HomePage() {
   const handleBackToHome = () => {
     setCurrentView('home')
     setPreviewData(null)
+    // Force marketplace refresh for when user navigates to marketplace later
+    setMarketplaceKey(prev => prev + 1)
   }
 
   const handleBackToMarketplace = () => {
     setCurrentView('marketplace')
+    // Force marketplace refresh to show updated item list
+    setMarketplaceKey(prev => prev + 1)
   }
 
   const handleShowListingPreview = (analysisData: AIAnalysisResult, uploadedImages: string[]) => {
     setPreviewData({ analysisData, uploadedImages })
     setCurrentView('listing-preview')
   }
+
+  const handleViewProfile = (username?: string) => {
+    if (username && typeof username === 'string') {
+      setSelectedUsername(username)
+    } else if (user && user.username && typeof user.username === 'string') {
+      setSelectedUsername(user.username)
+    } else {
+      setError('Unable to load profile - no valid username')
+      return
+    }
+    setCurrentView('profile-view')
+  }
+
+  // Note: Profile navigation handlers available but not used in current flow
+  // const handleEditProfile = () => {
+  //   setCurrentView('profile-edit')
+  // }
+
+  // const handleBackFromProfile = () => {
+  //   setCurrentView('home')
+  //   setSelectedUsername(null)
+  // }
 
   const handleListingPreviewSignUp = (editedData: AIAnalysisResult) => {
     // Store the edited data and image URLs for after authentication
@@ -266,6 +321,7 @@ export function HomePage() {
         onSignInClick={() => setCurrentView('auth')}
         onSellerDashboard={() => setCurrentView('dashboard')}
         onSellerChat={() => setCurrentView('seller-chat')}
+        onViewProfile={handleViewProfile}
       />
     )
   }
@@ -307,6 +363,8 @@ export function HomePage() {
         user={user}
         onBack={handleBackToMarketplace}
         onMakeOffer={handleMakeOffer}
+        onSignInClick={() => setCurrentView('auth')}
+        onViewProfile={handleViewProfile}
       />
     )
   }
@@ -324,6 +382,23 @@ export function HomePage() {
     )
   }
 
+  if (currentView === 'profile-view' && selectedUsername) {
+    return (
+      <ProfileView
+        username={selectedUsername}
+        isOwnProfile={user?.username === selectedUsername}
+        onNavigateHome={() => setCurrentView('home')}
+        onNavigateMarketplace={() => setCurrentView('marketplace')}
+      />
+    )
+  }
+
+  if (currentView === 'profile-edit' && user) {
+    return (
+      <ProfileEdit />
+    )
+  }
+
   return (
     <div className="homepage-container">
       <HeroSection
@@ -334,6 +409,7 @@ export function HomePage() {
         onCreateListing={handleCreateListing}
         onBrowseItems={() => setCurrentView('marketplace')}
         onSellerDashboard={() => setCurrentView('dashboard')}
+        onViewProfile={handleViewProfile}
         onShowListingPreview={handleShowListingPreview}
       />
     </div>

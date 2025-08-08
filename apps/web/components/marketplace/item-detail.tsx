@@ -87,9 +87,11 @@ interface ItemDetailProps {
   user: User | null
   onBack: () => void
   onMakeOffer?: (itemId: number, offer: number, message: string) => void
+  onSignInClick?: () => void
+  onViewProfile?: (username: string) => void
 }
 
-export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProps) {
+export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, onViewProfile }: ItemDetailProps) {
   const [item, setItem] = useState<FurnitureItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -297,17 +299,15 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
   }
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #F7F3E9 0%, #E8DDD4 50%, #DDD1C7 100%)' }}>
-      {/* Header */}
-      <header className="backdrop-blur-md border-b sticky top-0 z-50" style={{ background: 'rgba(247, 243, 233, 0.9)', borderColor: 'rgba(139, 69, 19, 0.1)' }}>
+    <div className="min-h-screen bg-gray-50">
+      {/* Clean Header */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button onClick={onBack} variant="outline" size="sm" style={{ borderColor: '#8B4513', color: '#8B4513' }}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-            </div>
+            <Button onClick={onBack} variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Marketplace
+            </Button>
             
             {isOwnItem && (
               <div className="flex items-center gap-2">
@@ -317,7 +317,6 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                       onClick={cancelEditing} 
                       variant="outline" 
                       size="sm"
-                      style={{ borderColor: '#8B4513', color: '#8B4513' }}
                       disabled={saveLoading}
                     >
                       <X className="h-4 w-4 mr-1" />
@@ -326,8 +325,8 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                     <Button 
                       onClick={saveChanges} 
                       size="sm"
-                      style={{ background: '#8B4513', color: '#F7F3E9' }}
                       disabled={saveLoading}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       <Save className="h-4 w-4 mr-1" />
                       {saveLoading ? 'Saving...' : 'Save'}
@@ -338,10 +337,9 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                     onClick={startEditing} 
                     variant="outline" 
                     size="sm"
-                    style={{ borderColor: '#8B4513', color: '#8B4513' }}
                   >
                     <Edit className="h-4 w-4 mr-1" />
-                    Edit
+                    Edit Listing
                   </Button>
                 )}
               </div>
@@ -350,85 +348,90 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {/* Image Carousel */}
-          <div className="space-y-4">
-            <Card className="bg-white">
-              <CardContent className="p-4 bg-white">
-                {(() => {
-                  // Prepare images array for carousel
-                  let carouselImages: string[] = []
-                  
-                  if (item.images && item.images.length > 0) {
-                    // Use new multiple images format
-                    carouselImages = item.images.map(img => 
-                      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${img.filename}`
-                    )
-                  } else if (item.image_filename) {
-                    // Use old single image format
-                    carouselImages = [`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${item.image_filename}`]
-                  }
-                  
-                  if (carouselImages.length > 0) {
-                    return (
-                      <ImageCarousel 
-                        images={carouselImages}
-                        alt={item.name}
-                        className="h-96"
-                      />
-                    )
-                  } else {
-                    return (
-                      <div className="h-96 flex items-center justify-center bg-gray-100 rounded-lg">
-                        <div className="text-8xl">🪑</div>
-                      </div>
-                    )
-                  }
-                })()}
-              </CardContent>
+      <div className="container mx-auto px-4 py-6">
+        <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          {/* Image Carousel - Takes up 2 columns on large screens */}
+          <div className="lg:col-span-2 space-y-4">
+            <Card className="overflow-hidden shadow-lg">
+              {(() => {
+                // Prepare images array for carousel
+                let carouselImages: string[] = []
+                
+                if (item.images && item.images.length > 0) {
+                  // Use new multiple images format
+                  carouselImages = item.images.map(img => 
+                    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${img.filename}`
+                  )
+                } else if (item.image_filename) {
+                  // Use old single image format
+                  carouselImages = [`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${item.image_filename}`]
+                }
+                
+                if (carouselImages.length > 0) {
+                  return (
+                    <ImageCarousel 
+                      images={carouselImages}
+                      alt={item.name}
+                      className="h-96 lg:h-[500px]"
+                    />
+                  )
+                } else {
+                  return (
+                    <div className="h-96 lg:h-[500px] flex items-center justify-center bg-gray-100">
+                      <div className="text-8xl">🪑</div>
+                    </div>
+                  )
+                }
+              })()}
             </Card>
+            
+            {/* Item Title & Basic Info - Mobile Only */}
+            <div className="lg:hidden">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">{item.name}</h1>
+              <p className="text-4xl font-bold text-green-600 mb-4">${item.starting_price}</p>
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium capitalize ${getConditionColor(item.condition)}`}>
+                {item.condition} condition
+              </span>
+            </div>
           </div>
 
-          {/* Details */}
-          <div className="space-y-6">
-            {/* Price and Actions */}
-            <Card className="bg-white">
-              <CardContent className="p-6 bg-white">
-                {/* Title */}
-                <h1 className="text-2xl font-bold mb-4" style={{ color: '#3C2415' }}>
-                  {item.name}
-                </h1>
+          {/* Sticky Sidebar - Details & Actions */}
+          <div className="space-y-6 lg:sticky lg:top-24 lg:h-fit">
+            {/* Price and Actions Card */}
+            <Card className="shadow-lg border-0">
+              <CardContent className="p-6">
+                {/* Title - Desktop Only */}
+                <div className="hidden lg:block mb-6">
+                  <h1 className="text-2xl font-bold text-gray-900 mb-2">{item.name}</h1>
+                  <p className="text-sm text-gray-600">Listed {formatTimeAgo(item.created_at)}</p>
+                </div>
                 
-                <div className="mb-4">
-                  <div>
-                    {isEditing ? (
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-2xl font-bold" style={{ color: '#3C2415' }}>$</span>
-                        <input
-                          type="number"
-                          value={editForm.starting_price}
-                          onChange={(e) => setEditForm(prev => ({ ...prev, starting_price: e.target.value }))}
-                          className="text-3xl font-bold pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                          style={{ color: '#3C2415' }}
-                          step="0.01"
-                          min="0"
-                        />
-                      </div>
-                    ) : (
-                      <p className="text-3xl font-bold" style={{ color: '#3C2415' }}>${item.starting_price}</p>
-                    )}
-                  </div>
+                {/* Price */}
+                <div className="mb-6">
+                  {isEditing ? (
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-3xl font-bold text-gray-900">$</span>
+                      <input
+                        type="number"
+                        value={editForm.starting_price}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, starting_price: e.target.value }))}
+                        className="text-4xl font-bold pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-full"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-4xl font-bold text-green-600">${item.starting_price}</p>
+                  )}
                 </div>
 
                 {/* Condition */}
-                <div className="mb-4">
+                <div className="mb-6">
                   {isEditing ? (
                     <select
                       value={editForm.condition}
                       onChange={(e) => setEditForm(prev => ({ ...prev, condition: e.target.value }))}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                      style={{ color: '#3C2415' }}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-full"
                     >
                       <option value="excellent">Excellent condition</option>
                       <option value="good">Good condition</option>
@@ -436,32 +439,58 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                       <option value="poor">Poor condition</option>
                     </select>
                   ) : (
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium capitalize ${getConditionColor(item.condition)}`}>
+                    <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold ${getConditionColor(item.condition)}`}>
                       {item.condition} condition
                     </span>
                   )}
                 </div>
 
                 {/* Action Buttons */}
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {!isOwnItem && user && (
                     <>
+                      {/* Quick Offer Buttons */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button 
+                          onClick={() => {
+                            setOfferAmount(item.starting_price)
+                            setShowOfferForm(true)
+                          }}
+                          variant="outline"
+                          className="border-green-600 text-green-600 hover:bg-green-50 font-medium"
+                        >
+                          <DollarSign className="h-4 w-4 mr-1" />
+                          Ask ${item.starting_price}
+                        </Button>
+                        <Button 
+                          onClick={() => {
+                            const eightyPercent = Math.round(parseFloat(item.starting_price) * 0.8)
+                            setOfferAmount(eightyPercent.toString())
+                            setShowOfferForm(true)
+                          }}
+                          variant="outline"
+                          className="border-blue-600 text-blue-600 hover:bg-blue-50 font-medium"
+                        >
+                          <DollarSign className="h-4 w-4 mr-1" />
+                          Offer ${Math.round(parseFloat(item.starting_price) * 0.8)}
+                        </Button>
+                      </div>
+                      
+                      {/* Custom Offer Button */}
                       <Button 
                         onClick={() => setShowOfferForm(true)}
-                        className="w-full hover:opacity-90"
-                        style={{ background: 'linear-gradient(135deg, #8B4513, #CD853F)', color: '#F7F3E9' }}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"
                         size="lg"
                       >
-                        <DollarSign className="h-4 w-4 mr-2" />
-                        {negotiation ? 'Make Another Offer' : 'Make an Offer'}
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        {negotiation ? 'Make Another Offer' : 'Make Custom Offer'}
                       </Button>
                       
                       {negotiation && (
                         <Button 
                           onClick={toggleMessages}
                           variant="outline"
-                          className="w-full"
-                          style={{ borderColor: '#8B4513', color: '#8B4513' }}
+                          className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
                           size="lg"
                         >
                           <MessageSquare className="h-4 w-4 mr-2" />
@@ -476,26 +505,28 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                     </>
                   )}
                   {!user && (
-                    <Button className="w-full hover:opacity-90" style={{ background: 'linear-gradient(135deg, #8B4513, #CD853F)', color: '#F7F3E9' }} size="lg">
+                    <Button 
+                      onClick={onSignInClick}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium" 
+                      size="lg"
+                    >
                       Sign in to Make Offer
                     </Button>
                   )}
                   {isOwnItem && (
-                    <div className="rounded-lg p-4 space-y-3" style={{ background: 'rgba(139, 69, 19, 0.1)', border: '1px solid rgba(139, 69, 19, 0.2)' }}>
-                      <p className="text-sm" style={{ color: '#8B4513' }}>This is your listing</p>
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <p className="text-sm font-medium text-gray-700 mb-2">This is your listing</p>
                       
                       {isEditing && (
-                        <div>
-                          <label className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={editForm.is_available}
-                              onChange={(e) => setEditForm(prev => ({ ...prev, is_available: e.target.checked }))}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="ml-2 text-sm" style={{ color: '#8B4513' }}>Item is available for sale</span>
-                          </label>
-                        </div>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={editForm.is_available}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, is_available: e.target.checked }))}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="ml-2 text-sm text-gray-600">Item is available for sale</span>
+                        </label>
                       )}
                     </div>
                   )}
@@ -505,9 +536,9 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
 
             {/* Message History */}
             {negotiation && showMessages && (
-              <Card className="bg-white">
-                <CardContent className="p-6 bg-white">
-                  <h3 className="text-lg font-semibold mb-4" style={{ color: '#3C2415' }}>Message History</h3>
+              <Card className="shadow-lg border-0">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold mb-4 text-gray-900">Message History</h3>
                   {loadingMessages ? (
                     <div className="text-center py-4">
                       <div style={{ color: '#6B5A47' }}>Loading messages...</div>
@@ -570,124 +601,137 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
               </Card>
             )}
 
-            {/* Description */}
-            <Card className="bg-white">
-              <CardContent className="p-6 bg-white">
-                <h3 className="text-lg font-semibold mb-3" style={{ color: '#3C2415' }}>Description</h3>
-                {isEditing ? (
-                  <textarea
-                    value={editForm.description}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                    style={{ color: '#6B5A47' }}
-                    rows={6}
-                    placeholder="Enter item description..."
-                  />
-                ) : (
-                  <p className="whitespace-pre-wrap" style={{ color: '#6B5A47' }}>{item.description || 'No description provided.'}</p>
-                )}
-              </CardContent>
-            </Card>
+          </div>
+        </div>
+        
+        {/* Additional Info Cards - Full Width Below */}
+        <div className="grid md:grid-cols-2 gap-6 mt-8">
+          {/* Description */}
+          <Card className="shadow-lg border-0">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold mb-4 text-gray-900">Description</h3>
+              {isEditing ? (
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-700"
+                  rows={6}
+                  placeholder="Enter item description..."
+                />
+              ) : (
+                <p className="whitespace-pre-wrap text-gray-600 leading-relaxed">
+                  {item.description || 'No description provided.'}
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
-            {/* Details */}
-            <Card className="bg-white">
-              <CardContent className="p-6 bg-white">
-                <h3 className="text-lg font-semibold mb-3" style={{ color: '#3C2415' }}>Details</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium" style={{ color: '#6B5A47' }}>Category:</span>
-                    <p className="font-semibold capitalize" style={{ color: '#3C2415' }}>{item.furniture_type.replace('_', ' ')}</p>
-                  </div>
-                  {item.style && (
-                    <div>
-                      <span className="font-medium" style={{ color: '#6B5A47' }}>Style:</span>
-                      <p className="font-semibold capitalize" style={{ color: '#3C2415' }}>{item.style}</p>
-                    </div>
-                  )}
-                  {item.dimensions && (
-                    <div>
-                      <span className="font-medium" style={{ color: '#6B5A47' }}>Dimensions:</span>
-                      <p className="font-semibold" style={{ color: '#3C2415' }}>{item.dimensions}</p>
-                    </div>
-                  )}
-                  {item.material && (
-                    <div>
-                      <span className="font-medium" style={{ color: '#6B5A47' }}>Material:</span>
-                      <p className="font-semibold" style={{ color: '#3C2415' }}>{item.material}</p>
-                    </div>
-                  )}
-                  {item.brand && (
-                    <div>
-                      <span className="font-medium" style={{ color: '#6B5A47' }}>Brand:</span>
-                      <p className="font-semibold" style={{ color: '#3C2415' }}>{item.brand}</p>
-                    </div>
-                  )}
-                  {item.color && (
-                    <div>
-                      <span className="font-medium" style={{ color: '#6B5A47' }}>Color:</span>
-                      <p className="font-semibold" style={{ color: '#3C2415' }}>{item.color}</p>
-                    </div>
-                  )}
-                  <div>
-                    <span className="font-medium" style={{ color: '#6B5A47' }}>Posted:</span>
-                    <p className="font-semibold" style={{ color: '#3C2415' }}>{formatTimeAgo(item.created_at)}</p>
-                  </div>
+          {/* Details & Seller Info Combined */}
+          <Card className="shadow-lg border-0">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold mb-4 text-gray-900">Item Details</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm mb-6">
+                <div>
+                  <span className="font-medium text-gray-500">Category</span>
+                  <p className="font-semibold capitalize text-gray-900">{item.furniture_type.replace('_', ' ')}</p>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Seller Info */}
-            <Card className="bg-white">
-              <CardContent className="p-6 bg-white">
-                <h3 className="text-lg font-semibold mb-3" style={{ color: '#3C2415' }}>Seller Information</h3>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(139, 69, 19, 0.1)' }}>
-                    <span className="text-sm font-medium" style={{ color: '#8B4513' }}>
+                {item.style && (
+                  <div>
+                    <span className="font-medium text-gray-500">Style</span>
+                    <p className="font-semibold capitalize text-gray-900">{item.style}</p>
+                  </div>
+                )}
+                {item.dimensions && (
+                  <div>
+                    <span className="font-medium text-gray-500">Dimensions</span>
+                    <p className="font-semibold text-gray-900">{item.dimensions}</p>
+                  </div>
+                )}
+                {item.material && (
+                  <div>
+                    <span className="font-medium text-gray-500">Material</span>
+                    <p className="font-semibold text-gray-900">{item.material}</p>
+                  </div>
+                )}
+                {item.brand && (
+                  <div>
+                    <span className="font-medium text-gray-500">Brand</span>
+                    <p className="font-semibold text-gray-900">{item.brand}</p>
+                  </div>
+                )}
+                {item.color && (
+                  <div>
+                    <span className="font-medium text-gray-500">Color</span>
+                    <p className="font-semibold text-gray-900">{item.color}</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Seller Info */}
+              <div className="border-t pt-6">
+                <h4 className="font-semibold text-gray-900 mb-3">Seller Information</h4>
+                <div 
+                  onClick={() => item.seller?.username && onViewProfile?.(item.seller.username)}
+                  className={`flex items-center gap-3 mb-4 ${
+                    item.seller?.username && onViewProfile 
+                      ? 'cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded-lg transition-colors' 
+                      : ''
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <span className="text-sm font-medium text-blue-600">
                       {(item.seller?.username || 'U').charAt(0).toUpperCase()}
                     </span>
                   </div>
-                  <div>
-                    <p className="font-medium" style={{ color: '#3C2415' }}>{item.seller?.username || 'Anonymous'}</p>
-                    <div className="flex items-center gap-2 text-sm" style={{ color: '#6B5A47' }}>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900 flex items-center gap-2">
+                      {item.seller?.username || 'Anonymous'}
+                      {item.seller?.username && onViewProfile && (
+                        <span className="text-xs text-blue-600 font-normal">View Profile →</span>
+                      )}
+                    </p>
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
                       <MapPin className="h-3 w-3" />
                       <span>{item.seller?.zip_code ? `${item.seller.zip_code} area` : 'Local area'}</span>
                     </div>
                   </div>
+                  {item.seller?.username && onViewProfile && (
+                    <User className="h-4 w-4 text-gray-400" />
+                  )}
                 </div>
                 
                 {/* Location Map */}
                 {item.seller?.zip_code && (
                   <div className="space-y-2">
-                    <p className="text-sm font-medium" style={{ color: '#6B5A47' }}>Pickup/Delivery Area</p>
+                    <p className="text-sm font-medium text-gray-700">Pickup/Delivery Area</p>
                     <SimpleLocationMap zipCode={item.seller.zip_code} />
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
       {/* Offer Modal */}
       {showOfferForm && (
-        <div className="fixed inset-0 bg-white bg-opacity-95 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md bg-white">
-            <CardContent className="p-6 bg-white">
-              <h3 className="text-lg font-semibold mb-4" style={{ color: '#3C2415' }}>Make an Offer</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md bg-white shadow-2xl">
+            <CardContent className="p-6">
+              <h3 className="text-xl font-bold mb-6 text-gray-900">Make an Offer</h3>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: '#6B5A47' }}>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
                     Offer Amount
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#6B5A47' }}>$</span>
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg">$</span>
                     <input
                       type="number"
                       value={offerAmount}
                       onChange={(e) => setOfferAmount(e.target.value)}
-                      className="w-full pl-8 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white"
-                      style={{ borderColor: 'rgba(139, 69, 19, 0.2)', color: '#3C2415' }}
+                      className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-lg"
                       placeholder="0.00"
                       step="0.01"
                     />
@@ -695,32 +739,29 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: '#6B5A47' }}>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
                     Message (optional)
                   </label>
                   <textarea
                     value={offerMessage}
                     onChange={(e) => setOfferMessage(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white"
-                    style={{ borderColor: 'rgba(139, 69, 19, 0.2)', color: '#3C2415' }}
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                     rows={3}
                     placeholder="Add a message to the seller..."
                   />
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 pt-4">
                   <Button 
                     onClick={() => setShowOfferForm(false)} 
                     variant="outline" 
-                    className="flex-1"
-                    style={{ borderColor: '#8B4513', color: '#8B4513' }}
+                    className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50"
                   >
                     Cancel
                   </Button>
                   <Button 
                     onClick={handleMakeOffer}
-                    className="flex-1 hover:opacity-90"
-                    style={{ background: 'linear-gradient(135deg, #8B4513, #CD853F)', color: '#F7F3E9' }}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     Submit Offer
                   </Button>
