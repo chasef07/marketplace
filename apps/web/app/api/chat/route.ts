@@ -11,27 +11,35 @@ const supabase = createSupabaseServerClient()
 
 // Level 1: Smart Analysis Functions
 function analyzeOffers(offers: any[], itemStartingPrice: number) {
+  // Filter out offers with null/undefined prices
+  const validOffers = offers.filter(o => o.price != null && typeof o.price === 'number')
+  
   const analysis = {
-    total: offers.length,
+    total: validOffers.length,
     priceRanges: {
-      lowball: offers.filter(o => o.price < itemStartingPrice * 0.6).length,
-      reasonable: offers.filter(o => o.price >= itemStartingPrice * 0.6 && o.price < itemStartingPrice * 0.9).length,
-      strong: offers.filter(o => o.price >= itemStartingPrice * 0.9 && o.price < itemStartingPrice * 1.1).length,
-      premium: offers.filter(o => o.price >= itemStartingPrice * 1.1).length
+      lowball: validOffers.filter(o => o.price < itemStartingPrice * 0.6).length,
+      reasonable: validOffers.filter(o => o.price >= itemStartingPrice * 0.6 && o.price < itemStartingPrice * 0.9).length,
+      strong: validOffers.filter(o => o.price >= itemStartingPrice * 0.9 && o.price < itemStartingPrice * 1.1).length,
+      premium: validOffers.filter(o => o.price >= itemStartingPrice * 1.1).length
     },
-    priceStats: {
-      min: Math.min(...offers.map(o => o.price)),
-      max: Math.max(...offers.map(o => o.price)),
-      avg: offers.reduce((sum, o) => sum + o.price, 0) / offers.length,
-      median: offers.sort((a, b) => a.price - b.price)[Math.floor(offers.length / 2)]?.price || 0
+    priceStats: validOffers.length > 0 ? {
+      min: Math.min(...validOffers.map(o => o.price)),
+      max: Math.max(...validOffers.map(o => o.price)),
+      avg: validOffers.reduce((sum, o) => sum + o.price, 0) / validOffers.length,
+      median: validOffers.sort((a, b) => a.price - b.price)[Math.floor(validOffers.length / 2)]?.price || 0
+    } : {
+      min: 0,
+      max: 0,
+      avg: 0,
+      median: 0
     },
-    urgencySignals: offers.filter(o => 
+    urgencySignals: validOffers.filter(o => 
       o.message?.toLowerCase().includes('asap') ||
       o.message?.toLowerCase().includes('immediately') ||
       o.message?.toLowerCase().includes('today') ||
       o.message?.toLowerCase().includes('cash')
     ),
-    qualityIndicators: offers.filter(o =>
+    qualityIndicators: validOffers.filter(o =>
       o.message?.toLowerCase().includes('cash') ||
       o.message?.toLowerCase().includes('pickup') ||
       o.message?.toLowerCase().includes('truck') ||
@@ -776,10 +784,13 @@ ${sellerStatus.items.map(item =>
 
 ${sellerStatus.recent_offers.length > 0 ? `
 LATEST ACTIVITY:
-${sellerStatus.recent_offers.slice(0, 3).map(offer => {
-  const buyer = offer.profiles?.username || 'Someone'
-  const itemName = offer.items?.name || 'an item'
-  return `• ${buyer} offered $${offer.current_offer} for ${itemName}`
+${sellerStatus.recent_offers.slice(0, 3).map(negotiation => {
+  const buyer = negotiation.profiles?.username || 'Someone'
+  const itemName = negotiation.items?.name || 'an item'
+  const latestOffer = negotiation.offers?.length > 0 ? 
+    negotiation.offers[negotiation.offers.length - 1] : null
+  const offerAmount = latestOffer?.price || negotiation.current_offer || 0
+  return `• ${buyer} offered $${offerAmount} for ${itemName}`
 }).join('\n')}
 ` : ''}
 

@@ -85,7 +85,7 @@ export interface Offer {
   id: number
   negotiation_id: number
   offer_type: 'buyer' | 'seller'
-  amount: number
+  price: number
   message?: string
   round_number: number
   is_counter_offer: boolean

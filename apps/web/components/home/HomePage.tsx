@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { HeroSection } from './HeroSection'
 import { ListingPreview } from './ListingPreview'
@@ -38,6 +38,62 @@ export function HomePage() {
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
   const [previewData, setPreviewData] = useState<{analysisData: AIAnalysisResult, uploadedImage: string} | null>(null)
   const [marketplaceKey, setMarketplaceKey] = useState(0) // Force marketplace re-render
+  const [isLoading, setIsLoading] = useState(true) // Add loading state
+
+  // Initialize auth state and listen for changes
+  useEffect(() => {
+    let mounted = true
+
+    // Check current session
+    const initializeAuth = async () => {
+      try {
+        const session = await apiClient.getSession()
+        if (mounted && session?.user) {
+          const userData = await apiClient.getCurrentUser()
+          if (mounted && userData) {
+            setUser(userData)
+          }
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error)
+      } finally {
+        if (mounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    // Set up auth state listener
+    const { data: { subscription } } = apiClient.onAuthStateChange(async (session) => {
+      if (!mounted) return
+
+      if (session?.user) {
+        try {
+          const userData = await apiClient.getCurrentUser()
+          if (mounted && userData) {
+            setUser(userData)
+          }
+        } catch (error) {
+          console.error('Error getting user data:', error)
+          if (mounted) {
+            setUser(null)
+          }
+        }
+      } else {
+        if (mounted) {
+          setUser(null)
+          setCurrentView('home')
+        }
+      }
+    })
+
+    initializeAuth()
+
+    return () => {
+      mounted = false
+      subscription?.unsubscribe()
+    }
+  }, [])
 
   const createListingAndNavigate = async (analysisData: AIAnalysisResult) => {
     try {
@@ -101,9 +157,16 @@ export function HomePage() {
     setCurrentView('marketplace')
   }
 
-  const handleSignOut = () => {
-    setUser(null)
-    setCurrentView('home')
+  const handleSignOut = async () => {
+    try {
+      await apiClient.signOut()
+      // Auth state change listener will handle clearing user state
+    } catch (error) {
+      console.error('Sign out error:', error)
+      // Still clear local state even if API call fails
+      setUser(null)
+      setCurrentView('home')
+    }
   }
 
   const handleGetStarted = () => {
@@ -165,6 +228,18 @@ export function HomePage() {
       window.localStorage.setItem('pendingListing', JSON.stringify(pendingData))
     }
     setCurrentView('auth')
+  }
+
+  // Show loading spinner while initializing auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
+          <p className="text-amber-700 font-medium">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   if (currentView === 'marketplace') {
