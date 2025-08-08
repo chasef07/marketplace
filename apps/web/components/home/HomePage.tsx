@@ -22,7 +22,7 @@ const SellerChat = dynamic(() => import('../chat/seller-chat').then(mod => ({ de
 })
 
 interface User {
-  id: number
+  id: string
   username: string
   email: string
   seller_personality: string

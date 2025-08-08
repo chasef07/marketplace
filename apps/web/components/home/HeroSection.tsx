@@ -6,7 +6,7 @@ import { PolaroidUpload } from './PolaroidUpload'
 import { type AIAnalysisResult } from "@/lib/api-client-new"
 
 interface User {
-  id: number
+  id: string
   username: string
   email: string
   seller_personality: string

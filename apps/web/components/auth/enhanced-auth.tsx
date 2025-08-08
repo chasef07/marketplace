@@ -7,7 +7,7 @@ import { X, Eye, EyeOff, Loader2, CheckCircle, AlertCircle, Mail } from "lucide-
 import { apiClient } from "@/lib/api-client-new"
 
 interface User {
-  id: number
+  id: string
   username: string
   email: string
   seller_personality: string

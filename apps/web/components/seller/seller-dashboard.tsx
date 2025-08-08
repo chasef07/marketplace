@@ -3,12 +3,11 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Package, TrendingUp, MessageSquare, Eye, ArrowLeft, X, ChevronDown, ChevronUp, Search, Filter, SortAsc } from "lucide-react"
+import { Package, TrendingUp, MessageSquare, Eye, ArrowLeft, X, ChevronDown, ChevronUp, Search, Filter, SortAsc, Edit, Trash2 } from "lucide-react"
 import { apiClient } from "@/lib/api-client-new"
-import { OfferAnalysisCard } from "./offer-analysis-card"
 
 interface User {
-  id: number
+  id: string
   username: string
   email: string
 }
@@ -26,7 +25,7 @@ interface FurnitureItem {
   condition: string
   furniture_type: string
   image_filename: string | null
-  seller_id: number
+  seller_id: string
   seller?: SellerInfo
   created_at: string
   updated_at: string
@@ -36,8 +35,8 @@ interface FurnitureItem {
 interface Negotiation {
   id: number
   item_id: number
-  seller_id: number
-  buyer_id: number
+  seller_id: string
+  buyer_id: string
   current_offer: number
   final_price?: number
   status: string
@@ -107,6 +106,10 @@ export function SellerDashboard({ user, onItemClick, onBackToMarketplace, defaul
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'status'>('date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+
+  // Delete functionality
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteItemId, setDeleteItemId] = useState<number | null>(null)
 
   useEffect(() => {
     fetchDashboardData()
@@ -210,6 +213,28 @@ export function SellerDashboard({ user, onItemClick, onBackToMarketplace, defaul
     } catch (err) {
       console.error('Failed to submit counter offer:', err)
       alert('Failed to submit counter offer. Please try again.')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleDeleteClick = (itemId: number) => {
+    setDeleteItemId(itemId)
+    setShowDeleteConfirm(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteItemId) return
+
+    try {
+      setActionLoading(deleteItemId)
+      await apiClient.deleteItem(deleteItemId)
+      setShowDeleteConfirm(false)
+      setDeleteItemId(null)
+      await fetchDashboardData()
+    } catch (err) {
+      console.error('Failed to delete item:', err)
+      alert(err instanceof Error ? err.message : 'Failed to delete item. Please try again.')
     } finally {
       setActionLoading(null)
     }
@@ -478,8 +503,18 @@ export function SellerDashboard({ user, onItemClick, onBackToMarketplace, defaul
                                     size="sm"
                                     onClick={() => onItemClick && onItemClick(item.id)}
                                   >
-                                    <Eye className="h-4 w-4 mr-1" />
-                                    View
+                                    <Edit className="h-4 w-4 mr-1" />
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDeleteClick(item.id)}
+                                    disabled={actionLoading === item.id}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                    Delete
                                   </Button>
                                 </div>
                               </div>
@@ -503,21 +538,6 @@ export function SellerDashboard({ user, onItemClick, onBackToMarketplace, defaul
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {/* AI Offer Analysis Cards */}
-                    {(() => {
-                      const itemsWithOffers = Array.from(new Set(sellerNegotiations.map(neg => neg.item_id)))
-                        .map(itemId => items.find(item => item.id === itemId))
-                        .filter((item): item is NonNullable<typeof item> => Boolean(item))
-                      
-                      return itemsWithOffers.map(item => (
-                        <OfferAnalysisCard 
-                          key={item.id}
-                          itemId={item.id}
-                          itemName={item.name}
-                        />
-                      ))
-                    })()}
-                    
                     {/* Individual Negotiations */}
                     <div className="grid gap-4">
                     {sellerNegotiations.map((negotiation) => {
@@ -857,6 +877,56 @@ export function SellerDashboard({ user, onItemClick, onBackToMarketplace, defaul
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && deleteItemId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md bg-white">
+            <CardContent className="p-6 bg-white">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Delete Listing</h3>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowDeleteConfirm(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                <p className="text-gray-600">
+                  Are you sure you want to delete this listing? This action cannot be undone.
+                </p>
+                
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Note:</strong> This will also delete all associated offers and negotiations for this item.
+                  </p>
+                </div>
+
+                <div className="flex space-x-3 pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1"
+                    disabled={actionLoading === deleteItemId}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleDeleteConfirm}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                    disabled={actionLoading === deleteItemId}
+                  >
+                    {actionLoading === deleteItemId ? 'Deleting...' : 'Delete'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Counter Offer Modal */}
       {showCounterModal && selectedNegotiation && (

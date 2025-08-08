@@ -64,10 +64,30 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid item ID' }, { status: 400 })
     }
 
-    // Get user from session
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Get the Authorization header from the client request
+    const authHeader = request.headers.get('authorization')
+    
+    let user = null
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      // Use the access token from the header
+      const token = authHeader.split(' ')[1]
+      const { data: { user: tokenUser }, error: tokenError } = await supabase.auth.getUser(token)
+      
+      if (!tokenError && tokenUser) {
+        user = tokenUser
+      }
+    }
+    
+    if (!user) {
+      // Fall back to session-based authentication
+      const { data: { user: sessionUser }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError || !sessionUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      
+      user = sessionUser
     }
 
     // Check if user owns the item
@@ -81,15 +101,21 @@ export async function PUT(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    // Only allow editing specific fields - exclude created_at, sold_at, views_count, etc.
+    const allowedUpdates: Partial<{
+      description: string;
+      condition: string;
+      starting_price: number;
+      is_available: boolean;
+    }> = {}
+    if (body.description !== undefined) allowedUpdates.description = body.description
+    if (body.condition !== undefined) allowedUpdates.condition = body.condition
+    if (body.starting_price !== undefined) allowedUpdates.starting_price = body.starting_price
+    if (body.is_available !== undefined) allowedUpdates.is_available = body.is_available
+
     const { data: item, error } = await supabase
       .from('items')
-      .update({
-        name: body.name,
-        description: body.description,
-        starting_price: body.starting_price,
-        condition: body.condition,
-        is_available: body.is_available,
-      })
+      .update(allowedUpdates)
       .eq('id', id)
       .select()
       .single()
@@ -102,6 +128,106 @@ export async function PUT(
     return NextResponse.json(item)
   } catch (error) {
     console.error('Item update error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const supabase = createSupabaseServerClient()
+    const resolvedParams = await params
+    const id = parseInt(resolvedParams.id)
+
+    if (isNaN(id)) {
+      return NextResponse.json({ error: 'Invalid item ID' }, { status: 400 })
+    }
+
+    // Get the Authorization header from the client request
+    const authHeader = request.headers.get('authorization')
+    
+    let user = null
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      // Use the access token from the header
+      const token = authHeader.split(' ')[1]
+      const { data: { user: tokenUser }, error: tokenError } = await supabase.auth.getUser(token)
+      
+      if (!tokenError && tokenUser) {
+        user = tokenUser
+      }
+    }
+    
+    if (!user) {
+      // Fall back to session-based authentication
+      const { data: { user: sessionUser }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError || !sessionUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      
+      user = sessionUser
+    }
+
+    // Check if user owns the item and get item details
+    const { data: existingItem } = await supabase
+      .from('items')
+      .select('seller_id, is_available')
+      .eq('id', id)
+      .single()
+
+    if (!existingItem || existingItem.seller_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    // Get all negotiations for this item to cascade delete
+    const { data: negotiations } = await supabase
+      .from('negotiations')
+      .select('id')
+      .eq('item_id', id)
+
+    // Delete all offers for all negotiations of this item
+    if (negotiations && negotiations.length > 0) {
+      const negotiationIds = negotiations.map(n => n.id)
+      
+      const { error: offersError } = await supabase
+        .from('offers')
+        .delete()
+        .in('negotiation_id', negotiationIds)
+
+      if (offersError) {
+        console.error('Error deleting offers:', offersError)
+        return NextResponse.json({ error: 'Failed to delete associated offers' }, { status: 500 })
+      }
+    }
+
+    // Delete all negotiations for this item
+    const { error: negotiationsError } = await supabase
+      .from('negotiations')
+      .delete()
+      .eq('item_id', id)
+
+    if (negotiationsError) {
+      console.error('Error deleting negotiations:', negotiationsError)
+      return NextResponse.json({ error: 'Failed to delete associated negotiations' }, { status: 500 })
+    }
+
+    // Finally delete the item
+    const { error } = await supabase
+      .from('items')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Error deleting item:', error)
+      return NextResponse.json({ error: 'Failed to delete item' }, { status: 500 })
+    }
+
+    return NextResponse.json({ message: 'Item deleted successfully' })
+  } catch (error) {
+    console.error('Item delete error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

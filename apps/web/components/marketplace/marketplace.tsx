@@ -13,7 +13,7 @@ import { ItemSkeleton } from "@/components/ui/skeleton"
 
 
 interface User {
-  id: number
+  id: string
   username: string
   email: string
   seller_personality: string

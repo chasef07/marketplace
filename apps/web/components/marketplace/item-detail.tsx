@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Heart, MapPin, User, DollarSign, MessageSquare, ChevronDown, ChevronUp } from "lucide-react"
+import { ArrowLeft, Heart, MapPin, User, DollarSign, MessageSquare, ChevronDown, ChevronUp, Edit, Save, X } from "lucide-react"
 import { apiClient } from "@/lib/api-client-new"
 import { FURNITURE_BLUR_DATA_URL } from "@/lib/blur-data"
 import Image from "next/image"
@@ -32,7 +32,7 @@ interface FurnitureItem {
   condition: string
   furniture_type: string
   image_filename: string | null
-  seller_id: number
+  seller_id: string
   seller?: SellerInfo
   created_at: string
   updated_at: string
@@ -45,7 +45,7 @@ interface FurnitureItem {
 }
 
 interface User {
-  id: number
+  id: string
   username: string
   email: string
   seller_personality: string
@@ -58,8 +58,8 @@ interface User {
 interface Negotiation {
   id: number
   item_id: number
-  seller_id: number
-  buyer_id: number
+  seller_id: string
+  buyer_id: string
   current_offer: number
   final_price?: number
   status: string
@@ -97,6 +97,14 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
   const [offers, setOffers] = useState<Offer[]>([])
   const [showMessages, setShowMessages] = useState(false)
   const [loadingMessages, setLoadingMessages] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editForm, setEditForm] = useState({
+    description: '',
+    condition: '',
+    starting_price: '',
+    is_available: true
+  })
+  const [saveLoading, setSaveLoading] = useState(false)
 
   useEffect(() => {
     fetchItem()
@@ -203,6 +211,68 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
     }
   }
 
+  const startEditing = () => {
+    if (!item) return
+    setEditForm({
+      description: item.description || '',
+      condition: item.condition,
+      starting_price: item.starting_price,
+      is_available: item.is_available
+    })
+    setIsEditing(true)
+  }
+
+  const cancelEditing = () => {
+    setIsEditing(false)
+    setEditForm({
+      description: '',
+      condition: '',
+      starting_price: '',
+      is_available: true
+    })
+  }
+
+  const saveChanges = async () => {
+    if (!item) return
+
+    const updates: Partial<{
+      description: string;
+      condition: string;
+      starting_price: number;
+      is_available: boolean;
+    }> = {}
+    
+    if (editForm.description !== item.description) {
+      updates.description = editForm.description
+    }
+    if (editForm.condition !== item.condition) {
+      updates.condition = editForm.condition
+    }
+    if (parseFloat(editForm.starting_price) !== parseFloat(item.starting_price)) {
+      updates.starting_price = parseFloat(editForm.starting_price)
+    }
+    if (editForm.is_available !== item.is_available) {
+      updates.is_available = editForm.is_available
+    }
+
+    if (Object.keys(updates).length === 0) {
+      setIsEditing(false)
+      return
+    }
+
+    try {
+      setSaveLoading(true)
+      await apiClient.updateItem(item.id, updates)
+      await fetchItem() // Refresh the item data
+      setIsEditing(false)
+    } catch (err) {
+      console.error('Failed to update item:', err)
+      alert(err instanceof Error ? err.message : 'Failed to update item. Please try again.')
+    } finally {
+      setSaveLoading(false)
+    }
+  }
+
   const isOwnItem = user && item && user.id === item.seller_id
 
   if (loading) {
@@ -228,12 +298,52 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
       {/* Header */}
       <header className="backdrop-blur-md border-b sticky top-0 z-50" style={{ background: 'rgba(247, 243, 233, 0.9)', borderColor: 'rgba(139, 69, 19, 0.1)' }}>
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button onClick={onBack} variant="outline" size="sm" style={{ borderColor: '#8B4513', color: '#8B4513' }}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <h1 className="text-xl font-semibold" style={{ color: '#3C2415' }}>{item.name}</h1>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button onClick={onBack} variant="outline" size="sm" style={{ borderColor: '#8B4513', color: '#8B4513' }}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <h1 className="text-xl font-semibold" style={{ color: '#3C2415' }}>{item.name}</h1>
+            </div>
+            
+            {isOwnItem && (
+              <div className="flex items-center gap-2">
+                {isEditing ? (
+                  <>
+                    <Button 
+                      onClick={cancelEditing} 
+                      variant="outline" 
+                      size="sm"
+                      style={{ borderColor: '#8B4513', color: '#8B4513' }}
+                      disabled={saveLoading}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={saveChanges} 
+                      size="sm"
+                      style={{ background: '#8B4513', color: '#F7F3E9' }}
+                      disabled={saveLoading}
+                    >
+                      <Save className="h-4 w-4 mr-1" />
+                      {saveLoading ? 'Saving...' : 'Save'}
+                    </Button>
+                  </>
+                ) : (
+                  <Button 
+                    onClick={startEditing} 
+                    variant="outline" 
+                    size="sm"
+                    style={{ borderColor: '#8B4513', color: '#8B4513' }}
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -272,18 +382,49 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
               <CardContent className="p-6 bg-white">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <p className="text-3xl font-bold" style={{ color: '#3C2415' }}>${item.starting_price}</p>
+                    {isEditing ? (
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-2xl font-bold" style={{ color: '#3C2415' }}>$</span>
+                        <input
+                          type="number"
+                          value={editForm.starting_price}
+                          onChange={(e) => setEditForm(prev => ({ ...prev, starting_price: e.target.value }))}
+                          className="text-3xl font-bold pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                          style={{ color: '#3C2415' }}
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-3xl font-bold" style={{ color: '#3C2415' }}>${item.starting_price}</p>
+                    )}
                   </div>
-                  <Button variant="outline" size="sm" style={{ borderColor: '#8B4513', color: '#8B4513' }}>
-                    <Heart className="h-4 w-4" />
-                  </Button>
+                  {!isOwnItem && (
+                    <Button variant="outline" size="sm" style={{ borderColor: '#8B4513', color: '#8B4513' }}>
+                      <Heart className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
 
                 {/* Condition */}
                 <div className="mb-4">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium capitalize ${getConditionColor(item.condition)}`}>
-                    {item.condition} condition
-                  </span>
+                  {isEditing ? (
+                    <select
+                      value={editForm.condition}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, condition: e.target.value }))}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      style={{ color: '#3C2415' }}
+                    >
+                      <option value="excellent">Excellent condition</option>
+                      <option value="good">Good condition</option>
+                      <option value="fair">Fair condition</option>
+                      <option value="poor">Poor condition</option>
+                    </select>
+                  ) : (
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium capitalize ${getConditionColor(item.condition)}`}>
+                      {item.condition} condition
+                    </span>
+                  )}
                 </div>
 
                 {/* Action Buttons */}
@@ -325,8 +466,22 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                     </Button>
                   )}
                   {isOwnItem && (
-                    <div className="rounded-lg p-4" style={{ background: 'rgba(139, 69, 19, 0.1)', border: '1px solid rgba(139, 69, 19, 0.2)' }}>
+                    <div className="rounded-lg p-4 space-y-3" style={{ background: 'rgba(139, 69, 19, 0.1)', border: '1px solid rgba(139, 69, 19, 0.2)' }}>
                       <p className="text-sm" style={{ color: '#8B4513' }}>This is your listing</p>
+                      
+                      {isEditing && (
+                        <div>
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={editForm.is_available}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, is_available: e.target.checked }))}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="ml-2 text-sm" style={{ color: '#8B4513' }}>Item is available for sale</span>
+                          </label>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -404,7 +559,18 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
             <Card className="bg-white">
               <CardContent className="p-6 bg-white">
                 <h3 className="text-lg font-semibold mb-3" style={{ color: '#3C2415' }}>Description</h3>
-                <p className="whitespace-pre-wrap" style={{ color: '#6B5A47' }}>{item.description || 'No description provided.'}</p>
+                {isEditing ? (
+                  <textarea
+                    value={editForm.description}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    style={{ color: '#6B5A47' }}
+                    rows={6}
+                    placeholder="Enter item description..."
+                  />
+                ) : (
+                  <p className="whitespace-pre-wrap" style={{ color: '#6B5A47' }}>{item.description || 'No description provided.'}</p>
+                )}
               </CardContent>
             </Card>
 

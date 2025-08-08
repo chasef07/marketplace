@@ -94,30 +94,6 @@ export interface Offer {
   seller_id?: string
 }
 
-export interface OfferAnalysisItem {
-  buyer_info: string
-  current_offer: number
-  percentage_of_asking: number
-  reason: string
-}
-
-export interface OfferAnalysisResponse {
-  priority_offers: OfferAnalysisItem[]
-  fair_offers: OfferAnalysisItem[]
-  lowball_offers: OfferAnalysisItem[]
-  recommendations: string[]
-  market_insights: {
-    average_offer_percentage: number
-    buyer_engagement_level: string
-    pricing_strategy: string
-  }
-  analysis_metadata: {
-    generated_at: string
-    total_offers_analyzed: number
-    total_buyers_analyzed: number
-  }
-  error?: string
-}
 
 export interface Negotiation {
   id: number
@@ -249,6 +225,44 @@ export class SupabaseApiClient {
     return response.json()
   }
 
+  async updateItem(itemId: number, updates: {
+    description?: string;
+    condition?: string;
+    starting_price?: number;
+    is_available?: boolean;
+  }) {
+    const headers = await this.getAuthHeaders(true)
+    
+    const response = await fetch(`/api/items/${itemId}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(updates)
+    })
+    
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to update item')
+    }
+    
+    return response.json()
+  }
+
+  async deleteItem(itemId: number) {
+    const headers = await this.getAuthHeaders()
+    
+    const response = await fetch(`/api/items/${itemId}`, {
+      method: 'DELETE',
+      headers
+    })
+    
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to delete item')
+    }
+    
+    return response.json()
+  }
+
   async getCurrentUser() {
     const headers = await this.getAuthHeaders()
     const response = await fetch('/api/auth/me', { headers })
@@ -342,16 +356,6 @@ export class SupabaseApiClient {
 
 
 
-  async getOfferAnalysis(itemId: number): Promise<OfferAnalysisResponse> {
-    const response = await fetch(`/api/negotiations/items/${itemId}/offer-analysis`)
-    
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Failed to get offer analysis')
-    }
-    
-    return response.json()
-  }
 
   // Get offers for a specific negotiation
   async getNegotiationOffers(negotiationId: number) {

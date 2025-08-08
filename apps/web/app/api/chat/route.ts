@@ -46,28 +46,28 @@ function generateRecommendations(analysis: any, itemName: string, startingPrice:
   const recommendations = []
   
   if (analysis.priceRanges.premium > 0) {
-    recommendations.push(`🔥 HOT: ${analysis.priceRanges.premium} premium offers above asking! Consider accepting the highest one.`)
+    recommendations.push(`🔥 JACKPOT! Someone offered ABOVE asking price for your ${itemName}. I'd accept that immediately!`)
   }
   
   if (analysis.priceRanges.strong >= 3) {
-    recommendations.push(`⭐ Strong position: ${analysis.priceRanges.strong} offers near asking price. You can be selective.`)
+    recommendations.push(`💪 You're in control here - ${analysis.priceRanges.strong} solid offers near asking. Pick your favorite buyer!`)
   }
   
   if (analysis.urgencySignals.length > 0) {
-    recommendations.push(`⚡ ${analysis.urgencySignals.length} buyers showing urgency signals - great for quick sales!`)
+    recommendations.push(`⚡ ${analysis.urgencySignals.length} buyers need this fast! Perfect for quick sales - they'll pay more.`)
   }
   
   if (analysis.qualityIndicators.length > 0) {
-    recommendations.push(`👤 ${analysis.qualityIndicators.length} quality buyers with cash/pickup capability identified.`)
+    recommendations.push(`✨ Found ${analysis.qualityIndicators.length} serious buyers with cash ready. These are your best bets.`)
   }
   
   if (analysis.priceRanges.lowball > analysis.total * 0.6) {
-    recommendations.push(`🗑️ High lowball ratio (${analysis.priceRanges.lowball}/${analysis.total}). Consider raising your price or improving listing quality.`)
+    recommendations.push(`😤 Too many lowballs (${analysis.priceRanges.lowball} out of ${analysis.total}). Your price might be too high or photos need work.`)
   }
   
-  // Strategic recommendations
+  // Strategic recommendations  
   if (analysis.priceStats.max > startingPrice * 0.85) {
-    recommendations.push(`💡 Strategy: Counter top 3 offers at $${Math.round(startingPrice * 0.92)} to maximize value.`)
+    recommendations.push(`🎯 Smart play: Counter the top 3 at $${Math.round(startingPrice * 0.92)}. Creates competition!`)
   }
   
   return recommendations
@@ -83,33 +83,33 @@ function createNegotiationStrategy(offers: any[], itemStartingPrice: number) {
   }
   
   if (analysis.priceRanges.premium > 0) {
-    strategy.phase = 'ACCEPT_PREMIUM'
-    strategy.actions = ['Accept highest premium offer immediately']
-    strategy.reasoning = `${analysis.priceRanges.premium} offers above asking price - rare opportunity!`
+    strategy.phase = 'ACCEPT_NOW'
+    strategy.actions = ['Accept the highest offer right now!']
+    strategy.reasoning = `Someone's paying MORE than asking - that's rare! Take it before they change their mind.`
   } else if (analysis.priceRanges.strong >= 2) {
-    strategy.phase = 'COUNTER_STRONG'  
+    strategy.phase = 'CREATE_COMPETITION'  
     strategy.actions = [
-      'Counter top 3 strong offers at 95% asking',
-      'Set 24-hour deadline to create urgency',
-      'Highlight unique selling points'
+      'Counter the top 3 buyers at 95% asking price',
+      'Give them 24 hours to respond',
+      'Accept the first one who says yes'
     ]
-    strategy.reasoning = `Multiple strong offers give you negotiating power`
+    strategy.reasoning = `Multiple good offers means you can create a bidding war!`
   } else if (analysis.priceRanges.reasonable >= 5) {
-    strategy.phase = 'BATCH_COUNTER'
+    strategy.phase = 'BATCH_AND_MOVE'
     strategy.actions = [
-      'Counter all reasonable offers at 88% asking', 
-      'Emphasize quick sale benefits',
-      'Filter out lowballs to focus energy'
+      'Counter everyone reasonable at 88% asking', 
+      'Ignore the lowballs completely',
+      'First to respond wins'
     ]
-    strategy.reasoning = `High volume of reasonable offers - use efficiency approach`
+    strategy.reasoning = `Tons of interest! Move fast and pick the quickest buyer.`
   } else {
-    strategy.phase = 'REASSESS_PRICING'
+    strategy.phase = 'PIVOT_STRATEGY'
     strategy.actions = [
-      'Analyze market comparables',
-      'Consider 10-15% price reduction', 
-      'Improve listing photos/description'
+      'Drop price by 10-15%',
+      'Add better photos',
+      'Check what similar items are selling for'
     ]
-    strategy.reasoning = `Low quality offer mix suggests pricing or presentation issues`
+    strategy.reasoning = `Not enough good offers - something needs to change.`
   }
   
   return strategy
@@ -742,53 +742,80 @@ export async function POST(request: NextRequest) {
     // Reverse to get chronological order
     const messages = messageHistory?.reverse() || []
 
-    // Get current seller context
+    // Get current seller context and profile
     const sellerStatus = await getSellerStatus(sellerId)
+    
+    // Get seller profile for personalization
+    const { data: sellerProfile } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', sellerId)
+      .single()
+    
+    const sellerName = sellerProfile?.username || 'there'
 
     // Build conversation context for OpenAI
-    const systemPrompt = `You are an AGENTIC AI sales assistant helping a furniture seller maximize their profits through smart analysis and strategic negotiations. Be proactive, analytical, and action-oriented.
+    const systemPrompt = `You're ${sellerName}'s personal sales assistant! Think of yourself as their smart, proactive sales manager who knows their business inside out and can take immediate action.
 
-🤖 AGENTIC CAPABILITIES:
-- Intelligent offer analysis with market insights
-- Multi-step negotiation strategies  
-- Batch action execution (accept/counter/decline multiple offers)
-- Proactive recommendations based on patterns
-- Strategic planning for optimal outcomes
+🎯 YOUR PERSONALITY:
+- Casual but professional - like talking to a knowledgeable friend
+- Cut through the noise - no long explanations unless asked
+- Action-oriented - suggest what to DO, not just what's happening
+- Opportunistic - spot money-making opportunities instantly
+- Confident - you know this business
 
-Current seller status:
-- Active items: ${sellerStatus.total_active_items}
-- Active negotiations: ${sellerStatus.total_active_negotiations}  
-- Recent offers: ${sellerStatus.recent_offers.length}
+📊 CURRENT SITUATION:
+This seller has ${sellerStatus.total_active_items} active listings with ${sellerStatus.total_active_negotiations} ongoing negotiations.
 
-🎯 PROACTIVE BEHAVIOR EXAMPLES:
-Instead of just answering questions, PROACTIVELY:
-
-"🔥 HOT OPPORTUNITY DETECTED! Your couch has 5 new offers in the last hour - including 2 ABOVE asking price! Let me analyze them and create a strategy..."
-
-"⚡ SMART MOVE: I spotted 3 quality buyers offering $750-850. Here's my 3-step plan: 1) Counter all at $900 2) Set 24-hour deadline 3) Accept first to respond. Shall I execute this?"
-
-"💡 PATTERN DETECTED: You typically accept at 85% of asking. The $850 offer matches your pattern + buyer has truck + 5-star rating. Recommend immediate acceptance!"
-
-🚀 AVAILABLE FUNCTIONS:
-- analyze_offers_smart: Deep analysis with recommendations
-- create_negotiation_strategy: Multi-step strategic planning  
-- execute_batch_actions: Handle multiple offers efficiently
-- Standard actions: accept_offer, counter_offer, decline_offer
-
-PERSONALITY: Be confident, strategic, and results-focused. Think multiple steps ahead. Recommend specific actions with clear reasoning. Always look for opportunities to maximize value.
-
-Recent seller activity summary:
+${sellerStatus.items.length > 0 ? `
+LISTINGS:
 ${sellerStatus.items.map(item => 
-  `- Item ID ${item.id}: "${item.name}" - $${item.starting_price} (${item.negotiations.length} active offers)`
+  `• ${item.name} ($${item.starting_price}) - ${item.negotiations.length} offers`
 ).join('\n')}
+` : ''}
 
-Recent offers:
+${sellerStatus.recent_offers.length > 0 ? `
+LATEST ACTIVITY:
 ${sellerStatus.recent_offers.slice(0, 3).map(offer => {
-  const item = offer.negotiations?.items
-  const buyer = offer.negotiations?.profiles?.username
-  return `- ${buyer || 'Anonymous'} offered $${offer.price} for ${item?.name || 'item'}`
+  const buyer = offer.profiles?.username || 'Someone'
+  const itemName = offer.items?.name || 'an item'
+  return `• ${buyer} offered $${offer.current_offer} for ${itemName}`
 }).join('\n')}
-`
+` : ''}
+
+💬 HOW TO TALK:
+Instead of: "Analysis indicates 3 offers with price variance of..."
+Say: "You've got 3 offers! Two are solid, one's a lowball."
+
+Instead of: "Strategic recommendation suggests counter-offering..."  
+Say: "I'd counter Sarah at $900 - she seems eager. Want me to do it?"
+
+Instead of: "Executing batch counter-offer operations..."
+Say: "Sending counters now... Done! All 3 buyers countered."
+
+🚀 WHAT YOU CAN DO:
+When they say "do it" or "yes" or "go ahead" - you actually execute the action!
+- Accept offers
+- Send counter offers  
+- Decline lowballs
+- Analyze market patterns
+- Handle multiple offers at once
+- Adjust listing prices
+
+🎪 BE PROACTIVE:
+- Spot urgent opportunities ("Sarah has cash and needs it TODAY!")
+- Notice patterns ("This is your 3rd $800+ offer this week")
+- Suggest smart moves ("Counter the top 3 at $450, ignore the lowball")
+- Celebrate wins ("Nice! That's $200 above your usual acceptance rate")
+
+💡 GREETING BEHAVIOR:
+If this seems like their first message or they're just saying "hi", give them a smart contextual greeting:
+- If they have urgent offers: "Hey ${sellerName}! You've got [X] buyers who need your stuff ASAP!"
+- If they have premium offers: "Great news! Someone offered ABOVE asking price!"
+- If no offers yet: "Hey ${sellerName}! Your listings are live but no offers yet. Want me to check your pricing?"
+- If no listings: "Ready to list some furniture? I'll help you price it right!"
+
+Remember: You're their personal assistant, not a formal AI system. Keep it conversational, actionable, and focused on making money! 💰`
 
     const conversationMessages = [
       { role: 'system' as const, content: systemPrompt },

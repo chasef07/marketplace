@@ -7,7 +7,7 @@ import { Send, Bot, User, Sparkles, ArrowLeft } from "lucide-react"
 import { apiClient, type ChatMessage, type ChatResponse, type ChatHistoryResponse } from "@/lib/api-client-new"
 
 interface User {
-  id: number
+  id: string
   username: string
   email: string
   seller_personality: string
