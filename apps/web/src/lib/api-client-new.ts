@@ -44,12 +44,6 @@ export interface CreateListingData {
   dimensions?: string
 }
 
-export interface SearchQuery {
-  query: string
-  limit?: number
-  offset?: number
-}
-
 export interface Item {
   id: number
   seller_id: string
@@ -71,13 +65,6 @@ export interface Item {
     id: string
     username: string
   }
-}
-
-export interface SearchResponse {
-  success: boolean
-  items: Item[]
-  total_count: number
-  query_interpretation: string
 }
 
 export interface PaginationInfo {
@@ -353,22 +340,6 @@ export class SupabaseApiClient {
     return response.json()
   }
 
-  async aiSearch(searchQuery: SearchQuery): Promise<SearchResponse> {
-    const response = await fetch('/api/ai/search', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(searchQuery)
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Search failed')
-    }
-
-    return response.json()
-  }
 
 
   async getOfferAnalysis(itemId: number): Promise<OfferAnalysisResponse> {

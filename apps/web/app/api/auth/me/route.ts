@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       user: {
         id: profile.id,
         email: profile.email,
@@ -54,6 +54,8 @@ export async function GET(request: NextRequest) {
         last_login: profile.last_login
       }
     })
+    response.headers.set('Cache-Control', 'private, max-age=300')
+    return response
   } catch (error) {
     console.error('Get current user error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

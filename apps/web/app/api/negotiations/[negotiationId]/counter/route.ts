@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase'
+import { ratelimit, withRateLimit } from '@/lib/rate-limit'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ negotiationId: string }> }
 ) {
-  try {
+  return withRateLimit(request, ratelimit.api, async () => {
+    try {
     const supabase = createSupabaseServerClient()
     const { negotiationId: negotiationIdStr } = await params
     const negotiationId = parseInt(negotiationIdStr)
@@ -103,8 +105,9 @@ export async function POST(
       message: 'Counter offer created successfully',
       offer
     })
-  } catch (error) {
-    console.error('Counter offer error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
+    } catch (error) {
+      console.error('Counter offer error:', error)
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    }
+  })
 }

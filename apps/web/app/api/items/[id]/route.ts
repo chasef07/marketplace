@@ -41,7 +41,9 @@ export async function GET(
       return NextResponse.json({ error: 'Item not found' }, { status: 404 })
     }
 
-    return NextResponse.json(item)
+    const response = NextResponse.json(item)
+    response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=3600')
+    return response
   } catch (error) {
     console.error('Item fetch error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

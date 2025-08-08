@@ -2,17 +2,15 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Search, Heart, Star, MapPin, Clock, Plus, Sparkles, Bot } from "lucide-react"
-import { useState, useEffect } from "react"
-import { apiClient, SearchResponse, Item, PaginatedResponse, PaginationInfo } from "@/lib/api-client-new"
-import { AISearchBar } from "@/components/search/ai-search-bar"
+import { Search, Heart, Star, MapPin, Clock, Plus, Bot } from "lucide-react"
+import { useState, useEffect, useMemo, useCallback } from "react"
+import useSWR from 'swr'
+import { useDebouncedCallback } from 'use-debounce'
+import { apiClient, Item, PaginationInfo } from "@/lib/api-client-new"
+import { FURNITURE_BLUR_DATA_URL } from "@/lib/blur-data"
 import Image from "next/image"
 import { ItemSkeleton } from "@/components/ui/skeleton"
 
-interface SellerInfo {
-  id: number
-  username: string
-}
 
 interface User {
   id: number
@@ -35,15 +33,25 @@ interface MarketplaceProps {
   onSellerChat?: () => void
 }
 
+// Fetcher function for SWR
+const fetcher = (url: string) => fetch(url).then(res => res.json())
+
 export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSignInClick, onSellerDashboard, onSellerChat }: MarketplaceProps) {
-  const [items, setItems] = useState<Item[]>([])
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [searchInput, setSearchInput] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
-  const [isAISearching, setIsAISearching] = useState(false)
-  const [searchInterpretation, setSearchInterpretation] = useState<string | null>(null)
-  const [isAISearchMode, setIsAISearchMode] = useState(false)
+
+  // Debounce search input to avoid excessive filtering
+  const debouncedSearch = useDebouncedCallback(
+    (value: string) => setSearchQuery(value),
+    300
+  )
+
+  useEffect(() => {
+    debouncedSearch(searchInput)
+  }, [searchInput, debouncedSearch])
+  const [currentPage, setCurrentPage] = useState(1)
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,
     limit: 12,
@@ -52,6 +60,21 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
     has_next: false,
     has_prev: false
   })
+
+  // Use SWR for data fetching with caching
+  const { data, error: swrError, mutate } = useSWR(
+    `/api/items?page=${currentPage}&limit=12`,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60000, // Dedupe requests within 1 minute
+      errorRetryCount: 3,
+      errorRetryInterval: 5000
+    }
+  )
+
+  const loading = !data && !swrError
+  const items = data?.items || []
 
 
   const categories = ["All", "couch", "chair", "dining_table", "bookshelf", "dresser", "other"]
@@ -66,81 +89,47 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
     "other": "Other"
   }
 
+  // Update pagination when data changes
   useEffect(() => {
-    fetchItems()
-  }, [])
+    if (data?.pagination) {
+      setPagination(data.pagination)
+    }
+  }, [data])
 
-  // Add an effect to refresh data when the component mounts (e.g., after navigation)
+  // Update error state from SWR
   useEffect(() => {
-    // Force refresh when component becomes visible after navigation
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        fetchItems()
-      }
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    
-    // Force immediate refresh on component mount - this ensures new listings appear
-    fetchItems()
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [])
-
-  const fetchItems = async (page: number = 1) => {
-    try {
-      setLoading(true)
-      const response = await apiClient.getMarketplaceItems(page, 12)
-      setItems(response.items || [])
-      setPagination(response.pagination)
-      setIsAISearchMode(false)
-      setSearchInterpretation(null)
-    } catch (err) {
-      console.error('Error fetching marketplace items:', err)
+    if (swrError) {
       setError('Failed to load marketplace items')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleAISearch = async (query: string) => {
-    try {
-      setIsAISearching(true)
-      setLoading(true)
+    } else {
       setError(null)
-      setIsAISearchMode(true)
-      
-      const searchResponse: SearchResponse = await apiClient.aiSearch({ query })
-      setItems(searchResponse.items)
-      setSearchInterpretation(searchResponse.query_interpretation)
-      setSearchQuery(query)
-      
-    } catch (err) {
-      setError('AI search failed. Please try again.')
-      console.error('AI search error:', err)
-    } finally {
-      setIsAISearching(false)
-      setLoading(false)
     }
-  }
+  }, [swrError])
 
-  const handleBackToAllItems = () => {
-    setSearchQuery("")
-    setSelectedCategory("All")
-    fetchItems()
-  }
+  // Function to refresh data (replaces fetchItems)
+  const refreshItems = useCallback(() => {
+    mutate()
+  }, [mutate])
 
-  const filteredItems = isAISearchMode ? items : items.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = selectedCategory === "All" || item.furniture_type === selectedCategory
-    return matchesSearch && matchesCategory && item.is_available
-  })
+  // Function to change page
+  const changePage = useCallback((page: number) => {
+    setCurrentPage(page)
+  }, [])
 
 
-  const formatTimeAgo = (timestamp: string) => {
+
+  // Memoize expensive filtering operation
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           item.description.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesCategory = selectedCategory === "All" || item.furniture_type === selectedCategory
+      return matchesSearch && matchesCategory && item.is_available
+    })
+  }, [items, searchQuery, selectedCategory])
+
+
+  // Memoize time formatting function
+  const formatTimeAgo = useCallback((timestamp: string) => {
     const now = new Date()
     const created = new Date(timestamp)
     const diffMinutes = Math.floor((now.getTime() - created.getTime()) / (1000 * 60))
@@ -157,9 +146,10 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
     
     const diffMonths = Math.floor(diffDays / 30)
     return `${diffMonths}mo ago`
-  }
+  }, [])
 
-  const getConditionColor = (condition: string) => {
+  // Memoize condition color mapping
+  const getConditionColor = useCallback((condition: string) => {
     switch (condition) {
       case 'excellent': return 'text-green-600'
       case 'good': return 'text-blue-600'  
@@ -167,7 +157,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
       case 'poor': return 'text-red-600'
       default: return 'text-gray-600'
     }
-  }
+  }, [])
 
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #F7F3E9 0%, #E8DDD4 50%, #DDD1C7 100%)' }}>
@@ -234,69 +224,51 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
         </div>
       </header>
 
-      {/* AI Search Hero Section */}
-      <section className="py-12" style={{ background: 'linear-gradient(135deg, rgba(247, 243, 233, 0.8) 0%, rgba(232, 221, 212, 0.8) 50%, rgba(221, 209, 199, 0.8) 100%)' }}>
+      {/* Search and Category Section */}
+      <section className="py-8" style={{ background: 'linear-gradient(135deg, rgba(247, 243, 233, 0.8) 0%, rgba(232, 221, 212, 0.8) 50%, rgba(221, 209, 199, 0.8) 100%)' }}>
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
-            <h2 className="text-4xl font-bold mb-4" style={{ color: '#3C2415' }}>
-              Find Your Perfect Furniture
+            <h2 className="text-3xl font-bold mb-4" style={{ color: '#3C2415' }}>
+              Browse Furniture
             </h2>
-            <p className="text-xl max-w-2xl mx-auto" style={{ color: '#6B5A47' }}>
-              Use natural language to describe what you're looking for. Our AI understands context and finds exactly what you need.
-            </p>
           </div>
           
-          <AISearchBar 
-            onSearch={handleAISearch}
-            isLoading={isAISearching}
-            className="mb-6"
-          />
+          {/* Search Bar */}
+          <div className="max-w-2xl mx-auto mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search furniture..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
 
-          {/* Search Interpretation */}
-          {searchInterpretation && (
-            <div className="max-w-4xl mx-auto">
-              <div className="bg-white/80 backdrop-blur-sm border rounded-xl p-4 flex items-center gap-3" style={{ borderColor: 'rgba(139, 69, 19, 0.2)' }}>
-                <Sparkles className="w-5 h-5 flex-shrink-0" style={{ color: '#8B4513' }} />
-                <p className="text-sm" style={{ color: '#3C2415' }}>
-                  <span className="font-medium">AI understood:</span> {searchInterpretation}
-                </p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleBackToAllItems}
-                  className="hover:bg-opacity-10"
-                  style={{ color: '#8B4513' }}
+          {/* Category Filters */}
+          <div className="max-w-4xl mx-auto">
+            <div className="flex justify-center gap-2 flex-wrap">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    selectedCategory === category
+                      ? 'text-white shadow-lg'
+                      : 'bg-white/80 backdrop-blur-sm border text-gray-700 hover:bg-white hover:shadow-md'
+                  }`}
+                  style={selectedCategory === category ? 
+                    { background: 'linear-gradient(135deg, #8B4513, #CD853F)', color: '#F7F3E9' } : 
+                    { borderColor: 'rgba(139, 69, 19, 0.2)' }
+                  }
                 >
-                  View All Items
-                </Button>
-              </div>
+                  {categoryDisplayNames[category]}
+                </button>
+              ))}
             </div>
-          )}
-
-          {/* Category Filters - Only show when not in AI search mode */}
-          {!isAISearchMode && (
-            <div className="max-w-4xl mx-auto mt-8">
-              <div className="flex justify-center gap-2 flex-wrap">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                      selectedCategory === category
-                        ? 'text-white shadow-lg'
-                        : 'bg-white/80 backdrop-blur-sm border text-gray-700 hover:bg-white hover:shadow-md'
-                    }`}
-                    style={selectedCategory === category ? 
-                      { background: 'linear-gradient(135deg, #8B4513, #CD853F)', color: '#F7F3E9' } : 
-                      { borderColor: 'rgba(139, 69, 19, 0.2)' }
-                    }
-                  >
-                    {categoryDisplayNames[category]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </section>
 
@@ -305,10 +277,10 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-semibold" style={{ color: '#3C2415' }}>
-              {isAISearchMode ? 'AI Search Results' : searchQuery ? `Search results for "${searchQuery}"` : 'Available Items'}
+              {searchQuery ? `Search results for "${searchQuery}"` : 'Available Items'}
             </h2>
             <p style={{ color: '#6B5A47' }}>
-              {isAISearchMode ? `${items.length} items found` : `${filteredItems.length} items found`}
+              {filteredItems.length} items found
             </p>
           </div>
 
@@ -323,7 +295,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 inline-block">
                 <p className="text-red-800">{error}</p>
                 <Button 
-                  onClick={() => fetchItems()}
+                  onClick={refreshItems}
                   className="mt-2 bg-red-600 hover:bg-red-700"
                 >
                   Try Again
@@ -365,6 +337,10 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                           fill
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
                           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
+                          placeholder="blur"
+                          blurDataURL={FURNITURE_BLUR_DATA_URL}
+                          quality={85}
+                          priority={false}
                         />
                       ) : (
                         <div className="text-6xl">🪑</div>
@@ -421,11 +397,11 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
           )}
 
           {/* Pagination */}
-          {!isAISearchMode && pagination.total_pages > 1 && (
+          {pagination.total_pages > 1 && (
             <div className="flex justify-center items-center gap-2 mt-8">
               <Button
                 variant="outline"
-                onClick={() => fetchItems(pagination.page - 1)}
+                onClick={() => changePage(pagination.page - 1)}
                 disabled={!pagination.has_prev || loading}
                 className="text-sm"
               >
@@ -455,7 +431,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                     <Button
                       key={`page-${pageNum}`}
                       variant={pagination.page === pageNum ? "default" : "outline"}
-                      onClick={() => fetchItems(pageNum)}
+                      onClick={() => changePage(pageNum)}
                       disabled={loading}
                       className="w-10 h-10 text-sm"
                       style={pagination.page === pageNum ? {
@@ -471,7 +447,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
               
               <Button
                 variant="outline"
-                onClick={() => fetchItems(pagination.page + 1)}
+                onClick={() => changePage(pagination.page + 1)}
                 disabled={!pagination.has_next || loading}
                 className="text-sm"
               >

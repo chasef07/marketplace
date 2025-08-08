@@ -1,14 +1,25 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { HeroSection } from './HeroSection'
 import { ListingPreview } from './ListingPreview'
 import { Marketplace } from '../marketplace/marketplace'
 import { EnhancedAuth } from '../auth/enhanced-auth'
-import { SellerDashboard } from '../seller/seller-dashboard'
-import { ItemDetail } from '../marketplace/item-detail'
-import { SellerChat } from '../chat/seller-chat'
 import { type AIAnalysisResult, apiClient } from "@/lib/api-client-new"
+
+// Lazy load heavy components
+const SellerDashboard = dynamic(() => import('../seller/seller-dashboard').then(mod => ({ default: mod.SellerDashboard })), {
+  loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
+})
+
+const ItemDetail = dynamic(() => import('../marketplace/item-detail').then(mod => ({ default: mod.ItemDetail })), {
+  loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
+})
+
+const SellerChat = dynamic(() => import('../chat/seller-chat').then(mod => ({ default: mod.SellerChat })), {
+  loading: () => <div className="h-96 bg-gray-100 animate-pulse rounded-lg" />
+})
 
 interface User {
   id: number

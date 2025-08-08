@@ -65,22 +65,27 @@ This is a serverless AI-powered furniture marketplace built as a Next.js monorep
 
 ### API Architecture
 - **RESTful endpoints** under `/api/` deployed as serverless functions
-- **AI Services**: `/api/ai/analyze-image`, `/api/ai/search`
+- **AI Services**: `/api/ai/analyze-image`, `/api/chat` for AI-powered assistance
 - **CRUD Operations**: `/api/items/*`, `/api/negotiations/*`, `/api/auth/me`
-- **Advanced Features**: `/api/negotiations/items/{itemId}/offer-analysis` for AI insights
+- **Location Services**: `/api/geocode` for zip code to coordinates conversion
+- **Advanced Features**: `/api/negotiations/items/{itemId}/offers` for offer management
 - **Authentication**: Handled by Supabase Auth, checked in API routes
 - **File Uploads**: Direct to Supabase Storage with signed URLs
+- **Rate Limiting**: Built-in rate limiting for API protection and performance
 
 ### Component Architecture
 - **App Router**: Uses `app/` directory structure
 - **Components**: Organized by feature in `components/`
   - `auth/` - Enhanced authentication UI
   - `home/` - Home page components (HeroSection, HomePage, ListingPreview, etc.)
-  - `marketplace/` - Marketplace views and item details
-  - `search/` - AI-powered search functionality
+  - `marketplace/` - Marketplace views and item details with location maps
+  - `maps/` - Location mapping components with radius display
+  - `performance-provider/` - Performance monitoring wrapper component
   - `seller/` - Seller dashboard with offer analysis
   - `ui/` - Reusable UI components
 - **API Client**: Modern Supabase-based client in `src/lib/api-client-new.ts`
+- **Performance Libraries**: Utilities in `src/lib/performance.ts` for Web Vitals tracking
+- **Rate Limiting**: Rate limiting utilities in `src/lib/rate-limit.ts`
 - **Type Safety**: Full TypeScript with Supabase-generated types
 
 ### Critical Integration Points
@@ -92,7 +97,8 @@ This is a serverless AI-powered furniture marketplace built as a Next.js monorep
 
 ## Database Schema
 
-Run the SQL in `/supabase/schema.sql` in your Supabase project to create:
+Run the SQL in `/supabase/schema.sql` in your Supabase project to create the initial schema.
+Run `/supabase/migrations/002_performance_indexes.sql` to add performance-optimized database indexes.
 
 ### Key Tables
 - `profiles` - User data with seller/buyer personalities
@@ -149,12 +155,13 @@ Run the SQL in `/supabase/schema.sql` in your Supabase project to create:
 ## Current Project Status
 
 ### Recent Changes
-- Streamlined authentication system with enhanced UI components
-- Removed deprecated landing page components (ai-showcase, features, hero)
-- Consolidated home page functionality with improved components
-- Simplified API structure by removing unused suggestion endpoints
-- Updated search functionality with AI-powered semantic search
-- Enhanced seller dashboard with offer analysis capabilities
+- **Performance Optimization**: Added comprehensive performance monitoring and tracking utilities
+- **Location Features**: Implemented geocoding API for zip code to coordinates conversion with location maps
+- **Performance Database Indexes**: Added optimized database indexes for improved query performance
+- **Rate Limiting**: Implemented API rate limiting for better security and performance
+- **UI/UX Improvements**: Enhanced image loading with blur placeholders and pagination
+- **Search Optimization**: Removed AI search bar component, streamlined search functionality
+- **Caching Strategy**: Added intelligent caching headers for geocoding and static assets
 
 ### Clean Architecture
 - Removed legacy components and unused API routes

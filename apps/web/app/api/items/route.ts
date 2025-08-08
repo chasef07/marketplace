@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase'
+import { ratelimit, withRateLimit } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
-  try {
+  return withRateLimit(request, ratelimit.api, async () => {
+    try {
     const supabase = createSupabaseServerClient()
     const { searchParams } = new URL(request.url)
     
@@ -36,7 +38,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Return paginated response with metadata
-    return NextResponse.json({
+    const response = NextResponse.json({
       items: items || [],
       pagination: {
         page,
@@ -47,14 +49,20 @@ export async function GET(request: NextRequest) {
         has_prev: page > 1
       }
     })
-  } catch (error) {
-    console.error('Items fetch error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
+
+    // Add caching headers
+    response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=600') // 5 min client, 10 min CDN
+    return response
+    } catch (error) {
+      console.error('Items fetch error:', error)
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    }
+  })
 }
 
 export async function POST(request: NextRequest) {
-  try {
+  return withRateLimit(request, ratelimit.api, async () => {
+    try {
     const supabase = createSupabaseServerClient()
     const body = await request.json()
 
@@ -170,8 +178,9 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(item)
-  } catch (error) {
-    console.error('Item creation error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
+    } catch (error) {
+      console.error('Item creation error:', error)
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    }
+  })
 }

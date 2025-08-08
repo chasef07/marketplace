@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase'
+import { ratelimit, withRateLimit } from '@/lib/rate-limit'
 import OpenAI from 'openai'
 
 const openai = new OpenAI({
@@ -14,6 +15,7 @@ if (!process.env.OPENAI_API_KEY) {
 const supabase = createSupabaseServerClient()
 
 export async function POST(request: NextRequest) {
+  return withRateLimit(request, ratelimit.imageAnalysis, async () => {
   try {
     // Check if OpenAI API key is available
     if (!process.env.OPENAI_API_KEY) {
@@ -160,4 +162,5 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+  });
 }

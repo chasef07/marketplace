@@ -1,13 +1,22 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Heart, MapPin, User, DollarSign, MessageSquare, ChevronDown, ChevronUp } from "lucide-react"
 import { apiClient } from "@/lib/api-client-new"
-import { SimpleLocationMap } from "@/components/maps/simple-location-map"
+import { FURNITURE_BLUR_DATA_URL } from "@/lib/blur-data"
 import Image from "next/image"
 import { ItemDetailSkeleton } from "@/components/ui/skeleton"
+
+// Lazy load the map component
+const SimpleLocationMap = dynamic(() => import('@/components/maps/simple-location-map').then(mod => ({ default: mod.SimpleLocationMap })), {
+  loading: () => <div className="h-32 bg-gray-200 animate-pulse rounded-lg flex items-center justify-center">
+    <MapPin className="h-6 w-6 text-gray-400" />
+  </div>,
+  ssr: false
+})
 
 interface SellerInfo {
   id: number
@@ -244,6 +253,9 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                       className="object-cover"
                       priority
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 50vw"
+                      placeholder="blur"
+                      blurDataURL={FURNITURE_BLUR_DATA_URL}
+                      quality={90}
                     />
                   ) : (
                     <div className="text-8xl">🪑</div>
@@ -457,21 +469,12 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer }: ItemDetailProp
                 </div>
                 
                 {/* Location Map */}
-                <div className="space-y-2 p-4 border-2 border-blue-500 bg-blue-50">
-                  <p className="text-lg font-bold text-blue-800">🗺️ PICKUP/DELIVERY AREA 🗺️</p>
-                  {item.seller?.zip_code ? (
-                    <div className="space-y-2">
-                      <p className="text-green-600 font-semibold">✅ ZIP CODE FOUND: {item.seller.zip_code}</p>
-                      <SimpleLocationMap zipCode={item.seller.zip_code} />
-                      <p className="text-xs text-gray-600">Map should be above this text</p>
-                    </div>
-                  ) : (
-                    <div className="p-4 bg-red-100 rounded-lg text-center border-2 border-red-500">
-                      <p className="text-lg font-bold text-red-600">❌ DEBUG: NO ZIP CODE FOUND</p>
-                      <p className="text-sm text-gray-700 mt-2">Seller data: {JSON.stringify(item.seller)}</p>
-                    </div>
-                  )}
-                </div>
+                {item.seller?.zip_code && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium" style={{ color: '#6B5A47' }}>Pickup/Delivery Area</p>
+                    <SimpleLocationMap zipCode={item.seller.zip_code} />
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

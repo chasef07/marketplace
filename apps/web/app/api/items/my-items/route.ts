@@ -42,7 +42,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch items' }, { status: 500 })
     }
 
-    return NextResponse.json(items)
+    const response = NextResponse.json(items)
+    response.headers.set('Cache-Control', 'private, max-age=300')
+    return response
   } catch (error) {
     console.error('My items fetch error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

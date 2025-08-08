@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase'
 import OpenAI from 'openai'
+import { ratelimit, withRateLimit } from '@/lib/rate-limit'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -646,7 +647,8 @@ async function executeBatchActions(actions: any[], sellerId: string) {
 }
 
 export async function POST(request: NextRequest) {
-  try {
+  return withRateLimit(request, ratelimit.chat, async () => {
+    try {
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({ error: 'AI service not configured' }, { status: 500 })
     }
@@ -917,11 +919,12 @@ ${sellerStatus.recent_offers.slice(0, 3).map(offer => {
       })
     }
 
-  } catch (error: any) {
-    console.error('Chat API error:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to process chat message' },
-      { status: 500 }
-    )
-  }
+    } catch (error: any) {
+      console.error('Chat API error:', error)
+      return NextResponse.json(
+        { error: error.message || 'Failed to process chat message' },
+        { status: 500 }
+      )
+    }
+  })
 }

@@ -1,96 +1,71 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import dynamic from 'next/dynamic'
+import React, { useEffect, useState, useRef } from 'react'
+import { MapPin } from 'lucide-react'
 
 interface SimpleLocationMapProps {
   zipCode: string
   className?: string
 }
 
-// Fallback component when map is loading or unavailable
-function LocationFallback({ zipCode }: { zipCode: string }) {
-  return (
-    <div className={`w-full h-32 bg-gray-50 rounded-lg border border-gray-200`}>
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          {/* Visual radius indicator */}
-          <div className="relative flex items-center justify-center mb-2">
-            {/* Outer radius circle */}
-            <div 
-              className="w-12 h-12 rounded-full border-2 opacity-20"
-              style={{ borderColor: '#8B4513' }}
-            />
-            {/* Middle radius circle */}
-            <div 
-              className="absolute w-8 h-8 rounded-full border-2 opacity-30 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-              style={{ borderColor: '#8B4513' }}
-            />
-            {/* Inner radius circle */}
-            <div 
-              className="absolute w-4 h-4 rounded-full border-2 opacity-50 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-              style={{ borderColor: '#8B4513' }}
-            />
-            {/* Center dot */}
-            <div 
-              className="absolute w-2 h-2 rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
-              style={{ backgroundColor: '#8B4513' }}
-            />
-          </div>
-          
-          {/* Location text */}
-          <p className="text-sm font-medium" style={{ color: '#8B4513' }}>
-            {zipCode} area
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            ~5 mile pickup radius
-          </p>
-        </div>
-      </div>
-    </div>
-  )
+// Import Leaflet dynamically to avoid SSR issues
+const loadLeaflet = async () => {
+  if (typeof window === 'undefined') return null
+  
+  // Load Leaflet CSS if not already loaded
+  if (!document.querySelector('link[href*="leaflet.css"]')) {
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+    link.crossOrigin = ''
+    document.head.appendChild(link)
+  }
+  
+  // Import Leaflet
+  const L = await import('leaflet')
+  
+  // Fix default icons issue in Leaflet
+  delete (L.Icon.Default.prototype as any)._getIconUrl
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  })
+  
+  return L
 }
 
-// Actual map component that will be dynamically loaded
-function LeafletMapComponent({ zipCode }: { zipCode: string }) {
+function InteractiveMap({ zipCode }: { zipCode: string }) {
+  const mapRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<any>(null)
+  const isInitializingRef = useRef(false)
+  const mapId = `map-${zipCode.replace(/\D/g, '')}-${Math.random().toString(36).substr(2, 9)}`
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // Simple geocoding using Nominatim (free service)
-  const geocodeZipCode = async (zipCode: string): Promise<{ lat: number; lng: number } | null> => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(zipCode)}&countrycodes=us&limit=1`
-      )
-      const data = await response.json()
-      
-      if (data && data.length > 0) {
-        return {
-          lat: parseFloat(data[0].lat),
-          lng: parseFloat(data[0].lon)
-        }
-      }
-      return null
-    } catch (error) {
-      console.error('Geocoding error:', error)
-      return null
-    }
-  }
-
-  // Always call all hooks in the same order
+  // Geocode the zip code
   useEffect(() => {
     const fetchCoordinates = async () => {
-      setLoading(true)
-      setError(false)
-      
-      const coords = await geocodeZipCode(zipCode)
-      if (coords) {
-        setCoordinates(coords)
-      } else {
-        setError(true)
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const response = await fetch(`/api/geocode?zipCode=${encodeURIComponent(zipCode)}`)
+        
+        if (!response.ok) {
+          throw new Error('Failed to geocode zip code')
+        }
+        
+        const data = await response.json()
+        console.log('Geocoding successful:', data)
+        setCoordinates({ lat: data.lat, lng: data.lng })
+      } catch (err) {
+        console.error('Geocoding error:', err)
+        setError('Unable to locate zip code')
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     if (zipCode) {
@@ -98,125 +73,210 @@ function LeafletMapComponent({ zipCode }: { zipCode: string }) {
     }
   }, [zipCode])
 
+  // Initialize map when coordinates are available
   useEffect(() => {
-    // Dynamically import Leaflet CSS
-    const link = document.createElement('link')
-    link.rel = 'stylesheet'
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-    link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY='
-    link.crossOrigin = ''
-    document.head.appendChild(link)
+    if (!coordinates || !mapRef.current) return
 
-    return () => {
-      if (document.head.contains(link)) {
-        document.head.removeChild(link)
-      }
-    }
-  }, [])
+    // Skip if already initializing or initialized
+    if (isInitializingRef.current || mapInstanceRef.current) return
 
-  // Always call this useEffect, but only initialize map when coordinates are ready
-  useEffect(() => {
     const initMap = async () => {
-      if (typeof window === 'undefined' || !coordinates) return
+      try {
+        isInitializingRef.current = true
+        const L = await loadLeaflet()
+        if (!L) {
+          isInitializingRef.current = false
+          return
+        }
 
-      // Dynamically import Leaflet
-      const L = await import('leaflet')
-      
-      const mapElement = document.getElementById(`map-${zipCode.replace(/\s+/g, '')}`)
-      if (!mapElement || mapElement.hasChildNodes()) return
+        // Thorough cleanup of existing map
+        if (mapInstanceRef.current) {
+          try {
+            mapInstanceRef.current.off()
+            mapInstanceRef.current.remove()
+          } catch (e) {
+            console.warn('Error during map cleanup:', e)
+          }
+          mapInstanceRef.current = null
+        }
 
-      const map = L.map(mapElement, {
-        center: [coordinates.lat, coordinates.lng],
-        zoom: 11,
-        scrollWheelZoom: false,
-        dragging: false,
-        zoomControl: false,
-        doubleClickZoom: false,
-        touchZoom: false,
-        keyboard: false
-      })
+        // Clear and reset container
+        if (mapRef.current) {
+          mapRef.current.innerHTML = ''
+          // Remove any Leaflet-related classes
+          mapRef.current.className = 'w-full h-full'
+        }
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(map)
+        // Wait for cleanup and DOM updates
+        await new Promise(resolve => setTimeout(resolve, 200))
 
-      // Add radius circle
-      L.circle([coordinates.lat, coordinates.lng], {
-        color: '#8B4513',
-        fillColor: '#8B4513',
-        fillOpacity: 0.15,
-        radius: 8047, // 5 miles in meters
-        weight: 2,
-        opacity: 0.8
-      }).addTo(map)
+        // Final safety check
+        if (!mapRef.current || isInitializingRef.current === false) {
+          console.log('Map initialization cancelled')
+          return
+        }
 
-      // Create custom marker
-      const customIcon = L.divIcon({
-        html: `
-          <div style="
-            width: 20px; 
-            height: 20px; 
-            background-color: #8B4513; 
-            border: 3px solid white; 
-            border-radius: 50%; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-          "></div>
-        `,
-        className: 'custom-div-icon',
-        iconSize: [20, 20],
-        iconAnchor: [10, 10]
-      })
+        console.log('Creating map with coordinates:', coordinates)
 
-      L.marker([coordinates.lat, coordinates.lng], { icon: customIcon })
-        .addTo(map)
-        .bindPopup(`
+        // Create map with error handling
+        const map = L.map(mapRef.current, {
+          center: [coordinates.lat, coordinates.lng],
+          zoom: 11,
+          zoomControl: true,
+          scrollWheelZoom: true,
+          doubleClickZoom: true,
+          boxZoom: true,
+          keyboard: true,
+        })
+
+        mapInstanceRef.current = map
+
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors',
+          maxZoom: 19,
+        }).addTo(map)
+
+        // Create custom marker
+        const customIcon = L.divIcon({
+          html: `
+            <div style="
+              width: 24px; 
+              height: 24px; 
+              background-color: #dc2626; 
+              border: 3px solid white; 
+              border-radius: 50%; 
+              box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+              position: relative;
+            ">
+              <div style="
+                position: absolute;
+                top: -8px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 0;
+                height: 0;
+                border-left: 6px solid transparent;
+                border-right: 6px solid transparent;
+                border-bottom: 8px solid #dc2626;
+              "></div>
+            </div>
+          `,
+          className: 'custom-marker',
+          iconSize: [24, 32],
+          iconAnchor: [12, 32],
+          popupAnchor: [0, -32]
+        })
+
+        // Add marker
+        const marker = L.marker([coordinates.lat, coordinates.lng], { icon: customIcon })
+          .addTo(map)
+          .bindPopup(`
+            <div style="text-align: center; font-family: system-ui; min-width: 120px;">
+              <div style="font-size: 16px; font-weight: 600; color: #dc2626; margin-bottom: 4px;">
+                📍 ${zipCode}
+              </div>
+              <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                ${coordinates.lat.toFixed(4)}°, ${coordinates.lng.toFixed(4)}°
+              </div>
+              <div style="font-size: 11px; color: #059669; font-weight: 500;">
+                🏠 Pickup & Delivery Zone
+              </div>
+            </div>
+          `)
+
+        // Add 5-mile radius circle
+        const radiusInMeters = 5 * 1609.34 // 5 miles in meters
+        const radiusCircle = L.circle([coordinates.lat, coordinates.lng], {
+          radius: radiusInMeters,
+          fillColor: '#dc2626',
+          color: '#dc2626',
+          weight: 2,
+          opacity: 0.8,
+          fillOpacity: 0.1,
+        }).addTo(map)
+
+        // Add radius info popup to circle
+        radiusCircle.bindPopup(`
           <div style="text-align: center; font-family: system-ui;">
-            <p style="font-weight: 600; color: #8B4513; margin: 0 0 4px 0;">
-              ${zipCode} area
-            </p>
-            <p style="font-size: 12px; color: #666; margin: 0;">
-              Pickup/Delivery Zone<br/>~5 mile radius
-            </p>
+            <div style="font-size: 14px; font-weight: 600; color: #dc2626; margin-bottom: 4px;">
+              🎯 Service Area
+            </div>
+            <div style="font-size: 12px; color: #666;">
+              5-mile radius from ${zipCode}
+            </div>
           </div>
         `)
+
+        // Fit map to show the circle
+        map.fitBounds(radiusCircle.getBounds(), { padding: [20, 20] })
+
+        // Force map to resize properly
+        setTimeout(() => {
+          map.invalidateSize()
+        }, 100)
+
+        console.log('Map initialized successfully with radius')
+
+      } catch (error) {
+        console.error('Error initializing map:', error)
+        setError('Failed to load map')
+      } finally {
+        isInitializingRef.current = false
+      }
     }
 
     initMap()
+
+    // Cleanup on unmount or coordinate/zipCode change
+    return () => {
+      isInitializingRef.current = false
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.off()
+          mapInstanceRef.current.remove()
+        } catch (e) {
+          console.warn('Error during cleanup:', e)
+        }
+        mapInstanceRef.current = null
+      }
+    }
   }, [coordinates, zipCode])
 
   if (loading) {
     return (
-      <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center border">
-        <div className="text-sm text-gray-500">Loading map...</div>
+      <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center border">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-2"></div>
+          <div className="text-sm text-gray-600">Loading map...</div>
+        </div>
       </div>
     )
   }
 
-  if (error || !coordinates) {
-    return <LocationFallback zipCode={zipCode} />
+  if (error) {
+    return (
+      <div className="w-full h-64 bg-red-50 rounded-lg flex items-center justify-center border border-red-200">
+        <div className="text-center">
+          <MapPin className="w-8 h-8 text-red-500 mx-auto mb-2" />
+          <div className="text-sm font-medium text-red-700">{error}</div>
+          <div className="text-xs text-red-600 mt-1">Please try a different zip code</div>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div 
-      id={`map-${zipCode.replace(/\s+/g, '')}`}
-      className="w-full h-32 rounded-lg overflow-hidden border"
-      style={{ minHeight: '128px' }}
-    />
+    <div className="w-full h-64 rounded-lg overflow-hidden border border-gray-300 shadow-sm">
+      <div ref={mapRef} id={mapId} className="w-full h-full" />
+    </div>
   )
 }
 
-// Dynamically import the map component to avoid SSR issues
-const DynamicLeafletMap = dynamic(() => Promise.resolve(LeafletMapComponent), {
-  ssr: false,
-  loading: () => <LocationFallback zipCode="" />
-})
-
 export function SimpleLocationMap({ zipCode, className = '' }: SimpleLocationMapProps) {
-  console.log('SimpleLocationMap rendering for zipCode:', zipCode) // Debug log
-  
   return (
     <div className={className}>
-      <DynamicLeafletMap zipCode={zipCode} />
+      <InteractiveMap zipCode={zipCode} />
     </div>
   )
 }

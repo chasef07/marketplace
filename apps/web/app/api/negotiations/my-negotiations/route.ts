@@ -68,7 +68,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch negotiations' }, { status: 500 })
     }
 
-    return NextResponse.json(negotiations)
+    const response = NextResponse.json(negotiations)
+    response.headers.set('Cache-Control', 'private, max-age=60')
+    return response
   } catch (error) {
     console.error('Negotiations fetch error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -17,15 +17,24 @@ A modern, serverless full-stack marketplace application with AI-powered image an
 
 ### 🏪 **Marketplace Features**
 - **Item Listings** - create, view, and manage furniture listings
-- **Image Upload** - secure photo storage via Supabase Storage
-- **Browse Marketplace** - view available items with filtering
+- **Image Upload** - secure photo storage with blur placeholders for performance
+- **Location Services** - geocoding API with zip code to coordinates conversion
+- **Interactive Maps** - location mapping with radius display
+- **Browse Marketplace** - view available items with filtering and pagination
 - **Real-time Updates** - live notifications via Supabase Realtime
 
 ### 🤝 **Advanced Negotiations**
 - **Multi-round Offers** - structured negotiation system with offer tracking
-- **AI Offer Analysis** - strategic insights and market intelligence for sellers
+- **AI Chat Assistant** - AI-powered assistance for negotiations and marketplace questions
 - **Real-time Communication** - instant offer updates via Supabase Realtime
 - **Smart Analytics** - comprehensive negotiation history and metrics
+
+### ⚡ **Performance & Optimization**
+- **Performance Monitoring** - Web Vitals tracking and component render metrics
+- **Rate Limiting** - API protection with intelligent rate limiting
+- **Database Optimization** - Performance indexes for faster queries
+- **Caching Strategy** - Intelligent caching for geocoding and static assets
+- **Image Optimization** - Blur placeholders and progressive loading
 
 ## 🚀 Quick Start
 
@@ -54,6 +63,7 @@ A modern, serverless full-stack marketplace application with AI-powered image an
    - Create a new Supabase project at https://supabase.com
    - Go to Settings > API and copy your URL and keys
    - Run the SQL from `supabase/schema.sql` in the SQL editor
+   - Run the performance indexes from `supabase/migrations/002_performance_indexes.sql`
    - Enable Storage and create a 'furniture-images' bucket
 
 4. **Run the application:**
@@ -89,9 +99,10 @@ marketplace/
 │       ├── app/
 │       │   ├── api/           # API routes (serverless functions)
 │       │   │   ├── ai/        # AI-powered endpoints
-│       │   │   │   ├── analyze-image/  # GPT-4 Vision image analysis
-│       │   │   │   └── search/         # Semantic search
+│       │   │   │   └── analyze-image/  # GPT-4 Vision image analysis
 │       │   │   ├── auth/      # Authentication endpoints
+│       │   │   ├── chat/      # AI chat assistant
+│       │   │   ├── geocode/   # Location services
 │       │   │   ├── items/     # Marketplace CRUD operations
 │       │   │   ├── negotiations/  # Advanced offer system
 │       │   │   └── users/     # User management
@@ -101,18 +112,25 @@ marketplace/
 │       ├── components/        # React components
 │       │   ├── auth/         # Authentication UI (enhanced-auth.tsx)
 │       │   ├── home/         # Home page components
+│       │   ├── maps/         # Location mapping components
 │       │   ├── marketplace/  # Marketplace views
-│       │   ├── search/       # AI search functionality
+│       │   ├── performance-provider.tsx  # Performance monitoring
 │       │   ├── seller/       # Seller dashboard & analytics
 │       │   └── ui/           # Reusable components
 │       ├── src/lib/          # Utilities and configurations
 │       │   ├── api-client-new.ts  # Modern Supabase client
+│       │   ├── blur-data.ts       # Image blur placeholder utilities
 │       │   ├── database.types.ts  # Generated TypeScript types
+│       │   ├── performance.ts     # Performance monitoring utilities
+│       │   ├── rate-limit.ts      # Rate limiting configuration
 │       │   ├── supabase.ts        # Supabase client setup
 │       │   └── utils.ts           # Utility functions
 │       ├── package.json      # Dependencies and scripts
 │       └── next.config.ts    # Next.js configuration
 ├── supabase/
+│   ├── migrations/           # Database migrations
+│   │   ├── 001_add_zip_code_to_profiles.sql
+│   │   └── 002_performance_indexes.sql
 │   └── schema.sql            # Database schema and policies
 ├── CLAUDE.md                # Development guidance for Claude
 └── README.md
@@ -122,7 +140,10 @@ marketplace/
 
 ### AI Services
 - `POST /api/ai/analyze-image` - GPT-4 Vision image analysis with structured output
-- `POST /api/ai/search` - Semantic furniture search using OpenAI embeddings
+- `POST /api/chat` - AI-powered marketplace assistant for questions and guidance
+
+### Location Services
+- `GET /api/geocode?zipCode={zipCode}` - Convert zip codes to coordinates with caching
 
 ### Authentication
 - Handled automatically by Supabase Auth
@@ -145,6 +166,7 @@ marketplace/
 
 - **Row Level Security** - Database-level access control
 - **Authentication** - Secure JWT-based auth with Supabase
+- **Rate Limiting** - API protection against abuse with intelligent throttling
 - **Input Validation** - Server-side validation for all inputs
 - **File Upload Security** - Secure image storage with signed URLs
 - **CORS Protection** - Configurable CORS policies
