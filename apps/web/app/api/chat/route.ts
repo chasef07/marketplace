@@ -189,15 +189,6 @@ const DATA_RETRIEVAL_FUNCTIONS = [
       },
       required: ["request"]
     }
-  },
-  {
-    name: "get_current_status_update",
-    description: "Get fresh, real-time status for dynamic responses and welcome messages. Use this for greetings, check-ins, or after actions to provide current info.",
-    parameters: {
-      type: "object",
-      properties: {},
-      required: []
-    }
   }
 ]
 
@@ -241,9 +232,6 @@ async function executeSellerFunction(functionName: string, args: any, sellerId: 
       
       case 'create_smart_action_plan':
         return await createSmartActionPlan(args.request, sellerId)
-      
-      case 'get_current_status_update':
-        return await getCurrentStatusUpdate(sellerId)
       
       // Action Execution Functions
       case 'execute_confirmed_plan':
@@ -785,25 +773,6 @@ function createPlanResponse(planId: string, itemId: number, itemName: string, ac
   }
 }
 
-// Get Current Status Update - for dynamic welcome messages
-async function getCurrentStatusUpdate(sellerId: string) {
-  const freshStatus = await getSellerStatus(sellerId)
-  
-  return {
-    timestamp: new Date().toISOString(),
-    total_active_items: freshStatus.total_active_items,
-    total_active_negotiations: freshStatus.total_active_negotiations,
-    recent_offers: freshStatus.recent_offers?.slice(0, 3).map(negotiation => ({
-      buyer: negotiation.profiles?.username || 'Buyer',
-      amount: negotiation.current_offer || 0,
-      item: negotiation.items?.name || 'item'
-    })) || [],
-    status_summary: `${freshStatus.total_active_items} active listings, ${freshStatus.total_active_negotiations} active offers`,
-    next_steps: freshStatus.total_active_negotiations > 0 ? 
-      'You have offers waiting! Ready to make some deals?' : 
-      'No active offers right now. Want to review your pricing strategy?'
-  }
-}
 
 // NEW: Create Action Plan (No Execution)
 async function createActionPlan(itemId: number, sellerId: string) {
@@ -1149,14 +1118,6 @@ export async function POST(request: NextRequest) {
 - Clear communicator - present plans in simple terms
 - Results-focused - make money efficiently
 
-📊 DYNAMIC STATUS:
-ALWAYS call get_current_status_update() FIRST to get real-time data before responding!
-
-The static status below may be outdated - get fresh data:
-- Seller has active listings and negotiations
-- Use get_current_status_update() to get exact current numbers
-- Present accurate, up-to-date information to the user
-
 🔄 SEAMLESS WORKFLOW:
 
 **AUTOMATIC INTELLIGENCE:**
@@ -1193,23 +1154,6 @@ When executing, be direct and results-focused:
 - "Executing plan now..."
 - "✅ Done! Mike accepted, Sarah got the counter, lowball declined"
 - "All set! Check your negotiations tab for updates"
-
-💡 DYNAMIC RESPONSE BEHAVIOR:
-Always provide current, up-to-date status based on their ACTUAL situation:
-
-**For greetings/check-ins/status requests:**
-MANDATORY: Call get_current_status_update() FIRST, then use that fresh data to respond:
-- Hot offers: "You've got [current_count] active offers! Latest: [actual_buyer] offered $[actual_amount] for your [actual_item]"
-- No offers: "No active offers right now. Want me to review your pricing strategy?"  
-- Mixed situation: "I see [current_count] offers across your [current_items] listings. Ready to make some deals?"
-
-NEVER use the static status in the system prompt - always get fresh data first!
-
-**After executing actions:**
-Always acknowledge what just happened and provide updated status:
-- "✅ Done! You now have X active offers (was Y before)"
-- "🎯 Next opportunity: Your highest remaining offer is $X from [buyer]"
-- "📊 Updated status: [current situation]"
 
 🎪 KEY PRINCIPLE:
 - FIRST: Always create a specific action plan 
@@ -1312,33 +1256,7 @@ ${pendingPlanId ? `
       
       functionResults = toolResults[0].result
 
-      // Refresh seller status if we executed actions to get updated context
-      let updatedContext = ''
-      const executedFunctionName = toolResults[0].functionName
-      if (executedFunctionName === 'execute_confirmed_plan') {
-        try {
-          const freshSellerStatus = await getSellerStatus(sellerId)
-          updatedContext = `\n\n🔄 UPDATED STATUS AFTER ACTIONS:
-- Active listings: ${freshSellerStatus.total_active_items} items
-- Active negotiations: ${freshSellerStatus.total_active_negotiations} offers
-- Recent activity: ${freshSellerStatus.recent_offers.slice(0, 2).map(negotiation => {
-            const buyer = negotiation.profiles?.username || 'Someone'
-            const itemName = negotiation.items?.name || 'an item'
-            const offerAmount = negotiation.current_offer || 0
-            return `${buyer} - $${offerAmount} for ${itemName}`
-          }).join(', ')}`
-        } catch (error) {
-          console.log('Could not refresh seller status:', error)
-        }
-      }
-
-      const enhancedFollowUpMessages = [
-        ...followUpMessages,
-        {
-          role: 'system' as const,
-          content: updatedContext ? `Context Update: ${updatedContext}` : ''
-        }
-      ].filter(msg => msg.content.trim() !== '')
+      const enhancedFollowUpMessages = followUpMessages
 
       const followUpCompletion = await openai.chat.completions.create({
         model: "gpt-4o",
