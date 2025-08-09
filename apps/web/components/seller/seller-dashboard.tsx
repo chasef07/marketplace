@@ -218,6 +218,22 @@ export function SellerDashboard({ user, onItemClick, onBackToMarketplace, defaul
     }
   }
 
+  const handleDeclineOffer = async (negotiationId: number) => {
+    const confirmed = confirm('Are you sure you want to decline this offer? This action cannot be undone.')
+    if (!confirmed) return
+
+    try {
+      setActionLoading(negotiationId)
+      await apiClient.declineOffer(negotiationId, 'Thanks for your interest, but I can\'t accept this offer.')
+      await fetchDashboardData() // Refresh data
+    } catch (err) {
+      console.error('Failed to decline offer:', err)
+      alert('Failed to decline offer. Please try again.')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   const handleDeleteClick = (itemId: number) => {
     setDeleteItemId(itemId)
     setShowDeleteConfirm(true)
@@ -611,6 +627,15 @@ export function SellerDashboard({ user, onItemClick, onBackToMarketplace, defaul
                                         disabled={actionLoading === negotiation.id}
                                       >
                                         Counter
+                                      </Button>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => handleDeclineOffer(negotiation.id)}
+                                        disabled={actionLoading === negotiation.id}
+                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                      >
+                                        {actionLoading === negotiation.id ? 'Declining...' : 'Decline'}
                                       </Button>
                                     </>
                                   )}

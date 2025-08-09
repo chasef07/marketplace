@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
         )
       `)
       .or(`seller_id.eq.${user.id},buyer_id.eq.${user.id}`)
+      .eq('status', 'active')
       .order('updated_at', { ascending: false })
 
     if (error) {
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
     }
 
     const response = NextResponse.json(negotiations)
-    response.headers.set('Cache-Control', 'private, max-age=60')
+    response.headers.set('Cache-Control', 'private, max-age=0, no-cache, no-store, must-revalidate')
     return response
   } catch (error) {
     console.error('Negotiations fetch error:', error)

@@ -123,8 +123,8 @@ function createNegotiationStrategy(offers: any[], itemStartingPrice: number) {
   return strategy
 }
 
-// Define the function schemas for OpenAI function calling
-const SELLER_FUNCTIONS = [
+// Phase 1: Data Retrieval Functions (No Side Effects)
+const DATA_RETRIEVAL_FUNCTIONS = [
   {
     name: "get_seller_status",
     description: "Get overview of seller's items, offers, and negotiations",
@@ -149,78 +149,6 @@ const SELLER_FUNCTIONS = [
     }
   },
   {
-    name: "accept_offer",
-    description: "Accept a specific offer from a buyer",
-    parameters: {
-      type: "object",
-      properties: {
-        negotiation_id: {
-          type: "number",
-          description: "The ID of the negotiation to accept"
-        }
-      },
-      required: ["negotiation_id"]
-    }
-  },
-  {
-    name: "decline_offer",
-    description: "Decline a specific offer with optional reason",
-    parameters: {
-      type: "object",
-      properties: {
-        negotiation_id: {
-          type: "number",
-          description: "The ID of the negotiation to decline"
-        },
-        reason: {
-          type: "string",
-          description: "Optional reason for declining"
-        }
-      },
-      required: ["negotiation_id"]
-    }
-  },
-  {
-    name: "counter_offer",
-    description: "Make a counter offer with new price and message",
-    parameters: {
-      type: "object",
-      properties: {
-        negotiation_id: {
-          type: "number",
-          description: "The ID of the negotiation to counter"
-        },
-        price: {
-          type: "number",
-          description: "New counter offer price"
-        },
-        message: {
-          type: "string",
-          description: "Message to accompany the counter offer"
-        }
-      },
-      required: ["negotiation_id", "price"]
-    }
-  },
-  {
-    name: "adjust_item_price",
-    description: "Change the listing price of an item",
-    parameters: {
-      type: "object",
-      properties: {
-        item_id: {
-          type: "number",
-          description: "The ID of the item to adjust price for"
-        },
-        new_price: {
-          type: "number",
-          description: "New listing price"
-        }
-      },
-      required: ["item_id", "new_price"]
-    }
-  },
-  {
     name: "analyze_offers_smart",
     description: "Perform intelligent analysis of offers with recommendations and strategy",
     parameters: {
@@ -235,83 +163,91 @@ const SELLER_FUNCTIONS = [
     }
   },
   {
-    name: "create_negotiation_strategy", 
-    description: "Generate a multi-step strategic plan for handling negotiations",
+    name: "create_action_plan", 
+    description: "Generate a detailed action plan with specific steps (NO EXECUTION)",
     parameters: {
       type: "object",
       properties: {
         item_id: {
           type: "number", 
-          description: "The ID of the item to create strategy for"
+          description: "The ID of the item to create action plan for"
         }
       },
       required: ["item_id"]
     }
   },
   {
-    name: "execute_batch_actions",
-    description: "Execute multiple actions in sequence (counter offers, declines, etc)",
+    name: "create_smart_action_plan",
+    description: "Intelligently create action plan by finding item and analyzing offers automatically. Use this for natural requests like 'counter top 3 couch offers' or 'remove offers under $900'",
     parameters: {
       type: "object",
       properties: {
-        actions: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              type: {
-                type: "string",
-                enum: ["counter", "accept", "decline"]
-              },
-              negotiation_id: {
-                type: "number"
-              },
-              price: {
-                type: "number"
-              },
-              message: {
-                type: "string"
-              }
-            },
-            required: ["type", "negotiation_id"]
-          }
+        request: {
+          type: "string",
+          description: "The user's natural request (e.g., 'counter top 3 couch offers', 'remove offers under $900', 'accept best dining table offer')"
         }
       },
-      required: ["actions"]
+      required: ["request"]
+    }
+  },
+  {
+    name: "get_current_status_update",
+    description: "Get fresh, real-time status for dynamic responses and welcome messages. Use this for greetings, check-ins, or after actions to provide current info.",
+    parameters: {
+      type: "object",
+      properties: {},
+      required: []
     }
   }
 ]
 
+// Phase 2: Action Execution Functions (Only called after user confirmation)
+const ACTION_EXECUTION_FUNCTIONS = [
+  {
+    name: "execute_confirmed_plan",
+    description: "Execute a previously created and confirmed action plan",
+    parameters: {
+      type: "object",
+      properties: {
+        plan_id: {
+          type: "string",
+          description: "The ID of the confirmed plan to execute"
+        }
+      },
+      required: ["plan_id"]
+    }
+  }
+]
+
+// In-memory storage for pending action plans (in production, use Redis or database)
+const pendingPlans = new Map<string, any>()
+
 // Helper function to execute seller functions
-async function executeSellerFunction(functionName: string, args: any, sellerId: string) {
+async function executeSellerFunction(functionName: string, args: any, sellerId: string, conversationContext?: any) {
   try {
     switch (functionName) {
+      // Data Retrieval Functions
       case 'get_seller_status':
         return await getSellerStatus(sellerId)
       
       case 'get_offer_details':
         return await getOfferDetails(args.item_id, sellerId)
       
-      case 'accept_offer':
-        return await acceptOffer(args.negotiation_id, sellerId)
-      
-      case 'decline_offer':
-        return await declineOffer(args.negotiation_id, sellerId, args.reason)
-      
-      case 'counter_offer':
-        return await counterOffer(args.negotiation_id, sellerId, args.price, args.message)
-      
-      case 'adjust_item_price':
-        return await adjustItemPrice(args.item_id, sellerId, args.new_price)
-      
       case 'analyze_offers_smart':
         return await analyzeOffersSmart(args.item_id, sellerId)
       
-      case 'create_negotiation_strategy':
-        return await createNegotiationStrategyAPI(args.item_id, sellerId)
+      case 'create_action_plan':
+        return await createActionPlan(args.item_id, sellerId)
       
-      case 'execute_batch_actions':
-        return await executeBatchActions(args.actions, sellerId)
+      case 'create_smart_action_plan':
+        return await createSmartActionPlan(args.request, sellerId)
+      
+      case 'get_current_status_update':
+        return await getCurrentStatusUpdate(sellerId)
+      
+      // Action Execution Functions
+      case 'execute_confirmed_plan':
+        return await executeConfirmedPlan(args.plan_id, sellerId)
       
       default:
         return { error: `Unknown function: ${functionName}` }
@@ -446,8 +382,29 @@ async function acceptOffer(negotiationId: number, sellerId: string) {
 }
 
 async function declineOffer(negotiationId: number, sellerId: string, reason?: string) {
+  console.log(`Declining offer: negotiationId=${negotiationId}, sellerId=${sellerId}, reason=${reason}`)
+  
+  // First verify the negotiation exists and belongs to seller
+  const { data: existingNegotiation, error: checkError } = await supabase
+    .from('negotiations')
+    .select('id, status, current_offer')
+    .eq('id', negotiationId)
+    .eq('seller_id', sellerId)
+    .single()
+
+  if (checkError) {
+    console.error('Error checking negotiation:', checkError)
+    throw new Error(`Negotiation not found: ${checkError.message}`)
+  }
+
+  if (!existingNegotiation) {
+    throw new Error(`Negotiation ${negotiationId} not found or doesn't belong to seller`)
+  }
+
+  console.log('Found negotiation:', existingNegotiation)
+
   // Update negotiation status to cancelled
-  const { error } = await supabase
+  const { data: updatedData, error: updateError } = await supabase
     .from('negotiations')
     .update({ 
       status: 'cancelled',
@@ -458,9 +415,32 @@ async function declineOffer(negotiationId: number, sellerId: string, reason?: st
     .select()
     .single()
 
-  if (error) throw new Error('Failed to decline offer')
+  if (updateError) {
+    console.error('Error updating negotiation:', updateError)
+    throw new Error(`Failed to decline offer: ${updateError.message}`)
+  }
 
-  return { message: 'Offer declined successfully', reason }
+  // Add decline message to offers table for conversation history
+  if (reason) {
+    const { error: offerError } = await supabase
+      .from('offers')
+      .insert({
+        negotiation_id: negotiationId,
+        offer_type: 'seller',
+        price: existingNegotiation.current_offer, // Keep the same price for decline
+        message: reason,
+        round_number: 1, // Simple decline response
+        is_counter_offer: false
+      })
+
+    if (offerError) {
+      console.warn('Failed to add decline message to offers table:', offerError)
+      // Don't throw error here - the main decline still succeeded
+    }
+  }
+
+  console.log('Successfully declined negotiation:', updatedData)
+  return { message: 'Offer declined successfully', reason, negotiation_id: negotiationId }
 }
 
 async function counterOffer(negotiationId: number, sellerId: string, price: number, message?: string) {
@@ -580,77 +560,446 @@ async function analyzeOffersSmart(itemId: number, sellerId: string) {
   }
 }
 
-async function createNegotiationStrategyAPI(itemId: number, sellerId: string) {
-  // Get item and offers data
-  const smartAnalysis = await analyzeOffersSmart(itemId, sellerId)
+async function findItemByKeyword(keyword: string, sellerId: string) {
+  console.log(`Finding items for keyword: ${keyword}, seller: ${sellerId}`)
   
-  if (smartAnalysis.analysis.total === 0) {
+  const { data: items, error } = await supabase
+    .from('items')
+    .select('id, name, starting_price')
+    .eq('seller_id', sellerId)
+    .eq('is_available', true)
+    .ilike('name', `%${keyword}%`)
+
+  if (error) {
+    console.error('Error finding items by keyword:', error)
+    throw new Error('Failed to search for items')
+  }
+
+  if (!items || items.length === 0) {
     return {
-      strategy: {
-        phase: 'NO_OFFERS',
-        actions: ['Improve listing visibility', 'Consider price adjustment', 'Add better photos'],
-        reasoning: 'No offers received yet - focus on improving listing appeal'
-      }
+      found: false,
+      message: `No items found matching "${keyword}". Your current items might use different names.`,
+      suggestion: "Try 'table', 'chair', 'sofa', or check your full item list first."
     }
   }
 
-  const allOffers = await getOffersForStrategy(itemId, sellerId)
-  const strategy = createNegotiationStrategy(allOffers, parseFloat(smartAnalysis.item?.starting_price || '0'))
+  if (items.length === 1) {
+    return {
+      found: true,
+      item_id: items[0].id,
+      item_name: items[0].name,
+      starting_price: items[0].starting_price,
+      message: `Found your ${keyword}: "${items[0].name}" (ID: ${items[0].id})`
+    }
+  }
 
+  // Multiple matches
   return {
-    item: smartAnalysis.item,
-    analysis: smartAnalysis.analysis,
-    strategy,
-    actionPlan: `🎯 Strategy: ${strategy.phase} - ${strategy.reasoning}`,
-    nextSteps: strategy.actions
+    found: true,
+    multiple_matches: true,
+    items: items,
+    message: `Found ${items.length} items matching "${keyword}": ${items.map(i => i.name).join(', ')}`
   }
 }
 
-async function getOffersForStrategy(itemId: number, sellerId: string) {
-  const { data: negotiations, error } = await supabase
-    .from('negotiations')
-    .select(`
-      offers (price, message, created_at)
-    `)
-    .eq('item_id', itemId)
-    .eq('seller_id', sellerId)
-
-  if (error) return []
-  return negotiations?.flatMap(n => n.offers || []) || []
+// NEW: Smart Action Plan - Handles natural language requests
+async function createSmartActionPlan(request: string, sellerId: string) {
+  console.log(`Creating smart action plan for: "${request}" by seller: ${sellerId}`)
+  
+  // Parse the request to identify item type and action
+  const requestLower = request.toLowerCase()
+  
+  // Extract item keywords
+  const itemKeywords = ['couch', 'sofa', 'table', 'chair', 'bed', 'desk', 'dining']
+  const foundKeyword = itemKeywords.find(keyword => requestLower.includes(keyword))
+  
+  if (!foundKeyword) {
+    return {
+      error: true,
+      message: "I couldn't identify which item you're referring to. Try mentioning 'couch', 'table', 'chair', etc."
+    }
+  }
+  
+  // Find the item
+  const itemSearch = await findItemByKeyword(foundKeyword, sellerId)
+  if (!itemSearch.found) {
+    return {
+      error: true,
+      message: itemSearch.message,
+      suggestion: itemSearch.suggestion
+    }
+  }
+  
+  const itemId = itemSearch.multiple_matches ? itemSearch.items[0].id : itemSearch.item_id
+  const itemName = itemSearch.multiple_matches ? itemSearch.items[0].name : itemSearch.item_name
+  
+  // Get offer details for this item
+  const offerDetails = await getOfferDetails(itemId, sellerId)
+  const negotiations = offerDetails.negotiations || []
+  
+  if (negotiations.length === 0) {
+    return {
+      error: true,
+      message: `No offers found for your ${foundKeyword}: "${itemName}"`
+    }
+  }
+  
+  // Parse action type and criteria
+  let actionType = 'general'
+  let criteria = {}
+  
+  if (requestLower.includes('counter')) {
+    actionType = 'counter'
+    
+    // Extract number (top 3, top 5, etc.)
+    const topMatch = requestLower.match(/top\s+(\d+)/)
+    if (topMatch) {
+      criteria = { top: parseInt(topMatch[1]) }
+    }
+  } else if (requestLower.includes('remove') || requestLower.includes('decline')) {
+    actionType = 'decline'
+    
+    // Extract price criteria (under $900, below $800, etc.)
+    const priceMatch = requestLower.match(/(?:under|below)\s*\$?(\d+)/)
+    if (priceMatch) {
+      criteria = { under: parseFloat(priceMatch[1]) }
+    }
+  } else if (requestLower.includes('accept')) {
+    actionType = 'accept'
+    
+    if (requestLower.includes('best') || requestLower.includes('highest')) {
+      criteria = { best: true }
+    }
+  }
+  
+  // Create action plan based on parsed request
+  return await createTargetedActionPlan(itemId, itemName, negotiations, actionType, criteria, sellerId)
 }
 
-async function executeBatchActions(actions: any[], sellerId: string) {
-  const results = []
+async function createTargetedActionPlan(itemId: number, itemName: string, negotiations: any[], actionType: string, criteria: any, sellerId: string) {
+  const planId = `plan_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+  const detailedActions = []
   
-  for (const action of actions) {
+  // Filter and sort negotiations based on criteria
+  const activeNegotiations = negotiations.filter(n => n.status === 'active')
+  
+  if (actionType === 'counter' && criteria.top) {
+    // Counter top N offers
+    const topOffers = activeNegotiations
+      .sort((a, b) => b.current_offer - a.current_offer)
+      .slice(0, criteria.top)
+    
+    for (const negotiation of topOffers) {
+      const buyerName = negotiation.profiles?.username || 'Buyer'
+      const currentOffer = negotiation.current_offer
+      const counterPrice = Math.round(currentOffer * 1.1) // Counter 10% higher
+      
+      detailedActions.push({
+        type: 'counter',
+        negotiation_id: negotiation.id,
+        buyer_name: buyerName,
+        current_offer: currentOffer,
+        counter_price: counterPrice,
+        reasoning: `Top offer #${topOffers.indexOf(negotiation) + 1} - counter to move higher`,
+        priority: topOffers.indexOf(negotiation) + 1,
+        message: `Hi ${buyerName}! Thanks for your ${currentOffer} offer. How about $${counterPrice}? That's a fair compromise.`
+      })
+    }
+    
+    return createPlanResponse(planId, itemId, itemName, detailedActions, `Counter top ${criteria.top} offers for "${itemName}"`, sellerId)
+    
+  } else if (actionType === 'decline' && criteria.under) {
+    // Decline offers under specified amount
+    const lowOffers = activeNegotiations.filter(n => n.current_offer < criteria.under)
+    
+    for (const negotiation of lowOffers) {
+      const buyerName = negotiation.profiles?.username || 'Buyer'
+      
+      detailedActions.push({
+        type: 'decline',
+        negotiation_id: negotiation.id,
+        buyer_name: buyerName,
+        current_offer: negotiation.current_offer,
+        reasoning: `Offer under $${criteria.under} - not worth negotiating`,
+        priority: 1,
+        message: `Thanks for your interest, ${buyerName}. I can't go that low, but good luck with your search!`
+      })
+    }
+    
+    return createPlanResponse(planId, itemId, itemName, detailedActions, `Decline ${detailedActions.length} offers under $${criteria.under} for "${itemName}"`, sellerId)
+    
+  } else if (actionType === 'accept' && criteria.best) {
+    // Accept the highest offer
+    const bestOffer = activeNegotiations
+      .sort((a, b) => b.current_offer - a.current_offer)[0]
+    
+    if (bestOffer) {
+      const buyerName = bestOffer.profiles?.username || 'Buyer'
+      
+      detailedActions.push({
+        type: 'accept',
+        negotiation_id: bestOffer.id,
+        buyer_name: buyerName,
+        current_offer: bestOffer.current_offer,
+        reasoning: 'Highest offer - accept immediately',
+        priority: 1,
+        message: `Accepting ${buyerName}'s offer of $${bestOffer.current_offer}`
+      })
+      
+      return createPlanResponse(planId, itemId, itemName, detailedActions, `Accept best offer ($${bestOffer.current_offer}) for "${itemName}"`, sellerId)
+    }
+  }
+  
+  return {
+    error: true,
+    message: `I couldn't understand how to handle "${actionType}" with the given criteria. Try being more specific.`
+  }
+}
+
+function createPlanResponse(planId: string, itemId: number, itemName: string, actions: any[], summary: string, sellerId: string) {
+  const actionPlan = {
+    plan_id: planId,
+    item_id: itemId,
+    seller_id: sellerId,
+    created_at: new Date().toISOString(),
+    strategy: summary,
+    reasoning: `Smart plan created from natural language request`,
+    actions: actions,
+    summary: summary
+  }
+  
+  // Store the plan for later execution
+  console.log(`Storing plan ${planId} for seller ${sellerId}`)
+  pendingPlans.set(planId, actionPlan)
+  console.log(`Plan stored. Current pending plans:`, Array.from(pendingPlans.keys()))
+  
+  return {
+    plan_id: planId,
+    item_name: itemName,
+    strategy: summary,
+    total_actions: actions.length,
+    actions_summary: actions.map(a => `${a.type.toUpperCase()} ${a.buyer_name} ($${a.current_offer})`),
+    detailed_actions: actions,
+    ready_to_execute: true,
+    confirmation_needed: true
+  }
+}
+
+// Get Current Status Update - for dynamic welcome messages
+async function getCurrentStatusUpdate(sellerId: string) {
+  const freshStatus = await getSellerStatus(sellerId)
+  
+  return {
+    timestamp: new Date().toISOString(),
+    total_active_items: freshStatus.total_active_items,
+    total_active_negotiations: freshStatus.total_active_negotiations,
+    recent_offers: freshStatus.recent_offers?.slice(0, 3).map(negotiation => ({
+      buyer: negotiation.profiles?.username || 'Buyer',
+      amount: negotiation.current_offer || 0,
+      item: negotiation.items?.name || 'item'
+    })) || [],
+    status_summary: `${freshStatus.total_active_items} active listings, ${freshStatus.total_active_negotiations} active offers`,
+    next_steps: freshStatus.total_active_negotiations > 0 ? 
+      'You have offers waiting! Ready to make some deals?' : 
+      'No active offers right now. Want to review your pricing strategy?'
+  }
+}
+
+// NEW: Create Action Plan (No Execution)
+async function createActionPlan(itemId: number, sellerId: string) {
+  // Get comprehensive data for planning
+  const smartAnalysis = await analyzeOffersSmart(itemId, sellerId)
+  const offerDetails = await getOfferDetails(itemId, sellerId)
+  
+  if (smartAnalysis.analysis.total === 0) {
+    return {
+      plan_type: 'NO_OFFERS',
+      message: `No offers yet for "${smartAnalysis.item?.name}". Focus on improving your listing first.`,
+      suggestions: ['Add better photos', 'Check market pricing', 'Improve description']
+    }
+  }
+
+  // Generate strategic action plan
+  const allOffers = offerDetails.negotiations || []
+  const startingPrice = parseFloat(smartAnalysis.item?.starting_price || '0')
+  const strategy = createNegotiationStrategy(
+    allOffers.flatMap(n => n.offers || []), 
+    startingPrice
+  )
+
+  // Create specific actionable plan
+  const planId = `plan_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+  const detailedActions = []
+
+  // Analyze each negotiation and create specific actions
+  for (const negotiation of allOffers) {
+    const latestOffer = negotiation.offers?.[negotiation.offers.length - 1]
+    if (!latestOffer || latestOffer.offer_type !== 'buyer') continue
+
+    const offerPrice = latestOffer.price
+    const buyerName = negotiation.profiles?.username || 'Buyer'
+    const offerRatio = offerPrice / startingPrice
+
+    if (offerRatio >= 1.1) {
+      // Premium offer - accept immediately
+      detailedActions.push({
+        type: 'accept',
+        negotiation_id: negotiation.id,
+        buyer_name: buyerName,
+        current_offer: offerPrice,
+        reasoning: 'Premium offer above asking price',
+        priority: 1,
+        message: `Accepting ${buyerName}'s offer of $${offerPrice} (above asking price!)`
+      })
+    } else if (offerRatio >= 0.85) {
+      // Strong offer - counter slightly higher
+      const counterPrice = Math.round(startingPrice * 0.92)
+      detailedActions.push({
+        type: 'counter',
+        negotiation_id: negotiation.id,
+        buyer_name: buyerName,
+        current_offer: offerPrice,
+        counter_price: counterPrice,
+        reasoning: 'Strong offer - counter to close the deal',
+        priority: 2,
+        message: `Hi ${buyerName}! Thanks for your ${offerPrice} offer. I can do $${counterPrice} - that's my best price. Let me know!`
+      })
+    } else if (offerRatio >= 0.6) {
+      // Reasonable offer - negotiate
+      const counterPrice = Math.round(startingPrice * 0.82)
+      detailedActions.push({
+        type: 'counter',
+        negotiation_id: negotiation.id,
+        buyer_name: buyerName,
+        current_offer: offerPrice,
+        counter_price: counterPrice,
+        reasoning: 'Reasonable starting point for negotiation',
+        priority: 3,
+        message: `Hi ${buyerName}! I appreciate your interest. How about $${counterPrice}? That's a fair compromise.`
+      })
+    } else {
+      // Lowball - polite decline
+      detailedActions.push({
+        type: 'decline',
+        negotiation_id: negotiation.id,
+        buyer_name: buyerName,
+        current_offer: offerPrice,
+        reasoning: 'Too low to justify negotiation time',
+        priority: 4,
+        message: `Thanks for your interest, ${buyerName}. I can't go that low, but good luck with your search!`
+      })
+    }
+  }
+
+  // Sort by priority and create final plan
+  detailedActions.sort((a, b) => a.priority - b.priority)
+
+  const actionPlan = {
+    plan_id: planId,
+    item_id: itemId,
+    seller_id: sellerId,
+    created_at: new Date().toISOString(),
+    strategy: strategy.phase,
+    reasoning: strategy.reasoning,
+    actions: detailedActions,
+    summary: `Plan for ${detailedActions.length} negotiations on "${smartAnalysis.item?.name}"`
+  }
+
+  // Store the plan for later execution
+  console.log(`Storing plan ${planId} for seller ${sellerId}`)
+  pendingPlans.set(planId, actionPlan)
+  console.log(`Plan stored. Current pending plans:`, Array.from(pendingPlans.keys()))
+
+  return {
+    plan_id: planId,
+    strategy: strategy.phase,
+    reasoning: strategy.reasoning,
+    total_actions: detailedActions.length,
+    actions_summary: detailedActions.map(a => `${a.type.toUpperCase()} ${a.buyer_name} ($${a.current_offer})`),
+    detailed_actions: detailedActions,
+    ready_to_execute: true,
+    confirmation_needed: true
+  }
+}
+
+// NEW: Execute Confirmed Plan
+async function executeConfirmedPlan(planId: string, sellerId: string) {
+  console.log(`Looking for plan ${planId} for seller ${sellerId}`)
+  console.log(`Current pending plans:`, Array.from(pendingPlans.keys()))
+  
+  const plan = pendingPlans.get(planId)
+  
+  if (!plan) {
+    throw new Error(`Plan ${planId} not found. Available plans: ${Array.from(pendingPlans.keys()).join(', ')}`)
+  }
+  
+  if (plan.seller_id !== sellerId) {
+    throw new Error('Plan does not belong to this seller')
+  }
+
+  const results = []
+  let successCount = 0
+
+  // Execute each action in the plan
+  for (const action of plan.actions) {
+    console.log(`Executing action: ${action.type} for negotiation ${action.negotiation_id} (${action.buyer_name})`)
+    
     try {
       let result
       switch (action.type) {
         case 'accept':
+          console.log(`Accepting offer from negotiation ${action.negotiation_id}`)
           result = await acceptOffer(action.negotiation_id, sellerId)
           break
         case 'decline':
-          result = await declineOffer(action.negotiation_id, sellerId, action.message || 'Not suitable')
+          console.log(`Declining offer from negotiation ${action.negotiation_id} with message: ${action.message}`)
+          result = await declineOffer(action.negotiation_id, sellerId, action.message)
+          console.log(`Decline result:`, result)
           break
         case 'counter':
-          result = await counterOffer(action.negotiation_id, sellerId, action.price, action.message || 'Counter offer')
+          console.log(`Countering negotiation ${action.negotiation_id} with price ${action.counter_price}`)
+          result = await counterOffer(action.negotiation_id, sellerId, action.counter_price, action.message)
           break
         default:
           result = { error: `Unknown action type: ${action.type}` }
       }
-      results.push({ action, result, success: !(result as any).error })
+      
+      const isSuccess = !(result as any).error
+      if (isSuccess) {
+        successCount++
+        console.log(`✅ Successfully executed ${action.type} for ${action.buyer_name}`)
+      } else {
+        console.error(`❌ Failed ${action.type} for ${action.buyer_name}:`, result)
+      }
+
+      results.push({ 
+        action: `${action.type} ${action.buyer_name}`,
+        success: isSuccess,
+        result: result,
+        details: action.message,
+        negotiation_id: action.negotiation_id
+      })
     } catch (error) {
-      results.push({ action, error: (error as Error).message, success: false })
+      console.error(`❌ Exception during ${action.type} for ${action.buyer_name}:`, error)
+      results.push({ 
+        action: `${action.type} ${action.buyer_name}`,
+        success: false,
+        error: (error as Error).message,
+        negotiation_id: action.negotiation_id
+      })
     }
   }
 
-  const successful = results.filter(r => r.success).length
-  const total = results.length
+  // Clean up the plan after execution
+  pendingPlans.delete(planId)
 
   return {
-    results,
-    summary: `✅ Executed ${successful}/${total} batch actions successfully`,
-    details: results
+    plan_executed: true,
+    total_actions: plan.actions.length,
+    successful_actions: successCount,
+    failed_actions: plan.actions.length - successCount,
+    results: results,
+    summary: `✅ Plan executed! ${successCount}/${plan.actions.length} actions completed successfully.`
   }
 }
 
@@ -702,28 +1051,45 @@ export async function POST(request: NextRequest) {
 
     const sellerId = user.id
 
-    // Get or create conversation
+    // Get or create conversation - simple approach
     let conversationId = conversation_id
     if (!conversationId) {
-      // Delete any existing conversation for this seller to start fresh
-      await supabase
+      // Try to get existing conversation first
+      const { data: existingConversation } = await supabase
         .from('conversations')
-        .delete()
-        .eq('seller_id', sellerId)
-      
-      // Create new fresh conversation
-      const { data: conversation, error: convError } = await supabase
-        .from('conversations')
-        .insert({ seller_id: sellerId })
         .select()
+        .eq('seller_id', sellerId)
         .single()
       
-      if (convError) {
-        console.error('Failed to create conversation:', convError)
-        return NextResponse.json({ error: 'Failed to create conversation' }, { status: 500 })
+      if (existingConversation) {
+        conversationId = existingConversation.id
+      } else {
+        // Create new conversation
+        const { data: conversation, error: convError } = await supabase
+          .from('conversations')
+          .insert({ seller_id: sellerId })
+          .select()
+          .single()
+        
+        if (convError) {
+          console.error('Failed to create conversation:', convError)
+          // If it's a unique constraint error, try to get the existing one
+          if (convError.code === '23505') {
+            const { data: retryConversation } = await supabase
+              .from('conversations')
+              .select()
+              .eq('seller_id', sellerId)
+              .single()
+            conversationId = retryConversation?.id
+          }
+          
+          if (!conversationId) {
+            return NextResponse.json({ error: 'Failed to create conversation' }, { status: 500 })
+          }
+        } else {
+          conversationId = conversation.id
+        }
       }
-      
-      conversationId = conversation.id
     }
 
     if (!conversationId) {
@@ -750,9 +1116,6 @@ export async function POST(request: NextRequest) {
     // Reverse to get chronological order
     const messages = messageHistory?.reverse() || []
 
-    // Get current seller context and profile
-    const sellerStatus = await getSellerStatus(sellerId)
-    
     // Get seller profile for personalization
     const { data: sellerProfile } = await supabase
       .from('profiles')
@@ -762,71 +1125,102 @@ export async function POST(request: NextRequest) {
     
     const sellerName = sellerProfile?.username || 'there'
 
+    // Check if there's a recent plan_id in conversation history
+    let pendingPlanId = null
+    for (let i = messages.length - 1; i >= 0 && i >= messages.length - 3; i--) {
+      const msg = messages[i]
+      if (msg.role === 'assistant' && msg.function_results) {
+        const results = typeof msg.function_results === 'string' ? 
+          JSON.parse(msg.function_results) : msg.function_results
+        if (results.plan_id && results.ready_to_execute) {
+          pendingPlanId = results.plan_id
+          break
+        }
+      }
+    }
+
     // Build conversation context for OpenAI
-    const systemPrompt = `You're ${sellerName}'s personal sales assistant! Think of yourself as their smart, proactive sales manager who knows their business inside out and can take immediate action.
+    const systemPrompt = `You're ${sellerName}'s personal sales assistant! Think of yourself as their smart, strategic sales manager who creates action plans and executes them when confirmed.
 
 🎯 YOUR PERSONALITY:
 - Casual but professional - like talking to a knowledgeable friend
-- Cut through the noise - no long explanations unless asked
-- Action-oriented - suggest what to DO, not just what's happening
-- Opportunistic - spot money-making opportunities instantly
-- Confident - you know this business
+- Strategic thinker - analyze first, then create specific action plans
+- Opportunity spotter - find the best deals and timing
+- Clear communicator - present plans in simple terms
+- Results-focused - make money efficiently
 
-📊 CURRENT SITUATION:
-This seller has ${sellerStatus.total_active_items} active listings with ${sellerStatus.total_active_negotiations} ongoing negotiations.
+📊 DYNAMIC STATUS:
+ALWAYS call get_current_status_update() FIRST to get real-time data before responding!
 
-${sellerStatus.items.length > 0 ? `
-LISTINGS:
-${sellerStatus.items.map(item => 
-  `• ${item.name} ($${item.starting_price}) - ${item.negotiations.length} offers`
-).join('\n')}
-` : ''}
+The static status below may be outdated - get fresh data:
+- Seller has active listings and negotiations
+- Use get_current_status_update() to get exact current numbers
+- Present accurate, up-to-date information to the user
 
-${sellerStatus.recent_offers.length > 0 ? `
-LATEST ACTIVITY:
-${sellerStatus.recent_offers.slice(0, 3).map(negotiation => {
-  const buyer = negotiation.profiles?.username || 'Someone'
-  const itemName = negotiation.items?.name || 'an item'
-  const latestOffer = negotiation.offers?.length > 0 ? 
-    negotiation.offers[negotiation.offers.length - 1] : null
-  const offerAmount = latestOffer?.price || negotiation.current_offer || 0
-  return `• ${buyer} offered $${offerAmount} for ${itemName}`
-}).join('\n')}
-` : ''}
+🔄 SEAMLESS WORKFLOW:
 
-💬 HOW TO TALK:
-Instead of: "Analysis indicates 3 offers with price variance of..."
-Say: "You've got 3 offers! Two are solid, one's a lowball."
+**AUTOMATIC INTELLIGENCE:**
+When they mention items (couch, table, etc), automatically:
+1. Find the item behind the scenes (don't mention this step)
+2. Gather all relevant data silently
+3. Present a clear, specific plan with exact actions
 
-Instead of: "Strategic recommendation suggests counter-offering..."  
-Say: "I'd counter Sarah at $900 - she seems eager. Want me to do it?"
+**NATURAL CONVERSATION:**
+- "counter the top 3 offers for my couch" → Show plan with specific buyers/amounts
+- "remove offers under $900" → Show which exact offers will be declined  
+- "accept the best offer" → Show which specific offer will be accepted
 
-Instead of: "Executing batch counter-offer operations..."
-Say: "Sending counters now... Done! All 3 buyers countered."
+**EXECUTION:**
+When they confirm, execute immediately and report results clearly.
 
-🚀 WHAT YOU CAN DO:
-When they say "do it" or "yes" or "go ahead" - you actually execute the action!
-- Accept offers
-- Send counter offers  
-- Decline lowballs
-- Analyze market patterns
-- Handle multiple offers at once
-- Adjust listing prices
+💬 PLANNING LANGUAGE:
+Instead of vague suggestions, be specific:
+- "I'll counter Sarah at $1,050 with this message: 'Hi Sarah! Thanks for your interest...'"
+- "I'll decline the $600 lowball with: 'Thanks but I can't go that low'"
+- "I'll accept Mike's $1,100 offer immediately (above asking!)"
 
-🎪 BE PROACTIVE:
-- Spot urgent opportunities ("Sarah has cash and needs it TODAY!")
-- Notice patterns ("This is your 3rd $800+ offer this week")
-- Suggest smart moves ("Counter the top 3 at $450, ignore the lowball")
-- Celebrate wins ("Nice! That's $200 above your usual acceptance rate")
+🎯 ACTION PLAN FORMAT:
+Present plans like this:
+"📋 **MY PLAN:**
+1. ACCEPT Mike's $1,100 offer (above asking!)
+2. COUNTER Sarah at $1,050 (she mentioned cash ready)  
+3. DECLINE the $600 lowball (waste of time)
 
-💡 GREETING BEHAVIOR:
-If this seems like their first message or they're just saying "hi", give them a smart contextual greeting:
-- If they have urgent offers: "Hey ${sellerName}! You've got [X] buyers who need your stuff ASAP!"
-- If they have premium offers: "Great news! Someone offered ABOVE asking price!"
-- If no offers yet: "Hey ${sellerName}! Your listings are live but no offers yet. Want me to check your pricing?"
-- If no listings: "Ready to list some furniture? I'll help you price it right!"
+This should get you $1,100 today. Want me to execute this plan?"
 
-Remember: You're their personal assistant, not a formal AI system. Keep it conversational, actionable, and focused on making money! 💰`
+🚀 EXECUTION LANGUAGE:
+When executing, be direct and results-focused:
+- "Executing plan now..."
+- "✅ Done! Mike accepted, Sarah got the counter, lowball declined"
+- "All set! Check your negotiations tab for updates"
+
+💡 DYNAMIC RESPONSE BEHAVIOR:
+Always provide current, up-to-date status based on their ACTUAL situation:
+
+**For greetings/check-ins/status requests:**
+MANDATORY: Call get_current_status_update() FIRST, then use that fresh data to respond:
+- Hot offers: "You've got [current_count] active offers! Latest: [actual_buyer] offered $[actual_amount] for your [actual_item]"
+- No offers: "No active offers right now. Want me to review your pricing strategy?"  
+- Mixed situation: "I see [current_count] offers across your [current_items] listings. Ready to make some deals?"
+
+NEVER use the static status in the system prompt - always get fresh data first!
+
+**After executing actions:**
+Always acknowledge what just happened and provide updated status:
+- "✅ Done! You now have X active offers (was Y before)"
+- "🎯 Next opportunity: Your highest remaining offer is $X from [buyer]"
+- "📊 Updated status: [current situation]"
+
+🎪 KEY PRINCIPLE:
+- FIRST: Always create a specific action plan 
+- THEN: Wait for confirmation
+- FINALLY: Execute when they say "yes"
+
+Remember: You're a strategic advisor first, executor second. Plan smart, confirm, then act! 💰
+
+${pendingPlanId ? `
+🔥 **IMPORTANT**: There's a pending action plan (ID: ${pendingPlanId}) waiting for execution. If the user confirms it, use the execute_confirmed_plan function with this plan_id.
+` : ''}`
 
     const conversationMessages = [
       { role: 'system' as const, content: systemPrompt },
@@ -836,11 +1230,15 @@ Remember: You're their personal assistant, not a formal AI system. Keep it conve
       }))
     ]
 
+    // Always make both data retrieval and action execution functions available
+    // The AI will decide what to use based on the conversation context and system prompt
+    const availableFunctions = [...DATA_RETRIEVAL_FUNCTIONS, ...ACTION_EXECUTION_FUNCTIONS]
+
     // Call OpenAI with function calling (using new tools format)
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: conversationMessages,
-      tools: SELLER_FUNCTIONS.map(func => ({
+      tools: availableFunctions.map(func => ({
         type: "function" as const,
         function: func
       })),
@@ -914,9 +1312,37 @@ Remember: You're their personal assistant, not a formal AI system. Keep it conve
       
       functionResults = toolResults[0].result
 
+      // Refresh seller status if we executed actions to get updated context
+      let updatedContext = ''
+      const executedFunctionName = toolResults[0].functionName
+      if (executedFunctionName === 'execute_confirmed_plan') {
+        try {
+          const freshSellerStatus = await getSellerStatus(sellerId)
+          updatedContext = `\n\n🔄 UPDATED STATUS AFTER ACTIONS:
+- Active listings: ${freshSellerStatus.total_active_items} items
+- Active negotiations: ${freshSellerStatus.total_active_negotiations} offers
+- Recent activity: ${freshSellerStatus.recent_offers.slice(0, 2).map(negotiation => {
+            const buyer = negotiation.profiles?.username || 'Someone'
+            const itemName = negotiation.items?.name || 'an item'
+            const offerAmount = negotiation.current_offer || 0
+            return `${buyer} - $${offerAmount} for ${itemName}`
+          }).join(', ')}`
+        } catch (error) {
+          console.log('Could not refresh seller status:', error)
+        }
+      }
+
+      const enhancedFollowUpMessages = [
+        ...followUpMessages,
+        {
+          role: 'system' as const,
+          content: updatedContext ? `Context Update: ${updatedContext}` : ''
+        }
+      ].filter(msg => msg.content.trim() !== '')
+
       const followUpCompletion = await openai.chat.completions.create({
         model: "gpt-4o",
-        messages: followUpMessages,
+        messages: enhancedFollowUpMessages,
         temperature: 0.7,
         max_tokens: 1000
       })

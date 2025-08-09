@@ -81,7 +81,7 @@ This is a serverless AI-powered furniture marketplace built as a Next.js monorep
   - `marketplace/` - Marketplace views and item details with location maps
   - `maps/` - Location mapping components with radius display
   - `performance-provider/` - Performance monitoring wrapper component
-  - `seller/` - Seller dashboard with offer analysis
+  - `seller/` - Seller dashboard for managing listings and negotiations
   - `ui/` - Reusable UI components
 - **API Client**: Modern Supabase-based client in `src/lib/api-client-new.ts`
 - **Performance Libraries**: Utilities in `src/lib/performance.ts` for Web Vitals tracking
@@ -122,7 +122,7 @@ Run `/supabase/migrations/002_performance_indexes.sql` to add performance-optimi
 ### AI Services
 - OpenAI GPT-4o for image analysis with structured output
 - Text embeddings for semantic search with cosine similarity
-- AI offer analysis for strategic seller insights
+- AI assistant for marketplace guidance and support
 - Fallback error handling for all AI operations
 
 ### File Handling

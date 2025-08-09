@@ -102,39 +102,54 @@ export function SellerChat({ user, onBack }: SellerChatProps) {
       const now = new Date()
       const timeOfDay = now.getHours() < 12 ? 'morning' : now.getHours() < 17 ? 'afternoon' : 'evening'
       
-      // Get fresh status data for welcome message without saving to database yet
-      const statusResponse = await fetch('/api/seller/status', {
-        headers: await apiClient.getAuthHeaders()
-      })
+      // Fetch fresh data from both endpoints for complete picture
+      const [statusResponse, negotiationsResponse] = await Promise.all([
+        fetch('/api/seller/status', {
+          headers: await apiClient.getAuthHeaders(),
+          cache: 'no-cache'
+        }),
+        fetch('/api/negotiations/my-negotiations', {
+          headers: await apiClient.getAuthHeaders(),
+          cache: 'no-cache'
+        })
+      ])
       
       let welcomeContent = `Good ${timeOfDay}! I'm your AI assistant, ready to help you manage your furniture listings.`
       
-      if (statusResponse.ok) {
+      if (statusResponse.ok && negotiationsResponse.ok) {
         const status = await statusResponse.json()
+        const negotiations = await negotiationsResponse.json()
+        
+        // Use the my-negotiations endpoint for accurate active negotiations count
+        const activeNegotiations = negotiations.filter((neg: any) => neg.status === 'active')
+        
         if (status.items && status.items.length > 0) {
-          welcomeContent = `Good ${timeOfDay}! ${status.items.length} active listing${status.items.length > 1 ? 's' : ''}, ${status.recent_offers?.length || 0} recent offer${status.recent_offers?.length !== 1 ? 's' : ''}.
-          
-${status.items.slice(0, 2).map((item: any) => 
-  `📦 "${item.name}" - $${item.starting_price} (${item.negotiations?.length || 0} offers)`
-).join('\n')}
+          welcomeContent = `Good ${timeOfDay}! ${status.items.length} active listing${status.items.length > 1 ? 's' : ''}, ${activeNegotiations.length} active offer${activeNegotiations.length !== 1 ? 's' : ''}.
 
-What would you like to know?`
+${status.items.slice(0, 2).map((item: any) => {
+  const itemNegotiations = activeNegotiations.filter((neg: any) => neg.item_id === item.id)
+  return `📦 "${item.name}" - $${item.starting_price} (${itemNegotiations.length} active offer${itemNegotiations.length !== 1 ? 's' : ''})`
+}).join('\n')}
+
+${activeNegotiations.length > 0 ? `🔥 Highest offer: $${Math.max(...activeNegotiations.map((n: any) => n.current_offer))} for your ${activeNegotiations.find((n: any) => n.current_offer === Math.max(...activeNegotiations.map((x: any) => x.current_offer)))?.items?.name || 'item'}!` : ''}
+
+What would you like to do today?`
         }
       }
       
-      // Show welcome message (session-only, not saved to DB)
+      // Show dynamic welcome message with real-time data
       setMessages([
         {
           id: Date.now(),
-          conversation_id: 0, // No conversation ID yet
+          conversation_id: 0,
           role: 'assistant',
           content: welcomeContent,
-          metadata: { welcome: true, sessionOnly: true },
+          metadata: { welcome: true, dynamic: true },
           created_at: new Date().toISOString()
         }
       ])
     } catch (error) {
-      console.error('Failed to get status for welcome message:', error)
+      console.error('Failed to get fresh status for welcome message:', error)
       
       // Fallback welcome message
       const now = new Date()
@@ -146,7 +161,7 @@ What would you like to know?`
           conversation_id: 0,
           role: 'assistant',
           content: `Good ${timeOfDay}! I'm your AI assistant, ready to help you manage your furniture listings. What would you like to know?`,
-          metadata: { welcome: true, fallback: true, sessionOnly: true },
+          metadata: { welcome: true, fallback: true },
           created_at: new Date().toISOString()
         }
       ])

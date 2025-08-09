@@ -421,6 +421,24 @@ export class SupabaseApiClient {
     return response.json()
   }
 
+  async declineOffer(negotiationId: number, reason: string = 'Thanks for your interest, but I can\'t accept this offer.') {
+    const headers = await this.getAuthHeaders(true)
+    const response = await fetch(`/api/negotiations/${negotiationId}/decline`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        reason: reason
+      })
+    })
+    
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to decline offer')
+    }
+    
+    return response.json()
+  }
+
   async createOffer(itemId: number, price: number, message: string = '') {
     const headers = await this.getAuthHeaders(true)
     const response = await fetch(`/api/negotiations/items/${itemId}/offers`, {
