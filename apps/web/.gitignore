@@ -86,3 +86,7 @@ temp/
 # Supabase (local development)
 supabase/.temp/
 supabase/docker/
+
+# MCP Configuration files (should not be committed)
+.mcp.json
+*.mcp.json
