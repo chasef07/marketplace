@@ -260,7 +260,7 @@ What would you like to do today?`
             style={isUser 
               ? { background: 'linear-gradient(135deg, #8B4513, #CD853F)' }
               : !isError 
-                ? { background: 'linear-gradient(135deg, #2563eb, #3b82f6)' }
+                ? { background: 'linear-gradient(135deg, #8B4513, #CD853F)' }
                 : undefined
             }
           >
@@ -316,9 +316,9 @@ What would you like to do today?`
   }
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #F7F3E9 0%, #E8DDD4 50%, #DDD1C7 100%)' }}>
+    <div className="h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #F7F3E9 0%, #E8DDD4 50%, #DDD1C7 100%)' }}>
       {/* Header */}
-      <header className="backdrop-blur-md border-b sticky top-0 z-50" style={{ background: 'rgba(247, 243, 233, 0.9)', borderColor: 'rgba(139, 69, 19, 0.1)' }}>
+      <header className="backdrop-blur-md border-b flex-shrink-0" style={{ background: 'rgba(247, 243, 233, 0.9)', borderColor: 'rgba(139, 69, 19, 0.1)' }}>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -348,18 +348,18 @@ What would you like to do today?`
       </header>
 
       {/* Chat Container */}
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
-        <Card className="h-[calc(100vh-200px)] flex flex-col">
+      <div className="flex-1 container mx-auto px-4 py-6 max-w-4xl flex flex-col">
+        <Card className="flex-1 flex flex-col min-h-0">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2" style={{ color: '#3C2415' }}>
-              <Bot className="w-5 h-5" style={{ color: '#2563eb' }} />
+              <Bot className="w-5 h-5" style={{ color: '#8B4513' }} />
               Chat with your AI assistant
             </CardTitle>
           </CardHeader>
           
-          <CardContent className="flex-1 flex flex-col p-0">
+          <CardContent className="flex-1 flex flex-col p-0 min-h-0">
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4" style={{ minHeight: 0 }}>
               {isInitializing ? (
                 <div className="flex justify-center items-center h-32">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: '#8B4513' }}></div>
@@ -381,7 +381,7 @@ What would you like to do today?`
                   <div className="flex items-center gap-3">
                     <div 
                       className="w-8 h-8 rounded-full flex items-center justify-center text-white"
-                      style={{ background: 'linear-gradient(135deg, #2563eb, #3b82f6)' }}
+                      style={{ background: 'linear-gradient(135deg, #8B4513, #CD853F)' }}
                     >
                       <Bot className="w-4 h-4" />
                     </div>
@@ -400,7 +400,7 @@ What would you like to do today?`
             </div>
             
             {/* Input Area */}
-            <div className="border-t p-4" style={{ borderColor: 'rgba(139, 69, 19, 0.1)' }}>
+            <div className="border-t p-4 flex-shrink-0" style={{ borderColor: 'rgba(139, 69, 19, 0.1)' }}>
               <form onSubmit={handleSendMessage} className="flex gap-3">
                 <input
                   ref={inputRef}
@@ -409,11 +409,12 @@ What would you like to do today?`
                   onChange={(e) => setInputMessage(e.target.value)}
                   placeholder="Ask about your offers, listings, or say something like 'Any good offers today?'"
                   disabled={isLoading}
-                  className="flex-1 px-4 py-3 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                  className="flex-1 px-4 py-3 border rounded-full focus:outline-none focus:ring-2 disabled:opacity-50"
                   style={{ 
                     borderColor: 'rgba(139, 69, 19, 0.2)',
-                    backgroundColor: '#FAFAFA'
-                  }}
+                    backgroundColor: '#FAFAFA',
+                    '--tw-ring-color': 'rgba(139, 69, 19, 0.3)'
+                  } as any}
                 />
                 <Button
                   type="submit"

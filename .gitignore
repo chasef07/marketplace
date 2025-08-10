@@ -87,3 +87,8 @@ env.bak/
 venv.bak/
 *.db
 *.sqlite3
+
+# MCP Configuration files (should not be committed)
+.mcp.json
+*.mcp.json
+**/.mcp.json
