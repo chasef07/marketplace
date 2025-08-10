@@ -6,10 +6,9 @@ html, body {
   overflow-x: hidden;
 }
 
-/* Ensure the homepage fits exactly */
+/* Allow homepage to scroll naturally */
 .homepage-container {
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
 }
 
 :root {

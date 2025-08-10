@@ -1,8 +1,13 @@
 'use client'
 
 import { Button } from "@/components/ui/button"
-import { LivingRoomScene } from './LivingRoomScene'
-import { PolaroidUpload } from './PolaroidUpload'
+import { InteractiveUploadZone } from './InteractiveUploadZone'
+import { AnimatedBackground } from './AnimatedBackground'
+import { HowItWorks } from './HowItWorks'
+import { TrustIndicators } from './TrustIndicators'
+import { RecentActivityTicker } from './RecentActivityTicker'
+import { colors, gradients, shadows, cssVariables } from './design-system/colors'
+import { animations, animationClasses } from './design-system/animations'
 import { type AIAnalysisResult } from "@/lib/api-client-new"
 
 interface User {
@@ -41,119 +46,112 @@ export function HeroSection({
 }: HeroSectionProps) {
   
   return (
-    <div className="hero-container">
-      {/* Navigation */}
-      <nav className="hero-nav">
-        <div className="nav-content">
-          <div className="logo">
-            <span className="logo-text">FurnitureMarket</span>
+    <>
+      <AnimatedBackground />
+      
+      <div className="hero-container">
+        {/* Navigation */}
+        <nav className="hero-nav">
+          <div className="nav-content">
+            <div className="logo">
+              <span className="logo-icon">📷</span>
+              <span className="logo-text">SnapNest</span>
+            </div>
+            
+            <div className="nav-buttons">
+              {user ? (
+                <>
+                  <span className="welcome-text">Welcome back, {user.username}!</span>
+                  <Button 
+                    variant="ghost" 
+                    onClick={onBrowseItems}
+                    className="nav-button nav-button-ghost"
+                  >
+                    Browse
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    onClick={onSellerDashboard}
+                    className="nav-button nav-button-ghost"
+                  >
+                    Dashboard
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    onClick={onViewProfile}
+                    className="nav-button nav-button-ghost"
+                  >
+                    Profile
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    onClick={onSignOut}
+                    className="nav-button nav-button-ghost"
+                  >
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button 
+                    variant="ghost" 
+                    onClick={onBrowseItems}
+                    className="nav-button nav-button-ghost"
+                  >
+                    Browse
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    onClick={onSignIn}
+                    className="nav-button nav-button-primary"
+                  >
+                    Sign In
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
-          
-          <div className="nav-buttons">
-            {user ? (
-              <>
-                <span className="welcome-text">Welcome back, {user.username}!</span>
-                <Button 
-                  variant="ghost" 
-                  onClick={onBrowseItems}
-                  className="nav-button nav-button-ghost"
-                >
-                  Browse Items
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={onSellerDashboard}
-                  className="nav-button nav-button-ghost"
-                >
-                  Dashboard
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={onViewProfile}
-                  className="nav-button nav-button-ghost"
-                >
-                  Profile
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={onSignOut}
-                  className="nav-button nav-button-ghost"
-                >
-                  Sign Out
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button 
-                  variant="ghost" 
-                  onClick={onBrowseItems}
-                  className="nav-button nav-button-ghost"
-                >
-                  Browse Items
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={onSignIn}
-                  className="nav-button nav-button-ghost"
-                >
-                  Sign In
-                </Button>
-              </>
-            )}
+        </nav>
+
+        {/* Main Hero Content */}
+        <main className="hero-main">
+          {/* Hero Header */}
+          <div className="hero-header">
+            <h1 className="hero-title">
+              From Photo to Posted
+              <span className="title-accent"> in Seconds</span>
+            </h1>
+            
+            <p className="hero-subtitle">
+              AI-powered pricing and listing for your home goods
+            </p>
           </div>
-        </div>
-      </nav>
 
-      {/* Main Hero Content */}
-      <main className="hero-main">
-        {/* Top Section - Title and Description */}
-        <div className="hero-header">
-          <h1 className="hero-title">
-            Your Home's Next
-            <span className="title-accent"> Story</span>
-            <br />
-            Starts Here
-          </h1>
-          
-          <p className="hero-subtitle">
-            Discover unique furniture pieces from your neighbors. 
-            Every item has a story, every sale builds community.
-          </p>
-        </div>
+          {/* Centered Upload Zone */}
+          <div className="hero-center">
+            <InteractiveUploadZone 
+              onShowListingPreview={onShowListingPreview}
+            />
+          </div>
+        </main>
 
-        {/* Center Section - Polaroid Upload (Star of the Show) */}
-        <div className="hero-center">
-          <PolaroidUpload 
-            onShowListingPreview={onShowListingPreview}
-          />
-        </div>
+        {/* How It Works */}
+        <HowItWorks />
 
+        {/* Trust Indicators */}
+        <TrustIndicators />
+      </div>
 
-        {/* Background Living Room Scene */}
-        <div className="hero-scene-background">
-          <LivingRoomScene />
-        </div>
-      </main>
+      {/* Recent Activity Ticker */}
+      <RecentActivityTicker />
 
       <style jsx>{`
+        ${cssVariables}
+        
         .hero-container {
-          height: 100vh;
-          background: linear-gradient(135deg, #F7F3E9 0%, #E8DDD4 50%, #DDD1C7 100%);
           position: relative;
-          overflow: hidden;
-        }
-
-        .hero-container::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-image: 
-            radial-gradient(circle at 25% 25%, rgba(139, 69, 19, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 75% 75%, rgba(210, 180, 140, 0.15) 0%, transparent 50%);
-          pointer-events: none;
+          z-index: 1;
+          background: transparent;
         }
 
         .hero-nav {
@@ -163,8 +161,9 @@ export function HeroSection({
           right: 0;
           z-index: 50;
           backdrop-filter: blur(10px);
-          background: rgba(247, 243, 233, 0.9);
-          border-bottom: 1px solid rgba(139, 69, 19, 0.1);
+          background: ${colors.glass.background};
+          border-bottom: 1px solid ${colors.glass.border};
+          box-shadow: ${shadows.sm};
         }
 
         .nav-content {
@@ -176,11 +175,26 @@ export function HeroSection({
           justify-content: space-between;
         }
 
+        .logo {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .logo-icon {
+          font-size: 1.5rem;
+        }
+
         .logo-text {
           font-size: 1.5rem;
-          font-weight: 700;
-          color: #3C2415;
+          font-weight: 800;
+          color: ${colors.neutralDark};
           letter-spacing: -0.025em;
+          font-family: 'Inter', -apple-system, sans-serif;
+          background: ${gradients.primary};
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
 
         .nav-buttons {
@@ -190,186 +204,118 @@ export function HeroSection({
         }
 
         .welcome-text {
-          color: #8B4513;
+          color: ${colors.primary};
           font-size: 0.9rem;
           font-weight: 500;
         }
 
         .nav-button {
-          font-weight: 500;
-          transition: all 0.3s ease;
+          font-weight: 600;
+          transition: all 300ms ${animations.easing.smooth};
+          border-radius: 8px;
+          font-size: 0.9rem;
         }
 
         .nav-button-ghost {
-          color: #8B4513;
+          color: ${colors.neutralDark};
           background: transparent;
         }
 
         .nav-button-ghost:hover {
-          background: rgba(139, 69, 19, 0.1);
-          color: #3C2415;
+          background: ${colors.primary}10;
+          color: ${colors.primary};
+          transform: translateY(-1px);
         }
 
         .nav-button-primary {
-          background: #8B4513;
-          color: #F7F3E9;
+          background: ${gradients.primary};
+          color: white;
           border: none;
+          box-shadow: ${shadows.primary};
         }
 
         .nav-button-primary:hover {
-          background: #6B3410;
+          background: ${colors.primaryDark};
           transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+          box-shadow: ${shadows.lg};
         }
 
         .hero-main {
-          display: flex;
-          flex-direction: column;
-          height: 100vh;
           max-width: 1200px;
           margin: 0 auto;
-          padding: 5rem 2rem 3rem;
-          align-items: center;
-          justify-content: flex-start;
+          padding: 6rem 2rem 4rem;
           position: relative;
           z-index: 2;
-          gap: 0.25rem;
-          overflow: hidden;
         }
 
         .hero-header {
           text-align: center;
-          max-width: 800px;
-          flex-shrink: 0;
-          margin-bottom: 0;
-          margin-top: 0.5rem;
+          margin-bottom: 4rem;
         }
-
-        .hero-center {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          width: 100%;
-          max-width: 500px;
-          z-index: 10;
-          position: relative;
-          flex-shrink: 0;
-          margin: 0;
-        }
-
 
         .hero-title {
-          font-size: clamp(2rem, 4vw, 3rem);
+          font-size: clamp(2.5rem, 5vw, 4rem);
           font-weight: 800;
           line-height: 1.1;
-          color: #3C2415;
-          margin-bottom: 0.5rem;
+          color: ${colors.neutralDark};
+          margin-bottom: 1rem;
           letter-spacing: -0.02em;
+          font-family: 'Inter', -apple-system, sans-serif;
+          ${animationClasses.fadeIn}
         }
 
         .title-accent {
-          background: linear-gradient(135deg, #8B4513, #CD853F);
+          background: ${gradients.accent};
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
         }
 
         .hero-subtitle {
-          font-size: 1.1rem;
-          color: #6B5A47;
+          font-size: 1.25rem;
+          color: ${colors.primary};
           line-height: 1.5;
-          margin-bottom: 0;
+          max-width: 600px;
+          margin: 0 auto;
+          font-weight: 500;
+          ${animationClasses.fadeIn}
+          animation-delay: 200ms;
         }
 
-        .hero-buttons {
+        .hero-center {
           display: flex;
-          gap: 1rem;
           justify-content: center;
-          flex-wrap: wrap;
+          align-items: center;
+          margin-bottom: 2rem;
+          ${animationClasses.fadeIn}
+          animation-delay: 400ms;
         }
 
-        .cta-button {
-          padding: 1rem 2rem;
-          font-weight: 600;
-          font-size: 1.1rem;
-          transition: all 0.3s ease;
-          border-radius: 12px;
-        }
+        ${animations.keyframes.fadeIn}
+        ${animations.keyframes.pulse}
 
-        .cta-primary {
-          background: linear-gradient(135deg, #8B4513, #CD853F);
-          color: #F7F3E9;
-          border: none;
-          box-shadow: 0 4px 20px rgba(139, 69, 19, 0.3);
-        }
-
-        .cta-primary:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 25px rgba(139, 69, 19, 0.4);
-        }
-
-        .cta-secondary {
-          border: 2px solid #8B4513;
-          color: #8B4513;
-          background: rgba(247, 243, 233, 0.8);
-        }
-
-        .cta-secondary:hover {
-          background: #8B4513;
-          color: #F7F3E9;
-          transform: translateY(-2px);
-        }
-
-
-        .hero-scene-background {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          z-index: 1;
-          opacity: 0.6;
-          pointer-events: none;
-        }
 
         @media (max-width: 768px) {
           .hero-main {
-            padding: 4rem 1rem 2.5rem;
-            height: 100vh;
-            gap: 0.125rem;
-            justify-content: flex-start;
-            overflow: hidden;
-          }
-          
-          .hero-center {
-            margin: 0;
+            padding: 5rem 1rem 2rem;
           }
           
           .hero-header {
-            margin-bottom: 0;
-            margin-top: 0.5rem;
+            margin-bottom: 2.5rem;
           }
           
           .hero-title {
-            font-size: clamp(1.75rem, 6vw, 2.5rem);
-            margin-bottom: 0.5rem;
+            font-size: clamp(2rem, 8vw, 3rem);
+            margin-bottom: 0.75rem;
           }
           
           .hero-subtitle {
-            font-size: 1rem;
-            margin-bottom: 0;
+            font-size: 1.1rem;
           }
 
           .nav-content {
             padding: 1rem;
           }
-
-          .hero-buttons {
-            flex-direction: column;
-            width: 100%;
-            max-width: 300px;
-          }
-
 
           .nav-buttons {
             gap: 0.5rem;
@@ -379,11 +325,11 @@ export function HeroSection({
             display: none;
           }
 
-          .hero-center {
-            max-width: 100%;
+          .logo-text {
+            font-size: 1.25rem;
           }
         }
       `}</style>
-    </div>
+    </>
   )
 }
