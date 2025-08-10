@@ -220,7 +220,9 @@ const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: stri
 
         // Force map to resize properly
         setTimeout(() => {
-          map.invalidateSize()
+          if (map && mapInstanceRef.current) {
+            map.invalidateSize()
+          }
         }, 100)
 
         console.log('Map initialized successfully with radius')
