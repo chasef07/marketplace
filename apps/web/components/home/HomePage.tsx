@@ -119,19 +119,12 @@ export function HomePage() {
 
   const createListingAndNavigate = async (analysisData: AIAnalysisResult) => {
     try {
-      const getConditionFromScore = (score: number): 'excellent' | 'good' | 'fair' | 'poor' => {
-        if (score >= 8) return 'excellent'
-        if (score >= 6) return 'good'
-        if (score >= 4) return 'fair'
-        return 'poor'
-      }
 
       const listingData = {
         name: analysisData.listing.title,
         description: analysisData.listing.description,
         furniture_type: analysisData.listing.furniture_type,
         starting_price: parseFloat(analysisData.pricing.suggested_starting_price.toString()),
-        condition: getConditionFromScore(analysisData.analysis.condition_score),
         image_filename: analysisData.image_filename, // Backward compatibility
         images: analysisData.images, // New multiple images support
         // Include AI analysis details

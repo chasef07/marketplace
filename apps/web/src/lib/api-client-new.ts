@@ -13,8 +13,6 @@ export interface AIAnalysisResult {
   analysis: {
     furniture_type: string
     style: string
-    condition_score: number
-    condition_notes: string
     material: string
     brand: string
     color: string
@@ -310,6 +308,11 @@ export class SupabaseApiClient {
   private readonly MAX_AUTH_ERRORS = 3
   private readonly CIRCUIT_BREAKER_DURATION = 60000 // 1 minute
   
+  // Add caching for negotiations
+  private _lastNegotiationsFetch = 0
+  private _negotiationsCache: any = null
+  private readonly NEGOTIATIONS_CACHE_DURATION = 5000 // 5 seconds
+  
   async getCurrentUser() {
     const now = Date.now()
     
@@ -377,6 +380,15 @@ export class SupabaseApiClient {
   }
 
   async getMyNegotiations() {
+    const now = Date.now()
+    
+    // Return cached data if recent
+    if (now - this._lastNegotiationsFetch < this.NEGOTIATIONS_CACHE_DURATION && this._negotiationsCache) {
+      return this._negotiationsCache
+    }
+    
+    this._lastNegotiationsFetch = now
+    
     const headers = await this.getAuthHeaders()
     const response = await fetch('/api/negotiations/my-negotiations', { headers })
     
@@ -384,7 +396,15 @@ export class SupabaseApiClient {
       throw new Error('Failed to fetch negotiations')
     }
     
-    return response.json()
+    const data = await response.json()
+    this._negotiationsCache = data
+    return data
+  }
+
+  // Clear negotiations cache (useful when data changes)
+  clearNegotiationsCache() {
+    this._negotiationsCache = null
+    this._lastNegotiationsFetch = 0
   }
 
   async acceptOffer(negotiationId: number) {
@@ -398,6 +418,9 @@ export class SupabaseApiClient {
       const errorData = await response.json()
       throw new Error(errorData.error || 'Failed to accept offer')
     }
+    
+    // Clear negotiations cache since offer was accepted
+    this.clearNegotiationsCache()
     
     return response.json()
   }
@@ -418,6 +441,9 @@ export class SupabaseApiClient {
       throw new Error(errorData.error || 'Failed to create counter offer')
     }
     
+    // Clear negotiations cache since counter offer was created
+    this.clearNegotiationsCache()
+    
     return response.json()
   }
 
@@ -435,6 +461,9 @@ export class SupabaseApiClient {
       const errorData = await response.json()
       throw new Error(errorData.error || 'Failed to decline offer')
     }
+    
+    // Clear negotiations cache since offer was declined
+    this.clearNegotiationsCache()
     
     return response.json()
   }
@@ -454,6 +483,9 @@ export class SupabaseApiClient {
       const errorData = await response.json()
       throw new Error(errorData.error || 'Failed to create offer')
     }
+    
+    // Clear negotiations cache since new offer was created
+    this.clearNegotiationsCache()
     
     return response.json()
   }
@@ -509,6 +541,8 @@ export class SupabaseApiClient {
     this._lastUserFetch = 0
     this._consecutiveAuthErrors = 0
     this._authCircuitBreakerUntil = 0
+    this._negotiationsCache = null
+    this._lastNegotiationsFetch = 0
     
     // Sign out from Supabase with explicit scope
     const { error } = await this._supabase.auth.signOut({ scope: 'global' })

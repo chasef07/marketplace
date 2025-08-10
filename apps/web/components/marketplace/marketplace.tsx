@@ -41,7 +41,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchInput, setSearchInput] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("All")
+  const [selectedPriceRange, setSelectedPriceRange] = useState("all")
 
   // Debounce search input to avoid excessive filtering
   const debouncedSearch = useDebouncedCallback(
@@ -87,17 +87,6 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
   const items = data?.items || []
 
 
-  const categories = ["All", "couch", "chair", "dining_table", "bookshelf", "dresser", "other"]
-  
-  const categoryDisplayNames: Record<string, string> = {
-    "All": "All",
-    "couch": "Couches",
-    "chair": "Chairs", 
-    "dining_table": "Dining Tables",
-    "bookshelf": "Bookshelves",
-    "dresser": "Dressers",
-    "other": "Other"
-  }
 
   // Update pagination when data changes
   useEffect(() => {
@@ -133,10 +122,33 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
     return items.filter((item: Item) => {
       const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            item.description.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesCategory = selectedCategory === "All" || item.furniture_type === selectedCategory
-      return matchesSearch && matchesCategory && item.is_available
+      
+      // Price range filter
+      let matchesPrice = true
+      if (selectedPriceRange !== "all") {
+        const price = item.starting_price
+        switch (selectedPriceRange) {
+          case "0-100":
+            matchesPrice = price < 100
+            break
+          case "100-300":
+            matchesPrice = price >= 100 && price < 300
+            break
+          case "300-500":
+            matchesPrice = price >= 300 && price < 500
+            break
+          case "500-1000":
+            matchesPrice = price >= 500 && price < 1000
+            break
+          case "1000+":
+            matchesPrice = price >= 1000
+            break
+        }
+      }
+      
+      return matchesSearch && matchesPrice && item.is_available
     })
-  }, [items, searchQuery, selectedCategory])
+  }, [items, searchQuery, selectedPriceRange])
 
 
   // Memoize time formatting function
@@ -159,29 +171,19 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
     return `${diffMonths}mo ago`
   }, [])
 
-  // Memoize condition color mapping
-  const getConditionColor = useCallback((condition: string) => {
-    switch (condition) {
-      case 'excellent': return 'text-green-600'
-      case 'good': return 'text-blue-600'  
-      case 'fair': return 'text-yellow-600'
-      case 'poor': return 'text-red-600'
-      default: return 'text-gray-600'
-    }
-  }, [])
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #F7F3E9 0%, #E8DDD4 50%, #DDD1C7 100%)' }}>
+    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #F5F0E8 0%, #FAF7F2 50%, #E8DDD4 100%)' }}>
       {/* Header */}
-      <header className="backdrop-blur-md border-b sticky top-0 z-50" style={{ background: 'rgba(247, 243, 233, 0.9)', borderColor: 'rgba(139, 69, 19, 0.1)' }}>
+      <header className="backdrop-blur-md border-b sticky top-0 z-50" style={{ background: 'rgba(250, 247, 242, 0.9)', borderColor: 'rgba(74, 111, 165, 0.1)' }}>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold" style={{ color: '#3C2415' }}>FurnitureMarket</h1>
+            <h1 className="text-2xl font-bold" style={{ color: '#2C3E50' }}>FurnitureMarket</h1>
             
             <div className="flex items-center gap-4">
               {user ? (
                 <>
-                  <span className="text-sm" style={{ color: '#6B5A47' }}>
+                  <span className="text-sm" style={{ color: '#6B7280' }}>
                     Welcome, {user.username}!
                   </span>
                   <Button 
@@ -189,7 +191,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                     size="sm"
                     onClick={onSellerDashboard}
                     className="hover:bg-opacity-10"
-                    style={{ borderColor: '#8B4513', color: '#8B4513' }}
+                    style={{ borderColor: '#4A6FA5', color: '#4A6FA5' }}
                   >
                     Dashboard
                   </Button>
@@ -198,7 +200,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                     size="sm"
                     onClick={onViewProfile}
                     className="hover:bg-opacity-10"
-                    style={{ borderColor: '#8B4513', color: '#8B4513' }}
+                    style={{ borderColor: '#4A6FA5', color: '#4A6FA5' }}
                   >
                     Profile
                   </Button>
@@ -207,7 +209,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                     size="sm"
                     onClick={onSellerChat}
                     className="hover:bg-opacity-10"
-                    style={{ borderColor: '#8B4513', color: '#8B4513' }}
+                    style={{ borderColor: '#4A6FA5', color: '#4A6FA5' }}
                   >
                     <Bot className="h-4 w-4 mr-2" />
                     AI Assistant
@@ -215,25 +217,25 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                   <Button 
                     onClick={onCreateListing}
                     className="hover:opacity-90"
-                    style={{ background: 'linear-gradient(135deg, #8B4513, #CD853F)', color: '#F7F3E9' }}
+                    style={{ background: 'linear-gradient(135deg, #4A6FA5, #6B8BC4)', color: '#FAF7F2' }}
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Sell Item
                   </Button>
-                  <Button variant="outline" size="sm" onClick={onLogout} style={{ borderColor: '#8B4513', color: '#8B4513' }}>
+                  <Button variant="outline" size="sm" onClick={onLogout} style={{ borderColor: '#4A6FA5', color: '#4A6FA5' }}>
                     Sign Out
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button variant="outline" size="sm" onClick={onSignInClick} style={{ borderColor: '#8B4513', color: '#8B4513' }}>
+                  <Button variant="outline" size="sm" onClick={onSignInClick} style={{ borderColor: '#4A6FA5', color: '#4A6FA5' }}>
                     Sign In
                   </Button>
                   <Button 
                     onClick={onCreateListing}
                     size="sm" 
                     className="hover:opacity-90"
-                    style={{ background: 'linear-gradient(135deg, #8B4513, #CD853F)', color: '#F7F3E9' }}
+                    style={{ background: 'linear-gradient(135deg, #4A6FA5, #6B8BC4)', color: '#FAF7F2' }}
                   >
                     Sell Item
                   </Button>
@@ -248,45 +250,45 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
       <section className="py-8" style={{ background: 'linear-gradient(135deg, rgba(247, 243, 233, 0.8) 0%, rgba(232, 221, 212, 0.8) 50%, rgba(221, 209, 199, 0.8) 100%)' }}>
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold mb-4" style={{ color: '#3C2415' }}>
+            <h2 className="text-3xl font-bold mb-4" style={{ color: '#2C3E50' }}>
               Browse Furniture
             </h2>
           </div>
           
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search furniture..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          {/* Category Filters */}
-          <div className="max-w-4xl mx-auto">
-            <div className="flex justify-center gap-2 flex-wrap">
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    selectedCategory === category
-                      ? 'text-white shadow-lg'
-                      : 'bg-white/80 backdrop-blur-sm border text-gray-700 hover:bg-white hover:shadow-md'
-                  }`}
-                  style={selectedCategory === category ? 
-                    { background: 'linear-gradient(135deg, #8B4513, #CD853F)', color: '#F7F3E9' } : 
-                    { borderColor: 'rgba(139, 69, 19, 0.2)' }
-                  }
-                >
-                  {categoryDisplayNames[category]}
-                </button>
-              ))}
+          {/* Enhanced Search Bar with Price Filter */}
+          <div className="max-w-3xl mx-auto mb-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Search Input */}
+                <div className="flex-1 min-w-64">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search furniture..."
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                
+                {/* Price Range Filter */}
+                <div className="min-w-36">
+                  <select
+                    value={selectedPriceRange}
+                    onChange={(e) => setSelectedPriceRange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  >
+                    <option value="all">All Prices</option>
+                    <option value="0-100">Under $100</option>
+                    <option value="100-300">$100 - $300</option>
+                    <option value="300-500">$300 - $500</option>
+                    <option value="500-1000">$500 - $1000</option>
+                    <option value="1000+">$1000+</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -296,10 +298,10 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
       <section className="py-8">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold" style={{ color: '#3C2415' }}>
+            <h2 className="text-2xl font-semibold" style={{ color: '#2C3E50' }}>
               {searchQuery ? `Search results for "${searchQuery}"` : 'Available Items'}
             </h2>
-            <p style={{ color: '#6B5A47' }}>
+            <p style={{ color: '#6B7280' }}>
               {filteredItems.length} items found
             </p>
           </div>
@@ -324,7 +326,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="text-center py-12">
-              <div className="mb-4" style={{ color: '#6B5A47' }}>
+              <div className="mb-4" style={{ color: '#6B7280' }}>
                 {searchQuery || selectedCategory !== "All" 
                   ? "No items match your search" 
                   : "No items available yet"}
@@ -333,7 +335,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                 <Button 
                   onClick={onCreateListing}
                   className="hover:opacity-90"
-                  style={{ background: 'linear-gradient(135deg, #8B4513, #CD853F)', color: '#F7F3E9' }}
+                  style={{ background: 'linear-gradient(135deg, #4A6FA5, #6B8BC4)', color: '#FAF7F2' }}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Be the first to sell!
@@ -383,39 +385,23 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                       {/* Price */}
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <p className="text-2xl font-bold" style={{ color: '#3C2415' }}>${item.starting_price.toFixed(2)}</p>
+                          <p className="text-2xl font-bold" style={{ color: '#2C3E50' }}>${item.starting_price.toFixed(2)}</p>
                         </div>
                       </div>
 
                       {/* Title */}
-                      <h3 className="font-semibold mb-2 line-clamp-2" style={{ color: '#3C2415' }}>{item.name}</h3>
+                      <h3 className="font-semibold mb-2 line-clamp-2" style={{ color: '#2C3E50' }}>{item.name}</h3>
 
-                      {/* Condition */}
-                      <div className="mb-2">
-                        <span className={`text-sm font-medium capitalize ${getConditionColor(item.condition)}`}>
-                          {item.condition} condition
-                        </span>
-                      </div>
-
-                      {/* Seller and Location */}
-                      <div className="flex items-center gap-1 text-sm mb-2" style={{ color: '#6B5A47' }}>
-                        <MapPin className="h-4 w-4" />
-                        <span>{item.seller?.zip_code ? `Near ${item.seller.zip_code}` : 'Local pickup'}</span>
-                      </div>
 
                       {/* Seller Info */}
-                      <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center text-sm">
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(139, 69, 19, 0.1)' }}>
-                            <span className="text-xs font-medium" style={{ color: '#8B4513' }}>
+                            <span className="text-xs font-medium" style={{ color: '#4A6FA5' }}>
                               {(item.seller?.username || 'U').charAt(0).toUpperCase()}
                             </span>
                           </div>
-                          <span style={{ color: '#3C2415' }}>{item.seller?.username || 'Anonymous'}</span>
-                        </div>
-                        <div className="flex items-center gap-1" style={{ color: '#6B5A47' }}>
-                          <Clock className="h-3 w-3" />
-                          <span>{formatTimeAgo(item.created_at)}</span>
+                          <span style={{ color: '#2C3E50' }}>{item.seller?.username || 'Anonymous'}</span>
                         </div>
                       </div>
                     </div>

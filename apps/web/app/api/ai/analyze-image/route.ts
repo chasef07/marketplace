@@ -58,8 +58,6 @@ export async function POST(request: NextRequest) {
     {
       "furniture_type": "MUST be one of: couch, dining_table, bookshelf, chair, desk, bed, dresser, coffee_table, nightstand, cabinet, other",
       "style": "design style (modern, vintage, traditional, etc.)",
-      "condition_score": "rate 1-10 based on visible condition",
-      "condition_notes": "detailed condition assessment",
       "material": "primary material (leather, wood, fabric, etc.)",
       "brand": "brand if identifiable, otherwise 'Unknown'",
       "color": "primary color or pattern",
@@ -75,7 +73,7 @@ export async function POST(request: NextRequest) {
       "description": "detailed, appealing description for buyers"
     }
 
-    Base pricing on visible condition, style, apparent quality, and current furniture market trends. Be realistic and helpful.`
+    Base pricing on style, apparent quality, and current furniture market trends. Be realistic and helpful.`
 
     let response
     try {
@@ -132,8 +130,6 @@ export async function POST(request: NextRequest) {
       analysis: {
         furniture_type: analysis.furniture_type,
         style: analysis.style,
-        condition_score: analysis.condition_score,
-        condition_notes: analysis.condition_notes,
         material: analysis.material,
         brand: analysis.brand,
         color: analysis.color,

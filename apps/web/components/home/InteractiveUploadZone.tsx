@@ -66,11 +66,11 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
       // Create FormData for the API call
       const formData = new FormData()
       imageFiles.forEach((file, index) => {
-        formData.append(`images`, file)
+        formData.append(`image${index}`, file)
       })
 
-      // Call the actual AI analysis API
-      const response = await fetch('/api/ai/analyze-image', {
+      // Call the actual AI analysis API (multiple images endpoint)
+      const response = await fetch('/api/ai/analyze-images', {
         method: 'POST',
         body: formData,
       })
@@ -92,8 +92,18 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
         // Create image URLs for the uploaded files
         const imageUrls = imageFiles.map(file => URL.createObjectURL(file))
         
+        // Add the images metadata to the result for compatibility
+        const enrichedResult = {
+          ...result,
+          images: result.images || imageUrls.map((_, index) => ({
+            filename: `temp-${index}`,
+            order: index + 1,
+            is_primary: index === 0
+          }))
+        }
+        
         // Show the listing preview
-        onShowListingPreview(result, imageUrls)
+        onShowListingPreview(enrichedResult, imageUrls)
       }, 500)
 
     } catch (error) {

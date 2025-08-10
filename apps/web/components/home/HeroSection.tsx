@@ -3,9 +3,6 @@
 import { Button } from "@/components/ui/button"
 import { InteractiveUploadZone } from './InteractiveUploadZone'
 import { AnimatedBackground } from './AnimatedBackground'
-import { HowItWorks } from './HowItWorks'
-import { TrustIndicators } from './TrustIndicators'
-import { RecentActivityTicker } from './RecentActivityTicker'
 import { colors, gradients, shadows, cssVariables } from './design-system/colors'
 import { animations, animationClasses } from './design-system/animations'
 import { type AIAnalysisResult } from "@/lib/api-client-new"
@@ -118,12 +115,12 @@ export function HeroSection({
           {/* Hero Header */}
           <div className="hero-header">
             <h1 className="hero-title">
-              From Photo to Posted
+              Sell Your Furniture
               <span className="title-accent"> in Seconds</span>
             </h1>
             
             <p className="hero-subtitle">
-              AI-powered pricing and listing for your home goods
+              Snap a photo, get AI pricing, list instantly on our marketplace
             </p>
           </div>
 
@@ -135,15 +132,7 @@ export function HeroSection({
           </div>
         </main>
 
-        {/* How It Works */}
-        <HowItWorks />
-
-        {/* Trust Indicators */}
-        <TrustIndicators />
       </div>
-
-      {/* Recent Activity Ticker */}
-      <RecentActivityTicker />
 
       <style jsx>{`
         ${cssVariables}

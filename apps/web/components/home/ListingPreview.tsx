@@ -211,7 +211,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
                   style={{
                     background: isCreatingListing 
                       ? 'rgba(139, 69, 19, 0.5)' 
-                      : 'linear-gradient(135deg, #8B4513, #CD853F)',
+                      : 'linear-gradient(135deg, #4A6FA5, #6B8BC4)',
                     color: 'white',
                     border: 'none',
                     cursor: isCreatingListing ? 'not-allowed' : 'pointer'
@@ -226,7 +226,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
                   size="lg"
                   variant="ghost"
                   style={{
-                    background: 'linear-gradient(135deg, #8B4513, #CD853F)',
+                    background: 'linear-gradient(135deg, #4A6FA5, #6B8BC4)',
                     color: 'white',
                     border: 'none'
                   }}
@@ -331,21 +331,6 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
                   )}
                 </div>
                 
-                <div className="analysis-item">
-                  <span className="analysis-label">Condition Score</span>
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={editedData.analysis.condition_score?.toString() || '1'}
-                      onChange={(e) => handleInputChange('condition_score', parseInt(e.target.value) || 1, 'analysis')}
-                      className="analysis-input"
-                    />
-                  ) : (
-                    <span className="analysis-value">{editedData.analysis.condition_score}/10</span>
-                  )}
-                </div>
               </div>
             </div>
 
@@ -374,13 +359,13 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
       <style jsx>{`
         .listing-preview-container {
           min-height: 100vh;
-          background: linear-gradient(135deg, #F7F3E9 0%, #E8DDD4 50%, #DDD1C7 100%);
+          background: linear-gradient(135deg, #F5F0E8 0%, #FAF7F2 50%, #E8DDD4 100%);
         }
 
         .preview-header {
           background: rgba(255, 255, 255, 0.95);
           backdrop-filter: blur(10px);
-          border-bottom: 1px solid rgba(139, 69, 19, 0.1);
+          border-bottom: 1px solid rgba(74, 111, 165, 0.1);
           position: sticky;
           top: 0;
           z-index: 10;
@@ -397,37 +382,37 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
         }
 
         .back-button {
-          color: #8B4513;
-          border: 1px solid #8B4513;
+          color: #4A6FA5;
+          border: 1px solid #4A6FA5;
         }
 
         .back-button:hover {
-          background: #8B4513;
+          background: #4A6FA5;
           color: white;
         }
 
         .header-title h1 {
           font-size: 1.5rem;
           font-weight: 700;
-          color: #3C2415;
+          color: #2C3E50;
           margin: 0 0 0.25rem 0;
         }
 
         .header-title p {
           font-size: 0.9rem;
-          color: #8B4513;
+          color: #E89A5C;
           margin: 0;
         }
 
         .edit-toggle {
-          color: #8B4513;
-          border: 1px solid #8B4513;
-          background: ${isEditing ? '#8B4513' : 'transparent'};
-          color: ${isEditing ? 'white' : '#8B4513'};
+          color: #E89A5C;
+          border: 1px solid #4A6FA5;
+          background: ${isEditing ? '#4A6FA5' : 'transparent'};
+          color: ${isEditing ? 'white' : '#4A6FA5'};
         }
 
         .edit-toggle:hover {
-          background: #8B4513;
+          background: #4A6FA5;
           color: white;
         }
 
@@ -543,7 +528,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
         }
 
         .dot.active {
-          background: #8B4513;
+          background: #4A6FA5;
         }
 
         .price-card {
@@ -561,7 +546,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
         .price-amount {
           font-size: 2.5rem;
           font-weight: 700;
-          color: #3C2415;
+          color: #2C3E50;
           line-height: 1;
           display: block;
         }
@@ -569,7 +554,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
         .price-input {
           font-size: 2.5rem;
           font-weight: 700;
-          color: #3C2415;
+          color: #2C3E50;
           border: 2px solid #E8DDD4;
           border-radius: 8px;
           padding: 0.5rem;
@@ -580,12 +565,12 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
 
         .price-input:focus {
           outline: none;
-          border-color: #8B4513;
+          border-color: #4A6FA5;
         }
 
         .price-label {
           font-size: 0.9rem;
-          color: #8B4513;
+          color: #E89A5C;
           font-weight: 500;
           display: block;
           margin-top: 0.5rem;
@@ -603,7 +588,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
         }
 
         .signup-button {
-          background: linear-gradient(135deg, #8B4513, #CD853F) !important;
+          background: linear-gradient(135deg, #4A6FA5, #6B8BC4) !important;
           color: white !important;
           border: none !important;
           width: 100%;
@@ -622,7 +607,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
 
         .signup-note {
           font-size: 0.8rem;
-          color: #8B4513;
+          color: #E89A5C;
           margin-top: 0.75rem;
           margin-bottom: 0;
         }
@@ -641,7 +626,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
         .listing-title {
           font-size: 2rem;
           font-weight: 700;
-          color: #3C2415;
+          color: #2C3E50;
           margin: 0 0 1rem 0;
           line-height: 1.2;
         }
@@ -649,7 +634,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
         .title-input {
           font-size: 2rem;
           font-weight: 700;
-          color: #3C2415;
+          color: #2C3E50;
           border: 2px solid #E8DDD4;
           border-radius: 8px;
           padding: 0.5rem;
@@ -659,7 +644,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
 
         .title-input:focus {
           outline: none;
-          border-color: #8B4513;
+          border-color: #4A6FA5;
         }
 
         .category-section {
@@ -668,7 +653,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
 
         .category-tag {
           display: inline-block;
-          background: linear-gradient(135deg, #8B4513, #CD853F);
+          background: linear-gradient(135deg, #4A6FA5, #6B8BC4);
           color: white;
           padding: 0.5rem 1rem;
           border-radius: 20px;
@@ -687,7 +672,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
 
         .category-input:focus {
           outline: none;
-          border-color: #8B4513;
+          border-color: #4A6FA5;
         }
 
 
@@ -698,7 +683,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
         .description-section h3, .analysis-section h3, .dimensions-section h3 {
           font-size: 1.25rem;
           font-weight: 600;
-          color: #3C2415;
+          color: #2C3E50;
           margin: 0 0 1rem 0;
         }
 
@@ -721,7 +706,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
 
         .description-textarea:focus {
           outline: none;
-          border-color: #8B4513;
+          border-color: #4A6FA5;
         }
 
         .analysis-grid, .dimensions-grid {
@@ -739,14 +724,14 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
         .analysis-label, .dimension-label {
           font-size: 0.8rem;
           font-weight: 500;
-          color: #8B4513;
+          color: #E89A5C;
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
 
         .analysis-value, .dimension-value {
           font-size: 1rem;
-          color: #3C2415;
+          color: #2C3E50;
           font-weight: 600;
           text-transform: capitalize;
         }
@@ -756,13 +741,13 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
           border-radius: 6px;
           padding: 0.5rem;
           font-size: 1rem;
-          color: #3C2415;
+          color: #2C3E50;
           font-weight: 600;
         }
 
         .analysis-input:focus, .dimension-input:focus {
           outline: none;
-          border-color: #8B4513;
+          border-color: #4A6FA5;
         }
 
         @media (max-width: 768px) {
