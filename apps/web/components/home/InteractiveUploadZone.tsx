@@ -131,6 +131,7 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
       >
         <input
           ref={fileInputRef}
+          id="hidden-file-input"
           type="file"
           multiple
           accept="image/*"

@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { InteractiveUploadZone } from './InteractiveUploadZone'
+import { InteractiveLivingRoom } from './InteractiveLivingRoom'
 import { AnimatedBackground } from './AnimatedBackground'
 import { colors, gradients, shadows, cssVariables } from './design-system/colors'
 import { animations, animationClasses } from './design-system/animations'
@@ -124,8 +125,42 @@ export function HeroSection({
             </p>
           </div>
 
-          {/* Centered Upload Zone */}
-          <div className="hero-center">
+          {/* Interactive Living Room */}
+          <div className="living-room-section">
+            <InteractiveLivingRoom 
+              onUploadClick={() => {
+                // Create a temporary file input and trigger it
+                const input = document.createElement('input')
+                input.type = 'file'
+                input.accept = 'image/*'
+                input.multiple = true
+                input.style.display = 'none'
+                
+                input.onchange = async (e) => {
+                  const files = Array.from((e.target as HTMLInputElement).files || [])
+                  if (files.length > 0) {
+                    // We need to call the same upload handling logic
+                    // Let's trigger the hidden upload zone's file input instead
+                    const hiddenInput = document.querySelector('#hidden-file-input') as HTMLInputElement
+                    if (hiddenInput) {
+                      // Copy files to hidden input and trigger its change event
+                      const dt = new DataTransfer()
+                      files.forEach(file => dt.items.add(file))
+                      hiddenInput.files = dt.files
+                      hiddenInput.dispatchEvent(new Event('change', { bubbles: true }))
+                    }
+                  }
+                  document.body.removeChild(input)
+                }
+                
+                document.body.appendChild(input)
+                input.click()
+              }}
+            />
+          </div>
+
+          {/* Hidden Upload Zone (for functionality) */}
+          <div className="hidden-upload-zone">
             <InteractiveUploadZone 
               onShowListingPreview={onShowListingPreview}
             />
@@ -271,13 +306,20 @@ export function HeroSection({
           animation-delay: 200ms;
         }
 
-        .hero-center {
+        .living-room-section {
           display: flex;
           justify-content: center;
           align-items: center;
           margin-bottom: 2rem;
           ${animationClasses.fadeIn}
           animation-delay: 400ms;
+        }
+
+        .hidden-upload-zone {
+          position: absolute;
+          visibility: hidden;
+          pointer-events: none;
+          left: -9999px;
         }
 
         ${animations.keyframes.fadeIn}
