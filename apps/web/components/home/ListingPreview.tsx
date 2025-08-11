@@ -78,6 +78,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
     })
   }
 
+
   return (
     <div className="listing-preview-container">
       {/* Header */}
@@ -98,8 +99,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
           </Button>
           
           <div className="header-title">
-            <h1>Your Listing Preview</h1>
-            <p>Review and edit your furniture listing details</p>
+            <h1>SnapNest</h1>
           </div>
           
           <Button 
@@ -110,12 +110,12 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
             {isEditing ? (
               <>
                 <Save className="w-4 h-4 mr-2" />
-                Save Changes
+                Save
               </>
             ) : (
               <>
                 <Edit className="w-4 h-4 mr-2" />
-                Edit Details
+                Edit
               </>
             )}
           </Button>
@@ -231,7 +231,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
                     border: 'none'
                   }}
                 >
-                  Sign in to Create Listing
+                  Create Account to List
                 </Button>
               )}
             </div>
@@ -285,54 +285,6 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
               )}
             </div>
 
-            {/* AI Analysis Details */}
-            <div className="analysis-section">
-              <h3>AI Analysis</h3>
-              <div className="analysis-grid">
-                <div className="analysis-item">
-                  <span className="analysis-label">Style</span>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedData.analysis.style}
-                      onChange={(e) => handleInputChange('style', e.target.value, 'analysis')}
-                      className="analysis-input"
-                    />
-                  ) : (
-                    <span className="analysis-value">{editedData.analysis.style}</span>
-                  )}
-                </div>
-                
-                <div className="analysis-item">
-                  <span className="analysis-label">Material</span>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedData.analysis.material}
-                      onChange={(e) => handleInputChange('material', e.target.value, 'analysis')}
-                      className="analysis-input"
-                    />
-                  ) : (
-                    <span className="analysis-value">{editedData.analysis.material}</span>
-                  )}
-                </div>
-                
-                <div className="analysis-item">
-                  <span className="analysis-label">Brand</span>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedData.analysis.brand}
-                      onChange={(e) => handleInputChange('brand', e.target.value, 'analysis')}
-                      className="analysis-input"
-                    />
-                  ) : (
-                    <span className="analysis-value">{editedData.analysis.brand}</span>
-                  )}
-                </div>
-                
-              </div>
-            </div>
 
             {/* Dimensions */}
             <div className="dimensions-section">
@@ -561,6 +513,17 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
           text-align: center;
           width: 100%;
           max-width: 200px;
+        }
+
+        /* Hide number input arrows */
+        .price-input::-webkit-outer-spin-button,
+        .price-input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+
+        .price-input[type=number] {
+          -moz-appearance: textfield;
         }
 
         .price-input:focus {

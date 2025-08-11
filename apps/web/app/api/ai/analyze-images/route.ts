@@ -34,10 +34,41 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const images: ImageData[] = []
     
-    // Process multiple images (up to 3)
-    for (let i = 0; i < 3; i++) {
-      const image = formData.get(`image${i}`) as File
-      if (image) {
+    // Handle both single image ('image') and multiple images ('image0', 'image1', etc.)
+    const singleImage = formData.get('image') as File
+    if (singleImage) {
+      // Single image upload
+      const bytes = await singleImage.arrayBuffer()
+      const buffer = Buffer.from(bytes)
+      const base64Image = buffer.toString('base64')
+      const mimeType = singleImage.type
+
+      // Upload to Supabase Storage
+      const sanitizedName = singleImage.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+      const fileName = `${Date.now()}-${sanitizedName}`
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('furniture-images')
+        .upload(fileName, buffer, {
+          contentType: mimeType,
+        })
+
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError.message)
+        return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 })
+      }
+
+      images.push({
+        filename: fileName,
+        base64: base64Image,
+        mimeType: mimeType,
+        order: 1,
+        is_primary: true
+      })
+    } else {
+      // Multiple images upload (up to 3)
+      for (let i = 0; i < 3; i++) {
+        const image = formData.get(`image${i}`) as File
+        if (image) {
         // Convert image to base64
         const bytes = await image.arrayBuffer()
         const buffer = Buffer.from(bytes)
@@ -58,13 +89,14 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 })
         }
 
-        images.push({
-          filename: fileName,
-          base64: base64Image,
-          mimeType: mimeType,
-          order: i + 1,
-          is_primary: i === 0 // First image is primary
-        })
+          images.push({
+            filename: fileName,
+            base64: base64Image,
+            mimeType: mimeType,
+            order: i + 1,
+            is_primary: i === 0 // First image is primary
+          })
+        }
       }
     }
 
@@ -92,9 +124,6 @@ export async function POST(request: NextRequest) {
 
     {
       "furniture_type": "MUST be one of: couch, dining_table, bookshelf, chair, desk, bed, dresser, coffee_table, nightstand, cabinet, other",
-      "style": "design style (modern, vintage, traditional, etc.)",
-      "material": "primary material (leather, wood, fabric, etc.)",
-      "brand": "brand if identifiable, otherwise 'Unknown'",
       "color": "primary color or pattern",
       "estimated_dimensions": "approximate size description",
       "key_features": ["list", "of", "notable", "features", "from", "all", "angles"],
@@ -103,12 +132,12 @@ export async function POST(request: NextRequest) {
       "quick_sale_price": "price for quick sale in USD",
       "market_price": "current market value in USD",
       "premium_price": "high-end asking price in USD",
-      "pricing_explanation": "brief explanation of pricing rationale based on style, quality, and features visible in all images",
+      "pricing_explanation": "brief explanation of pricing rationale based on quality and features visible in all images",
       "title": "compelling marketplace listing title",
       "description": "detailed, appealing description for buyers highlighting features visible across the images"
     }
 
-    Base pricing on style, apparent quality, and current furniture market trends. Consider all angles and details visible across the provided images.`
+    Base pricing on apparent quality and current furniture market trends. Consider all angles and details visible across the provided images.`
 
     let response
     try {
@@ -154,13 +183,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to parse AI analysis' }, { status: 500 })
     }
 
-    return NextResponse.json({
+    const responseData: {
+      success: boolean;
+      analysis: any;
+      pricing: any;
+      listing: any;
+      images: any[];
+      image_filename?: string;
+    } = {
       success: true,
       analysis: {
         furniture_type: analysis.furniture_type,
-        style: analysis.style,
-        material: analysis.material,
-        brand: analysis.brand,
         color: analysis.color,
         estimated_dimensions: analysis.estimated_dimensions,
         key_features: analysis.key_features,
@@ -183,7 +216,14 @@ export async function POST(request: NextRequest) {
         order: img.order,
         is_primary: img.is_primary
       }))
-    })
+    }
+
+    // For backward compatibility with single image uploads
+    if (images.length === 1) {
+      responseData.image_filename = images[0].filename
+    }
+
+    return NextResponse.json(responseData)
   } catch (error) {
     console.error('AI analysis error:', error)
     return NextResponse.json(

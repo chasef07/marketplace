@@ -181,7 +181,7 @@ export class SupabaseApiClient {
     const formData = new FormData()
     formData.append('image', file)
 
-    const response = await fetch('/api/ai/analyze-image', {
+    const response = await fetch('/api/ai/analyze-images', {
       method: 'POST',
       body: formData
     })

@@ -315,17 +315,17 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 bg-opacity-95 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto border-amber-100 shadow-xl">
-        <CardContent className="p-0">
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ background: 'linear-gradient(135deg, #F5F0E8 0%, #FAF7F2 50%, #E8DDD4 100%)' }}>
+      <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl" style={{ borderColor: 'rgba(74, 111, 165, 0.2)' }}>
+        <CardContent className="p-0" style={{ background: 'white' }}>
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-amber-100 bg-gradient-to-r from-amber-25 to-orange-25">
-            <h2 className="text-xl font-semibold text-amber-900">
+          <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: 'rgba(74, 111, 165, 0.1)', background: 'rgba(250, 247, 242, 0.95)' }}>
+            <h2 className="text-xl font-semibold" style={{ color: '#2C3E50' }}>
               {mode === 'signin' && 'Welcome Back'}
               {mode === 'register' && 'Create Account'}
               {mode === 'reset' && 'Reset Password'}
             </h2>
-            <Button variant="outline" size="sm" onClick={onClose} disabled={loading} className="border-amber-300 text-amber-800 hover:bg-amber-50">
+            <Button variant="outline" size="sm" onClick={onClose} disabled={loading} style={{ borderColor: '#4A6FA5', color: '#4A6FA5' }} className="hover:bg-opacity-10">
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -350,16 +350,22 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-amber-800 mb-1">
+              <label className="block text-sm font-medium mb-1" style={{ color: '#2C3E50' }}>
                 Email Address *
               </label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-amber-900 bg-white ${
-                  getFieldError('email') ? 'border-red-300' : 'border-amber-300'
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white ${
+                  getFieldError('email') ? 'border-red-300' : ''
                 }`}
+                style={{ 
+                  borderColor: getFieldError('email') ? '#ef4444' : 'rgba(74, 111, 165, 0.3)',
+                  color: '#2C3E50'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#4A6FA5'}
+                onBlur={(e) => e.target.style.borderColor = getFieldError('email') ? '#ef4444' : 'rgba(74, 111, 165, 0.3)'}
                 placeholder="Enter your email address"
                 disabled={loading}
                 autoComplete="email"
@@ -372,16 +378,22 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
             {/* Username (register only) */}
             {mode === 'register' && (
               <div>
-                <label className="block text-sm font-medium text-amber-800 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: '#2C3E50' }}>
                   Username *
                 </label>
                 <input
                   type="text"
                   value={formData.username}
                   onChange={(e) => handleInputChange('username', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-amber-900 bg-white ${
-                    getFieldError('username') ? 'border-red-300' : 'border-amber-300'
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white ${
+                    getFieldError('username') ? 'border-red-300' : ''
                   }`}
+                  style={{ 
+                    borderColor: getFieldError('username') ? '#ef4444' : 'rgba(74, 111, 165, 0.3)',
+                    color: '#2C3E50'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#4A6FA5'}
+                  onBlur={(e) => e.target.style.borderColor = getFieldError('username') ? '#ef4444' : 'rgba(74, 111, 165, 0.3)'}
                   placeholder="Choose a username"
                   disabled={loading}
                   autoComplete="username"
@@ -395,16 +407,22 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
             {/* Full Name (register only) */}
             {mode === 'register' && (
               <div>
-                <label className="block text-sm font-medium text-amber-800 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: '#2C3E50' }}>
                   Full Name *
                 </label>
                 <input
                   type="text"
                   value={formData.full_name}
                   onChange={(e) => handleInputChange('full_name', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-amber-900 bg-white ${
-                    getFieldError('full_name') ? 'border-red-300' : 'border-amber-300'
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white ${
+                    getFieldError('full_name') ? 'border-red-300' : ''
                   }`}
+                  style={{ 
+                    borderColor: getFieldError('full_name') ? '#ef4444' : 'rgba(74, 111, 165, 0.3)',
+                    color: '#2C3E50'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#4A6FA5'}
+                  onBlur={(e) => e.target.style.borderColor = getFieldError('full_name') ? '#ef4444' : 'rgba(74, 111, 165, 0.3)'}
                   placeholder="Enter your full name"
                   disabled={loading}
                   autoComplete="name"
@@ -418,16 +436,22 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
             {/* Zip Code (register only) */}
             {mode === 'register' && (
               <div>
-                <label className="block text-sm font-medium text-amber-800 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: '#2C3E50' }}>
                   Zip Code *
                 </label>
                 <input
                   type="text"
                   value={formData.zip_code}
                   onChange={(e) => handleInputChange('zip_code', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-amber-900 bg-white ${
-                    getFieldError('zip_code') ? 'border-red-300' : 'border-amber-300'
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white ${
+                    getFieldError('zip_code') ? 'border-red-300' : ''
                   }`}
+                  style={{ 
+                    borderColor: getFieldError('zip_code') ? '#ef4444' : 'rgba(74, 111, 165, 0.3)',
+                    color: '#2C3E50'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#4A6FA5'}
+                  onBlur={(e) => e.target.style.borderColor = getFieldError('zip_code') ? '#ef4444' : 'rgba(74, 111, 165, 0.3)'}
                   placeholder="Enter your zip code (e.g., 10001)"
                   disabled={loading}
                   autoComplete="postal-code"
@@ -442,7 +466,7 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
             {/* Password (not for reset) */}
             {mode !== 'reset' && (
               <div>
-                <label className="block text-sm font-medium text-amber-800 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: '#2C3E50' }}>
                   Password *
                 </label>
                 <div className="relative">
@@ -450,9 +474,15 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
                     type={showPassword ? 'text' : 'password'}
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
-                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-amber-900 bg-white ${
-                      getFieldError('password') ? 'border-red-300' : 'border-amber-300'
+                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 bg-white ${
+                      getFieldError('password') ? 'border-red-300' : ''
                     }`}
+                    style={{ 
+                      borderColor: getFieldError('password') ? '#ef4444' : 'rgba(74, 111, 165, 0.3)',
+                      color: '#2C3E50'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#4A6FA5'}
+                    onBlur={(e) => e.target.style.borderColor = getFieldError('password') ? '#ef4444' : 'rgba(74, 111, 165, 0.3)'}
                     placeholder="Enter your password"
                     disabled={loading}
                     autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
@@ -460,7 +490,8 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-amber-400 hover:text-amber-600"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 hover:opacity-75"
+                    style={{ color: '#4A6FA5' }}
                     disabled={loading}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -501,7 +532,7 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
             {/* Confirm Password (register only) */}
             {mode === 'register' && (
               <div>
-                <label className="block text-sm font-medium text-amber-800 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: '#2C3E50' }}>
                   Confirm Password *
                 </label>
                 <div className="relative">
@@ -509,9 +540,15 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-amber-900 bg-white ${
-                      getFieldError('confirmPassword') ? 'border-red-300' : 'border-amber-300'
+                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 bg-white ${
+                      getFieldError('confirmPassword') ? 'border-red-300' : ''
                     }`}
+                    style={{ 
+                      borderColor: getFieldError('confirmPassword') ? '#ef4444' : 'rgba(74, 111, 165, 0.3)',
+                      color: '#2C3E50'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#4A6FA5'}
+                    onBlur={(e) => e.target.style.borderColor = getFieldError('confirmPassword') ? '#ef4444' : 'rgba(74, 111, 165, 0.3)'}
                     placeholder="Confirm your password"
                     disabled={loading}
                     autoComplete="new-password"
@@ -519,7 +556,8 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-amber-400 hover:text-amber-600"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 hover:opacity-75"
+                    style={{ color: '#4A6FA5' }}
                     disabled={loading}
                   >
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -536,7 +574,7 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
               type="submit"
               className="w-full py-3 text-white"
               style={{
-                background: 'linear-gradient(135deg, #8B4513, #CD853F)',
+                background: 'linear-gradient(135deg, #4A6FA5, #6B8BC4)',
                 border: 'none'
               }}
               disabled={loading}
@@ -566,23 +604,25 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
             <div className="text-center pt-4 space-y-2">
               {mode === 'signin' && (
                 <div className="space-y-2">
-                  <p className="text-sm text-amber-700">
+                  <p className="text-sm" style={{ color: '#2C3E50' }}>
                     Don't have an account?{' '}
                     <button
                       type="button"
                       onClick={() => switchMode('register')}
-                      className="text-amber-800 hover:text-amber-900 font-medium"
+                      className="font-medium hover:opacity-75"
+                      style={{ color: '#4A6FA5' }}
                       disabled={loading}
                     >
                       Create one
                     </button>
                   </p>
-                  <p className="text-sm text-amber-700">
+                  <p className="text-sm" style={{ color: '#2C3E50' }}>
                     Forgot your password?{' '}
                     <button
                       type="button"
                       onClick={() => switchMode('reset')}
-                      className="text-amber-800 hover:text-amber-900 font-medium"
+                      className="font-medium hover:opacity-75"
+                      style={{ color: '#4A6FA5' }}
                       disabled={loading}
                     >
                       Reset it
@@ -592,12 +632,13 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
               )}
               
               {mode === 'register' && (
-                <p className="text-sm text-amber-700">
+                <p className="text-sm" style={{ color: '#2C3E50' }}>
                   Already have an account?{' '}
                   <button
                     type="button"
                     onClick={() => switchMode('signin')}
-                    className="text-amber-800 hover:text-amber-900 font-medium"
+                    className="font-medium hover:opacity-75"
+                    style={{ color: '#4A6FA5' }}
                     disabled={loading}
                   >
                     Sign in
@@ -606,12 +647,13 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
               )}
               
               {mode === 'reset' && (
-                <p className="text-sm text-amber-700">
+                <p className="text-sm" style={{ color: '#2C3E50' }}>
                   Remember your password?{' '}
                   <button
                     type="button"
                     onClick={() => switchMode('signin')}
-                    className="text-amber-800 hover:text-amber-900 font-medium"
+                    className="font-medium hover:opacity-75"
+                    style={{ color: '#4A6FA5' }}
                     disabled={loading}
                   >
                     Sign in

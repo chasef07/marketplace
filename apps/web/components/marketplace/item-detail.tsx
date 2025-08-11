@@ -337,7 +337,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-4 py-4">
         <div className="grid lg:grid-cols-5 gap-6 max-w-7xl mx-auto">
           {/* Image Carousel - Takes up 3 columns on large screens */}
           <div className="lg:col-span-3 space-y-3">
@@ -361,12 +361,12 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
                     <ImageCarousel 
                       images={carouselImages}
                       alt={item.name}
-                      className="h-96 lg:h-[500px]"
+                      className="h-80 lg:h-96"
                     />
                   )
                 } else {
                   return (
-                    <div className="h-96 lg:h-[500px] flex items-center justify-center bg-gray-100">
+                    <div className="h-80 lg:h-96 flex items-center justify-center bg-gray-100">
                       <div className="text-8xl">🪑</div>
                     </div>
                   )
@@ -380,10 +380,34 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
               <p className="text-3xl font-bold mb-2" style={{ color: '#7CB342' }}>${item.starting_price}</p>
               <p className="text-sm" style={{ color: '#6B7280' }}>Listed {formatTimeAgo(item.created_at)}</p>
             </div>
+
+            {/* Description - Under Photo */}
+            <div className="rounded-xl p-3" style={{ background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', boxShadow: '0 6px 24px rgba(74, 111, 165, 0.1)' }}>
+              <h3 className="text-base font-semibold mb-2" style={{ color: '#2C3E50' }}>Description</h3>
+              {isEditing ? (
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-700"
+                  rows={3}
+                  placeholder="Enter item description..."
+                />
+              ) : (
+                <div className="whitespace-pre-wrap leading-snug text-sm" style={{ color: '#4A6FA5' }}>
+                  <p>{item.description || 'No description provided.'}</p>
+                  {item.dimensions && (
+                    <p className="mt-1 pt-1 border-t font-medium text-sm" style={{ borderColor: 'rgba(74, 111, 165, 0.1)', color: '#2C3E50' }}>
+                      <span className="font-semibold" style={{ color: '#E89A5C' }}>Dimensions: </span>
+                      {item.dimensions}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Sidebar - Details & Actions */}
-          <div className="lg:col-span-2 space-y-4 lg:sticky lg:top-24 lg:h-fit">
+          <div className="lg:col-span-2 space-y-4">
             {/* Price and Actions Card */}
             <div className="rounded-2xl p-5" style={{ background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', boxShadow: '0 10px 40px rgba(74, 111, 165, 0.1)' }}>
                 {/* Title - Desktop Only */}
@@ -419,35 +443,20 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
                       {/* Make Offer Button */}
                       <Button 
                         onClick={() => setShowOfferForm(true)}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                        className="w-full font-medium text-white hover:opacity-90"
+                        style={{ backgroundColor: '#4A6FA5' }}
                         size="lg"
                       >
                         <DollarSign className="h-4 w-4 mr-2" />
-                        {negotiation ? 'Make Another Offer' : 'Make Offer'}
+                        Make Offer
                       </Button>
-                      
-                      {negotiation && (
-                        <Button 
-                          onClick={toggleMessages}
-                          variant="outline"
-                          className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
-                          size="lg"
-                        >
-                          <MessageSquare className="h-4 w-4 mr-2" />
-                          View Messages
-                          {showMessages ? (
-                            <ChevronUp className="h-4 w-4 ml-2" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 ml-2" />
-                          )}
-                        </Button>
-                      )}
                     </>
                   )}
                   {!user && (
                     <Button 
                       onClick={onSignInClick}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium" 
+                      className="w-full font-medium text-white hover:opacity-90" 
+                      style={{ backgroundColor: '#4A6FA5' }}
                       size="lg"
                     >
                       Sign in to Make Offer
@@ -471,199 +480,79 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
                     </div>
                   )}
                 </div>
-            </div>
 
-            {/* Message History */}
-            {negotiation && showMessages && (
-              <div className="rounded-2xl p-5" style={{ background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', boxShadow: '0 10px 40px rgba(74, 111, 165, 0.1)' }}>
-                  <h3 className="text-lg font-semibold mb-4" style={{ color: '#2C3E50' }}>Message History</h3>
-                  {loadingMessages ? (
-                    <div className="text-center py-4">
-                      <div style={{ color: '#6B5A47' }}>Loading messages...</div>
+                {/* Seller Info */}
+                <div className="mt-4 pt-4 border-t" style={{ borderColor: 'rgba(74, 111, 165, 0.1)' }}>
+                  <h4 className="font-semibold mb-2" style={{ color: '#2C3E50' }}>Seller Info</h4>
+                  <div 
+                    onClick={() => item.seller?.username && onViewProfile?.(item.seller.username)}
+                    className={`flex items-center gap-2 mb-2 ${
+                      item.seller?.username && onViewProfile 
+                        ? 'cursor-pointer hover:bg-gray-50 p-1 -m-1 rounded-lg transition-colors' 
+                        : ''
+                    }`}
+                  >
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(74, 111, 165, 0.1)' }}>
+                      <span className="text-xs font-medium" style={{ color: '#4A6FA5' }}>
+                        {(item.seller?.username || 'U').charAt(0).toUpperCase()}
+                      </span>
                     </div>
-                  ) : (
-                    <div className="space-y-3 max-h-64 overflow-y-auto">
-                      {offers.length > 0 ? (
-                        offers.map((offer) => (
-                          <div key={offer.id} className={`flex ${offer.offer_type === 'buyer' ? 'justify-start' : 'justify-end'}`}>
-                            <div className={`max-w-xs px-3 py-2 rounded-lg ${
-                              offer.offer_type === 'buyer' 
-                                ? 'bg-white border text-gray-900' 
-                                : 'bg-blue-600 text-white'
-                            }`}>
-                              <div className="flex items-center justify-between text-xs mb-1">
-                                <span className="font-medium">
-                                  {offer.offer_type === 'buyer' ? 'You' : 'Seller'}
-                                </span>
-                                <span className={offer.offer_type === 'buyer' ? 'text-gray-500' : 'text-blue-100'}>
-                                  ${offer.price}
-                                </span>
-                              </div>
-                              {offer.message && (
-                                <p className="text-sm">{offer.message}</p>
-                              )}
-                              <p className={`text-xs mt-1 ${
-                                offer.offer_type === 'buyer' ? 'text-gray-500' : 'text-blue-100'
-                              }`}>
-                                {formatTimeAgo(offer.created_at)}
-                              </p>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-center py-4" style={{ color: '#6B5A47' }}>
-                          No messages yet
-                        </p>
-                      )}
+                    <div className="flex-1">
+                      <p className="font-medium text-sm" style={{ color: '#2C3E50' }}>
+                        {item.seller?.username || 'Anonymous'}
+                        {item.seller?.username && onViewProfile && (
+                          <span className="text-xs font-normal ml-1" style={{ color: '#4A6FA5' }}>View Profile →</span>
+                        )}
+                      </p>
+                      <div className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
+                        <MapPin className="h-2 w-2" />
+                        <span>{item.seller?.zip_code ? `${item.seller.zip_code} area` : 'Local area'}</span>
+                      </div>
                     </div>
-                  )}
+                  </div>
                   
-                  {negotiation && (
-                    <div className="mt-4 pt-4 border-t">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          negotiation.status === 'active' ? 'text-blue-600 bg-blue-100' :
-                          negotiation.status === 'deal_pending' ? 'text-green-600 bg-green-100' :
-                          negotiation.status === 'completed' ? 'text-gray-600 bg-white border' :
-                          'text-red-600 bg-red-100'
-                        }`}>
-                          {negotiation.status.replace('_', ' ')}
-                        </span>
-                        <span className="text-gray-500">
-                          Round {negotiation.round_number}
-                        </span>
+                  {/* Location Map */}
+                  {item.seller?.zip_code && (
+                    <div className="space-y-2 mt-4">
+                      <p className="text-sm font-medium" style={{ color: '#4A6FA5' }}>Pickup Area</p>
+                      <div className="w-full h-48 overflow-hidden rounded-lg border border-gray-200">
+                        <SimpleLocationMap zipCode={item.seller.zip_code} />
                       </div>
                     </div>
                   )}
+                </div>
             </div>
-            )}
 
-          </div>
-        </div>
-        
-        {/* Additional Info Cards - Full Width Below */}
-        <div className="grid md:grid-cols-2 gap-6 mt-6">
-          {/* Description */}
-          <div className="rounded-2xl p-5" style={{ background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', boxShadow: '0 10px 40px rgba(74, 111, 165, 0.1)' }}>
-              <h3 className="text-lg font-semibold mb-4" style={{ color: '#2C3E50' }}>Description</h3>
-              {isEditing ? (
-                <textarea
-                  value={editForm.description}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-700"
-                  rows={6}
-                  placeholder="Enter item description..."
-                />
-              ) : (
-                <p className="whitespace-pre-wrap leading-relaxed" style={{ color: '#4A6FA5' }}>
-                  {item.description || 'No description provided.'}
-                </p>
-              )}
-          </div>
 
-          {/* Details & Seller Info Combined */}
-          <div className="rounded-2xl p-5" style={{ background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', boxShadow: '0 10px 40px rgba(74, 111, 165, 0.1)' }}>
-              <h3 className="text-lg font-semibold mb-4" style={{ color: '#2C3E50' }}>Item Details</h3>
-              <div className="grid grid-cols-2 gap-3 text-sm mb-5">
-                <div>
-                  <span className="font-medium" style={{ color: '#E89A5C' }}>Category</span>
-                  <p className="font-semibold capitalize" style={{ color: '#2C3E50' }}>{item.furniture_type.replace('_', ' ')}</p>
-                </div>
-                {item.style && (
-                  <div>
-                    <span className="font-medium" style={{ color: '#E89A5C' }}>Style</span>
-                    <p className="font-semibold capitalize" style={{ color: '#2C3E50' }}>{item.style}</p>
-                  </div>
-                )}
-                {item.dimensions && (
-                  <div>
-                    <span className="font-medium" style={{ color: '#E89A5C' }}>Dimensions</span>
-                    <p className="font-semibold" style={{ color: '#2C3E50' }}>{item.dimensions}</p>
-                  </div>
-                )}
-                {item.material && (
-                  <div>
-                    <span className="font-medium" style={{ color: '#E89A5C' }}>Material</span>
-                    <p className="font-semibold" style={{ color: '#2C3E50' }}>{item.material}</p>
-                  </div>
-                )}
-                {item.brand && (
-                  <div>
-                    <span className="font-medium" style={{ color: '#E89A5C' }}>Brand</span>
-                    <p className="font-semibold" style={{ color: '#2C3E50' }}>{item.brand}</p>
-                  </div>
-                )}
-                {item.color && (
-                  <div>
-                    <span className="font-medium" style={{ color: '#E89A5C' }}>Color</span>
-                    <p className="font-semibold" style={{ color: '#2C3E50' }}>{item.color}</p>
-                  </div>
-                )}
-              </div>
-              
-              {/* Seller Info */}
-              <div className="border-t pt-5" style={{ borderColor: 'rgba(74, 111, 165, 0.1)' }}>
-                <h4 className="font-semibold mb-3" style={{ color: '#2C3E50' }}>Seller Information</h4>
-                <div 
-                  onClick={() => item.seller?.username && onViewProfile?.(item.seller.username)}
-                  className={`flex items-center gap-3 mb-4 ${
-                    item.seller?.username && onViewProfile 
-                      ? 'cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded-lg transition-colors' 
-                      : ''
-                  }`}
-                >
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(74, 111, 165, 0.1)' }}>
-                    <span className="text-sm font-medium" style={{ color: '#4A6FA5' }}>
-                      {(item.seller?.username || 'U').charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium flex items-center gap-2" style={{ color: '#2C3E50' }}>
-                      {item.seller?.username || 'Anonymous'}
-                      {item.seller?.username && onViewProfile && (
-                        <span className="text-xs font-normal" style={{ color: '#4A6FA5' }}>View Profile →</span>
-                      )}
-                    </p>
-                    <div className="flex items-center gap-2 text-sm" style={{ color: '#6B7280' }}>
-                      <MapPin className="h-3 w-3" />
-                      <span>{item.seller?.zip_code ? `${item.seller.zip_code} area` : 'Local area'}</span>
-                    </div>
-                  </div>
-                  {item.seller?.username && onViewProfile && (
-                    <User className="h-4 w-4 text-gray-400" />
-                  )}
-                </div>
-                
-                {/* Location Map */}
-                {item.seller?.zip_code && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium" style={{ color: '#4A6FA5' }}>Pickup/Delivery Area</p>
-                    <SimpleLocationMap zipCode={item.seller.zip_code} />
-                  </div>
-                )}
-              </div>
           </div>
         </div>
       </div>
 
       {/* Offer Modal */}
       {showOfferForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-md rounded-2xl p-6" style={{ background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(15px)', boxShadow: '0 20px 60px rgba(74, 111, 165, 0.2)' }}>
-              <h3 className="text-xl font-bold mb-6 text-gray-900">Make an Offer</h3>
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ background: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="w-full max-w-md rounded-2xl p-6" style={{ background: 'linear-gradient(135deg, #F5F0E8 0%, #FAF7F2 50%, #E8DDD4 100%)', backdropFilter: 'blur(15px)', boxShadow: '0 20px 60px rgba(74, 111, 165, 0.3)' }}>
+              <h3 className="text-xl font-bold mb-6" style={{ color: '#2C3E50' }}>Make an Offer</h3>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                  <label className="block text-sm font-medium mb-2" style={{ color: '#2C3E50' }}>
                     Offer Amount
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg">$</span>
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-lg" style={{ color: '#4A6FA5' }}>$</span>
                     <input
                       type="number"
                       value={offerAmount}
                       onChange={(e) => setOfferAmount(e.target.value)}
-                      className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 text-lg"
+                      className="w-full pl-8 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 text-lg [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      style={{ 
+                        borderColor: 'rgba(74, 111, 165, 0.3)', 
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)', 
+                        color: '#2C3E50',
+                        focusRingColor: '#4A6FA5',
+                        MozAppearance: 'textfield'
+                      }}
                       placeholder="0.00"
                       step="0.01"
                     />
@@ -671,13 +560,19 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                  <label className="block text-sm font-medium mb-2" style={{ color: '#2C3E50' }}>
                     Message (optional)
                   </label>
                   <textarea
                     value={offerMessage}
                     onChange={(e) => setOfferMessage(e.target.value)}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                    className="w-full px-3 py-3 border rounded-lg focus:outline-none focus:ring-2"
+                    style={{ 
+                      borderColor: 'rgba(74, 111, 165, 0.3)', 
+                      backgroundColor: 'rgba(255, 255, 255, 0.9)', 
+                      color: '#2C3E50',
+                      focusRingColor: '#4A6FA5'
+                    }}
                     rows={3}
                     placeholder="Add a message to the seller..."
                   />
@@ -687,13 +582,15 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
                   <Button 
                     onClick={() => setShowOfferForm(false)} 
                     variant="outline" 
-                    className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50"
+                    className="flex-1 text-white hover:opacity-90"
+                    style={{ borderColor: '#4A6FA5', backgroundColor: 'transparent', color: '#4A6FA5' }}
                   >
                     Cancel
                   </Button>
                   <Button 
                     onClick={handleMakeOffer}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    className="flex-1 text-white hover:opacity-90"
+                    style={{ backgroundColor: '#4A6FA5' }}
                   >
                     Submit Offer
                   </Button>

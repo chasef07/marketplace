@@ -49,6 +49,7 @@ export function HomePage() {
   const [marketplaceKey, setMarketplaceKey] = useState(0) // Force marketplace re-render
   const [isLoading, setIsLoading] = useState(true) // Add loading state
   const [error, setError] = useState<string | null>(null)
+  const [authMode, setAuthMode] = useState<'signin' | 'register' | 'reset'>('signin') // Track auth mode
 
   // Initialize auth state and listen for changes
   useEffect(() => {
@@ -210,6 +211,7 @@ export function HomePage() {
     if (user) {
       setCurrentView('marketplace')
     } else {
+      setAuthMode('signin')
       setCurrentView('auth')
     }
   }
@@ -288,6 +290,7 @@ export function HomePage() {
       }
       window.localStorage.setItem('pendingListing', JSON.stringify(pendingData))
     }
+    setAuthMode('register') // Set to register mode for account creation
     setCurrentView('auth')
   }
 
@@ -311,7 +314,7 @@ export function HomePage() {
         onCreateListing={handleCreateListing}
         onLogout={handleSignOut}
         onItemClick={handleItemClick}
-        onSignInClick={() => setCurrentView('auth')}
+        onSignInClick={() => { setAuthMode('signin'); setCurrentView('auth'); }}
         onSellerDashboard={() => setCurrentView('dashboard')}
         onSellerChat={() => setCurrentView('seller-chat')}
         onViewProfile={handleViewProfile}
@@ -325,6 +328,7 @@ export function HomePage() {
         isOpen={true}
         onClose={handleBackToHome}
         onAuthSuccess={handleAuthSuccess}
+        initialMode={authMode}
       />
     )
   }
@@ -356,7 +360,7 @@ export function HomePage() {
         user={user}
         onBack={handleBackToMarketplace}
         onMakeOffer={handleMakeOffer}
-        onSignInClick={() => setCurrentView('auth')}
+        onSignInClick={() => { setAuthMode('signin'); setCurrentView('auth'); }}
         onViewProfile={handleViewProfile}
       />
     )
@@ -397,7 +401,7 @@ export function HomePage() {
       <HeroSection
         user={user}
         onGetStarted={handleGetStarted}
-        onSignIn={() => setCurrentView('auth')}
+        onSignIn={() => { setAuthMode('signin'); setCurrentView('auth'); }}
         onSignOut={handleSignOut}
         onCreateListing={handleCreateListing}
         onBrowseItems={() => setCurrentView('marketplace')}

@@ -192,31 +192,8 @@ const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: stri
             </div>
           `)
 
-        // Add 5-mile radius circle
-        const radiusInMeters = 5 * 1609.34 // 5 miles in meters
-        const radiusCircle = L.circle([coordinates.lat, coordinates.lng], {
-          radius: radiusInMeters,
-          fillColor: '#dc2626',
-          color: '#dc2626',
-          weight: 2,
-          opacity: 0.8,
-          fillOpacity: 0.1,
-        }).addTo(map)
-
-        // Add radius info popup to circle
-        radiusCircle.bindPopup(`
-          <div style="text-align: center; font-family: system-ui;">
-            <div style="font-size: 14px; font-weight: 600; color: #dc2626; margin-bottom: 4px;">
-              🎯 Service Area
-            </div>
-            <div style="font-size: 12px; color: #666;">
-              5-mile radius from ${zipCode}
-            </div>
-          </div>
-        `)
-
-        // Fit map to show the circle
-        map.fitBounds(radiusCircle.getBounds(), { padding: [20, 20] })
+        // Center map on the location
+        map.setView([coordinates.lat, coordinates.lng], 13)
 
         // Force map to resize properly
         setTimeout(() => {
@@ -270,10 +247,10 @@ const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: stri
 
   if (loading) {
     return (
-      <div className="w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center border">
+      <div className="w-full h-full bg-gray-100 rounded-lg flex items-center justify-center border">
         <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-2"></div>
-          <div className="text-sm text-gray-600">Loading map...</div>
+          <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-1"></div>
+          <div className="text-xs text-gray-600">Loading map...</div>
         </div>
       </div>
     )
@@ -281,18 +258,17 @@ const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: stri
 
   if (error) {
     return (
-      <div className="w-full h-64 bg-red-50 rounded-lg flex items-center justify-center border border-red-200">
+      <div className="w-full h-full bg-red-50 rounded-lg flex items-center justify-center border border-red-200">
         <div className="text-center">
-          <MapPin className="w-8 h-8 text-red-500 mx-auto mb-2" />
-          <div className="text-sm font-medium text-red-700">{error}</div>
-          <div className="text-xs text-red-600 mt-1">Please try a different zip code</div>
+          <MapPin className="w-4 h-4 text-red-500 mx-auto mb-1" />
+          <div className="text-xs font-medium text-red-700">{error}</div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="w-full h-64 rounded-lg overflow-hidden border border-gray-300 shadow-sm">
+    <div className="w-full h-full rounded-lg overflow-hidden border border-gray-300 shadow-sm">
       <div ref={mapRef} id={mapId} className="w-full h-full" />
     </div>
   )
