@@ -6,9 +6,10 @@ html, body {
   overflow-x: hidden;
 }
 
-/* Allow homepage to scroll naturally */
+/* Homepage container - no scroll, fixed height */
 .homepage-container {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 :root {
@@ -113,12 +114,12 @@ html {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #8B4513, #CD853F);
+  background: linear-gradient(to bottom, #4A6FA5, #6B8BC4);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #6B3410, #8B4513);
+  background: linear-gradient(to bottom, #3A5A89, #4A6FA5);
 }
 
 /* Animation classes */

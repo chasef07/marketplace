@@ -7,6 +7,8 @@ import { User, MapPin, Calendar, Star, Package, ShoppingBag, Edit, ArrowLeft, Ho
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase'
+import { colors, gradients, shadows } from '../home/design-system/colors'
+import { animations } from '../home/design-system/animations'
 
 interface ProfileData {
   id: string
@@ -153,30 +155,26 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #F7F3E9 0%, #E8DDD4 50%, #DDD1C7 100%)' }}>
       {/* Header */}
-      <header className="backdrop-blur-md border-b sticky top-0 z-50" style={{ background: 'rgba(247, 243, 233, 0.9)', borderColor: 'rgba(139, 69, 19, 0.1)' }}>
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h1 className="text-xl font-bold" style={{ color: '#3C2415' }}>
-                {isOwnProfile ? 'My Profile' : `${profile?.display_name || username}'s Profile`}
-              </h1>
+      <header className="profile-header">
+        <div className="header-content">
+          <div className="header-inner">
+            <div className="logo">
+              <span className="logo-text">SnapNest</span>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="nav-buttons">
               <Button 
+                variant="ghost"
                 onClick={onNavigateHome}
-                variant="outline" 
-                size="sm"
-                style={{ borderColor: '#8B4513', color: '#8B4513' }}
+                className="nav-button nav-button-ghost"
               >
                 <Home className="h-4 w-4 mr-2" />
                 Home
               </Button>
               <Button 
+                variant="ghost"
                 onClick={onNavigateMarketplace}
-                variant="outline" 
-                size="sm"
-                style={{ borderColor: '#8B4513', color: '#8B4513' }}
+                className="nav-button nav-button-ghost"
               >
                 <Store className="h-4 w-4 mr-2" />
                 Marketplace
@@ -186,7 +184,7 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-4xl mx-auto p-6" style={{ paddingTop: '6rem' }}>
       {/* Profile Header */}
       <div className="bg-white rounded-lg shadow-sm border p-8 mb-8">
         <div className="flex flex-col md:flex-row items-start md:items-center space-y-6 md:space-y-0 md:space-x-8">
@@ -352,6 +350,84 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
         )}
       </div>
       </div>
+
+      {/* Styles */}
+      <style jsx>{`
+        .profile-header {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 50;
+          backdrop-filter: blur(10px);
+          background: ${colors.glass.background};
+          border-bottom: 1px solid ${colors.glass.border};
+          box-shadow: ${shadows.sm};
+        }
+
+        .header-content {
+          padding: 1rem 2rem;
+        }
+
+        .header-inner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .logo {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .logo-text {
+          font-size: 1.5rem;
+          font-weight: 800;
+          color: black;
+          letter-spacing: -0.025em;
+          font-family: 'Inter', -apple-system, sans-serif;
+        }
+
+        .nav-buttons {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .nav-button {
+          font-weight: 600;
+          transition: all 300ms ${animations.easing.smooth};
+          border-radius: 8px;
+          font-size: 0.9rem;
+        }
+
+        .nav-button-ghost {
+          color: ${colors.neutralDark};
+          background: transparent;
+          border: none;
+        }
+
+        .nav-button-ghost:hover {
+          background: ${colors.primary}10;
+          color: ${colors.primary};
+          transform: translateY(-1px);
+        }
+
+        @media (max-width: 768px) {
+          .header-content {
+            padding: 1rem;
+          }
+
+          .nav-buttons {
+            gap: 0.5rem;
+          }
+
+          .logo-text {
+            font-size: 1.25rem;
+          }
+        }
+      `}</style>
     </div>
   )
 }

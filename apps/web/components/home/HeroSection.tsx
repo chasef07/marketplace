@@ -26,7 +26,6 @@ interface HeroSectionProps {
   onSignOut: () => void
   onCreateListing: () => void
   onBrowseItems: () => void
-  onSellerDashboard: () => void
   onViewProfile: () => void
   onShowListingPreview: (analysisData: AIAnalysisResult, uploadedImages: string[]) => void
 }
@@ -38,7 +37,6 @@ export function HeroSection({
   onSignOut, 
   onCreateListing, 
   onBrowseItems,
-  onSellerDashboard,
   onViewProfile,
   onShowListingPreview
 }: HeroSectionProps) {
@@ -52,7 +50,6 @@ export function HeroSection({
         <nav className="hero-nav">
           <div className="nav-content">
             <div className="logo">
-              <span className="logo-icon">📷</span>
               <span className="logo-text">SnapNest</span>
             </div>
             
@@ -66,13 +63,6 @@ export function HeroSection({
                     className="nav-button nav-button-ghost"
                   >
                     Browse
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    onClick={onSellerDashboard}
-                    className="nav-button nav-button-ghost"
-                  >
-                    Dashboard
                   </Button>
                   <Button 
                     variant="ghost" 
@@ -176,6 +166,8 @@ export function HeroSection({
           position: relative;
           z-index: 1;
           background: transparent;
+          height: 100vh;
+          overflow: hidden;
         }
 
         .hero-nav {
@@ -191,8 +183,6 @@ export function HeroSection({
         }
 
         .nav-content {
-          max-width: 1200px;
-          margin: 0 auto;
           padding: 1rem 2rem;
           display: flex;
           align-items: center;
@@ -212,13 +202,9 @@ export function HeroSection({
         .logo-text {
           font-size: 1.5rem;
           font-weight: 800;
-          color: ${colors.neutralDark};
+          color: black;
           letter-spacing: -0.025em;
           font-family: 'Inter', -apple-system, sans-serif;
-          background: ${gradients.primary};
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
         }
 
         .nav-buttons {
@@ -267,14 +253,19 @@ export function HeroSection({
         .hero-main {
           max-width: 1200px;
           margin: 0 auto;
-          padding: 6rem 2rem 4rem;
+          padding: 1rem 2rem 1rem;
           position: relative;
           z-index: 2;
+          height: calc(100vh - 70px);
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-start;
+          padding-top: 8rem;
         }
 
         .hero-header {
           text-align: center;
-          margin-bottom: 4rem;
+          margin-bottom: 2rem;
         }
 
         .hero-title {
@@ -310,7 +301,7 @@ export function HeroSection({
           display: flex;
           justify-content: center;
           align-items: center;
-          margin-bottom: 2rem;
+          flex: 1;
           ${animationClasses.fadeIn}
           animation-delay: 400ms;
         }
@@ -328,20 +319,22 @@ export function HeroSection({
 
         @media (max-width: 768px) {
           .hero-main {
-            padding: 5rem 1rem 2rem;
+            padding: 1rem 1rem 0.5rem;
+            height: calc(100vh - 60px);
+            padding-top: 4rem;
           }
           
           .hero-header {
-            margin-bottom: 2.5rem;
+            margin-bottom: 1.5rem;
           }
           
           .hero-title {
-            font-size: clamp(2rem, 8vw, 3rem);
-            margin-bottom: 0.75rem;
+            font-size: clamp(1.8rem, 7vw, 2.5rem);
+            margin-bottom: 0.5rem;
           }
           
           .hero-subtitle {
-            font-size: 1.1rem;
+            font-size: 1rem;
           }
 
           .nav-content {

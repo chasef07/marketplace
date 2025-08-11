@@ -9,9 +9,6 @@ import { EnhancedAuth } from '../auth/enhanced-auth'
 import { type AIAnalysisResult, apiClient } from "@/lib/api-client-new"
 
 // Lazy load heavy components
-const SellerDashboard = dynamic(() => import('../seller/seller-dashboard').then(mod => ({ default: mod.SellerDashboard })), {
-  loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
-})
 
 const ItemDetail = dynamic(() => import('../marketplace/item-detail').then(mod => ({ default: mod.ItemDetail })), {
   loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
@@ -42,7 +39,7 @@ interface User {
 
 export function HomePage() {
   const [user, setUser] = useState<User | null>(null)
-  const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'dashboard' | 'item-detail' | 'listing-preview' | 'seller-chat' | 'profile-view' | 'profile-edit'>('home')
+  const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'item-detail' | 'listing-preview' | 'seller-chat' | 'profile-view' | 'profile-edit'>('home')
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<{analysisData: AIAnalysisResult, uploadedImages: string[]} | null>(null)
@@ -315,7 +312,6 @@ export function HomePage() {
         onLogout={handleSignOut}
         onItemClick={handleItemClick}
         onSignInClick={() => { setAuthMode('signin'); setCurrentView('auth'); }}
-        onSellerDashboard={() => setCurrentView('dashboard')}
         onSellerChat={() => setCurrentView('seller-chat')}
         onViewProfile={handleViewProfile}
       />
@@ -334,15 +330,6 @@ export function HomePage() {
   }
 
 
-  if (currentView === 'dashboard' && user) {
-    return (
-      <SellerDashboard
-        user={user}
-        onItemClick={handleItemClick}
-        onBackToMarketplace={handleBackToMarketplace}
-      />
-    )
-  }
 
   if (currentView === 'seller-chat' && user) {
     return (
@@ -405,7 +392,6 @@ export function HomePage() {
         onSignOut={handleSignOut}
         onCreateListing={handleCreateListing}
         onBrowseItems={() => setCurrentView('marketplace')}
-        onSellerDashboard={() => setCurrentView('dashboard')}
         onViewProfile={handleViewProfile}
         onShowListingPreview={handleShowListingPreview}
       />

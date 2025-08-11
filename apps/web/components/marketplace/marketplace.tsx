@@ -3,6 +3,8 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Search, Heart, Star, MapPin, Clock, Plus, Bot } from "lucide-react"
+import { colors, gradients, shadows } from '../home/design-system/colors'
+import { animations } from '../home/design-system/animations'
 import { useState, useEffect, useMemo, useCallback } from "react"
 import useSWR from 'swr'
 import { useDebouncedCallback } from 'use-debounce'
@@ -29,7 +31,6 @@ interface MarketplaceProps {
   onLogout: () => void
   onItemClick?: (itemId: number) => void
   onSignInClick?: () => void
-  onSellerDashboard?: () => void
   onSellerChat?: () => void
   onViewProfile?: () => void
 }
@@ -37,7 +38,7 @@ interface MarketplaceProps {
 // Fetcher function for SWR
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
-export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSignInClick, onSellerDashboard, onSellerChat, onViewProfile }: MarketplaceProps) {
+export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSignInClick, onSellerChat, onViewProfile }: MarketplaceProps) {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchInput, setSearchInput] = useState("")
@@ -175,69 +176,54 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #F5F0E8 0%, #FAF7F2 50%, #E8DDD4 100%)' }}>
       {/* Header */}
-      <header className="backdrop-blur-md border-b sticky top-0 z-50" style={{ background: 'rgba(250, 247, 242, 0.9)', borderColor: 'rgba(74, 111, 165, 0.1)' }}>
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold" style={{ color: '#2C3E50' }}>FurnitureMarket</h1>
+      <header className="marketplace-header">
+        <div className="header-content">
+          <div className="header-inner">
+            <div className="logo">
+              <span className="logo-text">SnapNest</span>
+            </div>
             
-            <div className="flex items-center gap-4">
+            <div className="nav-buttons">
               {user ? (
                 <>
-                  <span className="text-sm" style={{ color: '#6B7280' }}>
-                    Welcome, {user.username}!
-                  </span>
+                  <span className="welcome-text">Welcome back, {user.username}!</span>
                   <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={onSellerDashboard}
-                    className="hover:bg-opacity-10"
-                    style={{ borderColor: '#4A6FA5', color: '#4A6FA5' }}
+                    variant="ghost"
+                    onClick={onCreateListing}
+                    className="nav-button nav-button-ghost"
                   >
-                    Dashboard
+                    Sell
                   </Button>
                   <Button 
-                    variant="outline"
-                    size="sm"
+                    variant="ghost"
                     onClick={onViewProfile}
-                    className="hover:bg-opacity-10"
-                    style={{ borderColor: '#4A6FA5', color: '#4A6FA5' }}
+                    className="nav-button nav-button-ghost"
                   >
                     Profile
                   </Button>
                   <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={onSellerChat}
-                    className="hover:bg-opacity-10"
-                    style={{ borderColor: '#4A6FA5', color: '#4A6FA5' }}
+                    variant="ghost" 
+                    onClick={onLogout}
+                    className="nav-button nav-button-ghost"
                   >
-                    <Bot className="h-4 w-4 mr-2" />
-                    AI Assistant
-                  </Button>
-                  <Button 
-                    onClick={onCreateListing}
-                    className="hover:opacity-90"
-                    style={{ background: 'linear-gradient(135deg, #4A6FA5, #6B8BC4)', color: '#FAF7F2' }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Sell Item
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={onLogout} style={{ borderColor: '#4A6FA5', color: '#4A6FA5' }}>
                     Sign Out
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button variant="outline" size="sm" onClick={onSignInClick} style={{ borderColor: '#4A6FA5', color: '#4A6FA5' }}>
-                    Sign In
+                  <Button 
+                    variant="ghost"
+                    onClick={onCreateListing}
+                    className="nav-button nav-button-ghost"
+                  >
+                    Sell
                   </Button>
                   <Button 
-                    onClick={onCreateListing}
-                    size="sm" 
-                    className="hover:opacity-90"
-                    style={{ background: 'linear-gradient(135deg, #4A6FA5, #6B8BC4)', color: '#FAF7F2' }}
+                    variant="ghost" 
+                    onClick={onSignInClick}
+                    className="nav-button nav-button-ghost"
                   >
-                    Sell Item
+                    Sign In
                   </Button>
                 </>
               )}
@@ -247,7 +233,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
       </header>
 
       {/* Search and Category Section */}
-      <section className="py-8" style={{ background: 'linear-gradient(135deg, rgba(247, 243, 233, 0.8) 0%, rgba(232, 221, 212, 0.8) 50%, rgba(221, 209, 199, 0.8) 100%)' }}>
+      <section className="search-section">
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold mb-4" style={{ color: '#2C3E50' }}>
@@ -327,11 +313,11 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
           ) : filteredItems.length === 0 ? (
             <div className="text-center py-12">
               <div className="mb-4" style={{ color: '#6B7280' }}>
-                {searchQuery || selectedCategory !== "All" 
+                {searchQuery 
                   ? "No items match your search" 
                   : "No items available yet"}
               </div>
-              {!searchQuery && selectedCategory === "All" && (
+              {!searchQuery && (
                 <Button 
                   onClick={onCreateListing}
                   className="hover:opacity-90"
@@ -450,8 +436,8 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                       disabled={loading}
                       className="w-10 h-10 text-sm"
                       style={pagination.page === pageNum ? {
-                        background: 'linear-gradient(135deg, #8B4513, #CD853F)',
-                        color: '#F7F3E9'
+                        background: 'linear-gradient(135deg, #4A6FA5, #6B8BC4)',
+                        color: 'white'
                       } : {}}
                     >
                       {pageNum}
@@ -476,6 +462,123 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
           )}
         </div>
       </section>
+
+      {/* Styles */}
+      <style jsx>{`
+        .marketplace-header {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 50;
+          backdrop-filter: blur(10px);
+          background: ${colors.glass.background};
+          border-bottom: 1px solid ${colors.glass.border};
+          box-shadow: ${shadows.sm};
+        }
+
+        .header-content {
+          padding: 1rem 2rem;
+        }
+
+        .header-inner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .logo {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .logo-icon {
+          font-size: 1.5rem;
+        }
+
+        .logo-text {
+          font-size: 1.5rem;
+          font-weight: 800;
+          color: black;
+          letter-spacing: -0.025em;
+          font-family: 'Inter', -apple-system, sans-serif;
+        }
+
+        .nav-buttons {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .welcome-text {
+          color: ${colors.primary};
+          font-size: 0.9rem;
+          font-weight: 500;
+        }
+
+        .nav-button {
+          font-weight: 600;
+          transition: all 300ms ${animations.easing.smooth};
+          border-radius: 8px;
+          font-size: 0.9rem;
+        }
+
+        .nav-button-ghost {
+          color: ${colors.neutralDark};
+          background: transparent;
+          border: none;
+        }
+
+        .nav-button-ghost:hover {
+          background: ${colors.primary}10;
+          color: ${colors.primary};
+          transform: translateY(-1px);
+        }
+
+        .nav-button-primary {
+          background: ${gradients.primary};
+          color: white;
+          border: none;
+          box-shadow: ${shadows.primary};
+        }
+
+        .nav-button-primary:hover {
+          background: ${colors.primaryDark};
+          transform: translateY(-1px);
+          box-shadow: ${shadows.lg};
+        }
+
+        /* Adjust main content for fixed header */
+        .min-h-screen {
+          padding-top: 70px;
+        }
+
+        .search-section {
+          padding: 2rem 0;
+          background: linear-gradient(135deg, rgba(247, 243, 233, 0.8) 0%, rgba(232, 221, 212, 0.8) 50%, rgba(221, 209, 199, 0.8) 100%);
+          box-shadow: none;
+          border: none;
+        }
+
+        @media (max-width: 768px) {
+          .header-content {
+            padding: 1rem;
+          }
+
+          .nav-buttons {
+            gap: 0.5rem;
+          }
+
+          .welcome-text {
+            display: none;
+          }
+
+          .logo-text {
+            font-size: 1.25rem;
+          }
+        }
+      `}</style>
     </div>
   )
 }
