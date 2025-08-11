@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { PerformanceProvider } from '@/components/performance-provider';
-import { SimpleGlassOverlayProvider } from '@/components/glass-overlay-chat';
+import { QuickActionsOverlay } from '@/components/marketplace/QuickActionsOverlay';
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,9 +32,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <PerformanceProvider>
-          <SimpleGlassOverlayProvider>
-            {children}
-          </SimpleGlassOverlayProvider>
+          {children}
+          <QuickActionsOverlay />
         </PerformanceProvider>
         <Analytics />
         <SpeedInsights />

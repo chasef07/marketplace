@@ -48,6 +48,27 @@ export function HomePage() {
   const [error, setError] = useState<string | null>(null)
   const [authMode, setAuthMode] = useState<'signin' | 'register' | 'reset'>('signin') // Track auth mode
 
+  // Listen for navigation events from QuickActions overlay
+  useEffect(() => {
+    const handleNavigateToMarketplace = () => setCurrentView('marketplace')
+    const handleNavigateToCreateListing = () => {
+      if (user) {
+        setCurrentView('home') // Home page has the create listing form
+      } else {
+        setAuthMode('signin')
+        setCurrentView('auth')
+      }
+    }
+
+    window.addEventListener('navigate-to-marketplace', handleNavigateToMarketplace)
+    window.addEventListener('navigate-to-create-listing', handleNavigateToCreateListing)
+
+    return () => {
+      window.removeEventListener('navigate-to-marketplace', handleNavigateToMarketplace)
+      window.removeEventListener('navigate-to-create-listing', handleNavigateToCreateListing)
+    }
+  }, [user])
+
   // Initialize auth state and listen for changes
   useEffect(() => {
     let mounted = true

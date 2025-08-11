@@ -61,16 +61,32 @@ export function useMarketplaceChat() {
           // Note: This would need the generateSmartIntroMessage function imported
           // For now, use enhanced logic inline
           if (activeNegotiations.length > 0) {
-            // Find highest offer with business analysis
-            const highestOfferNeg = activeNegotiations.reduce((max: any, neg: any) => 
-              parseFloat(neg.current_offer) > parseFloat(max.current_offer) ? neg : max
-            )
+            // Find highest offer with business analysis - using helper to get current offers
+            let highestOfferNeg = activeNegotiations[0]
+            let highestOffer = 0
+            
+            // Get current offers for all negotiations
+            for (const neg of activeNegotiations) {
+              try {
+                const response = await fetch(`/api/negotiations/${neg.id}/current-offer`)
+                if (response.ok) {
+                  const data = await response.json()
+                  const offer = parseFloat(data.current_offer || 0)
+                  if (offer > highestOffer) {
+                    highestOffer = offer
+                    highestOfferNeg = neg
+                  }
+                }
+              } catch (error) {
+                console.warn('Failed to get current offer for negotiation:', neg.id)
+              }
+            }
             
             const buyerName = highestOfferNeg.buyer?.[0]?.username || 'Someone'
             const itemName = highestOfferNeg.items?.[0]?.name || 'your item'
-            const offerAmount = parseFloat(highestOfferNeg.current_offer)
+            const offerAmount = highestOffer || 0
             const startingPrice = parseFloat(highestOfferNeg.items?.[0]?.starting_price || 0)
-            const percentage = Math.round((offerAmount / startingPrice) * 100)
+            const percentage = startingPrice > 0 ? Math.round((offerAmount / startingPrice) * 100) : 0
             
             if (activeNegotiations.length === 1) {
               if (percentage >= 90) {
@@ -81,10 +97,8 @@ export function useMarketplaceChat() {
                 welcomeContent = `Lowball alert! ${buyerName}: $${offerAmount} (${percentage}% of asking) for ${itemName}. Decline?`
               }
             } else {
-              const strongCount = activeNegotiations.filter((neg: any) => {
-                const p = Math.round((parseFloat(neg.current_offer) / parseFloat(neg.items?.[0]?.starting_price || 1)) * 100)
-                return p >= 90
-              }).length
+              // Note: This is a simplified approach - in production you'd want to batch fetch all current offers
+              const strongCount = 0 // Simplified for now since we'd need to fetch all current offers
               
               if (strongCount > 0) {
                 welcomeContent = `${activeNegotiations.length} offers! ${strongCount} strong. Best: ${buyerName} $${offerAmount} (${percentage}%). Accept?`

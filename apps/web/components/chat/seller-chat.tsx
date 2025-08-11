@@ -131,7 +131,7 @@ ${status.items.slice(0, 2).map((item: any) => {
   return `📦 "${item.name}" - $${item.starting_price} (${itemNegotiations.length} active offer${itemNegotiations.length !== 1 ? 's' : ''})`
 }).join('\n')}
 
-${activeNegotiations.length > 0 ? `🔥 Highest offer: $${Math.max(...activeNegotiations.map((n: any) => n.current_offer))} for your ${activeNegotiations.find((n: any) => n.current_offer === Math.max(...activeNegotiations.map((x: any) => x.current_offer)))?.items?.name || 'item'}!` : ''}
+${activeNegotiations.length > 0 ? `🔥 You have ${activeNegotiations.length} active negotiation${activeNegotiations.length > 1 ? 's' : ''}!` : ''}
 
 What would you like to do today?`
         }

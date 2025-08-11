@@ -36,7 +36,6 @@ export async function GET(request: NextRequest) {
         negotiations (
           id,
           status,
-          current_offer,
           buyer_id,
           profiles!negotiations_buyer_id_fkey (username)
         )

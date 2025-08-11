@@ -60,12 +60,16 @@ export async function POST(
       return NextResponse.json({ error: 'Negotiation is not active' }, { status: 400 })
     }
 
+    // Get current offer using helper function
+    const { data: currentOffer } = await supabase
+      .rpc('get_current_offer', { neg_id: negotiationId })
+
     // Update negotiation status
     const { error: updateError } = await supabase
       .from('negotiations')
       .update({
         status: 'completed',
-        final_price: negotiation.current_offer,
+        final_price: currentOffer || 0,
         completed_at: new Date().toISOString()
       })
       .eq('id', negotiationId)
@@ -91,7 +95,7 @@ export async function POST(
 
     return NextResponse.json({ 
       message: 'Offer accepted successfully',
-      final_price: negotiation.current_offer
+      final_price: currentOffer || 0
     })
     } catch (error) {
       console.error('Accept offer error:', error)

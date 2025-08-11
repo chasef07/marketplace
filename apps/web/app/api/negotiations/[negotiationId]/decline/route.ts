@@ -79,14 +79,20 @@ export async function POST(
     const offerType = negotiation.seller_id === user.id ? 'seller' : 'buyer'
     const declineMessage = body.reason || 'Offer declined'
 
+    // Get current offer and round number using helper functions
+    const { data: currentOffer } = await supabase
+      .rpc('get_current_offer', { neg_id: negotiationId })
+    const { data: currentRound } = await supabase
+      .rpc('get_round_count', { neg_id: negotiationId })
+
     const { error: offerError } = await supabase
       .from('offers')
       .insert({
         negotiation_id: negotiationId,
         offer_type: offerType,
-        price: negotiation.current_offer, // Keep current price for decline
+        price: currentOffer || 0,
         message: declineMessage,
-        round_number: negotiation.round_number + 1,
+        round_number: ((currentRound as number) || 0) + 1,
         is_counter_offer: false
       })
 

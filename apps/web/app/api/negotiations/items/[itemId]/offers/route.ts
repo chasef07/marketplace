@@ -76,9 +76,7 @@ export async function POST(
         .insert({
           item_id: itemId,
           seller_id: item.seller_id,
-          buyer_id: user.id,
-          current_offer: body.price,
-          round_number: 1
+          buyer_id: user.id
         })
         .select()
         .single()
@@ -89,21 +87,12 @@ export async function POST(
       }
 
       negotiation = newNegotiation
-    } else {
-      // Update existing negotiation
-      const { error: updateError } = await supabase
-        .from('negotiations')
-        .update({
-          current_offer: body.price,
-          round_number: negotiation.round_number + 1
-        })
-        .eq('id', negotiation.id)
-
-      if (updateError) {
-        console.error('Error updating negotiation:', updateError)
-        return NextResponse.json({ error: 'Failed to update negotiation' }, { status: 500 })
-      }
     }
+    // Note: No need to update existing negotiation - offers table handles the progression
+
+    // Get current round number for this negotiation
+    const { data: currentRound } = await supabase
+      .rpc('get_round_count', { neg_id: negotiation.id })
 
     // Create the offer
     const { data: offer, error: offerError } = await supabase
@@ -113,7 +102,7 @@ export async function POST(
         offer_type: 'buyer',
         price: body.price,
         message: body.message || '',
-        round_number: negotiation.round_number
+        round_number: ((currentRound as number) || 0) + 1
       })
       .select()
       .single()

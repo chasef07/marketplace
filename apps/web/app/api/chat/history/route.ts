@@ -30,16 +30,16 @@ export async function GET(request: NextRequest) {
     const conversationId = searchParams.get('conversation_id')
     const limit = parseInt(searchParams.get('limit') || '50')
 
-    // If no conversation_id provided, get the seller's conversation
+    // If no conversation_id provided, get the seller's chat record
     let targetConversationId = conversationId
     if (!targetConversationId) {
-      const { data: conversation } = await supabase
-        .from('conversations')
-        .select('id')
+      const { data: chatRecord } = await supabase
+        .from('seller_chat_optimized')
+        .select('conversation_id')
         .eq('seller_id', user.id)
         .single()
       
-      targetConversationId = conversation?.id?.toString()
+      targetConversationId = chatRecord?.conversation_id?.toString() ?? null
     }
 
     if (!targetConversationId) {
@@ -49,34 +49,37 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Get conversation messages
-    const { data: messages, error: messagesError } = await supabase
-      .from('chat_messages')
+    // Get chat record and extract messages
+    const { data: chatRecord, error: chatError } = await supabase
+      .from('seller_chat_optimized')
       .select('*')
-      .eq('conversation_id', targetConversationId)
-      .order('created_at', { ascending: true })
-      .limit(limit)
+      .eq('conversation_id', parseInt(targetConversationId))
+      .single()
 
-    if (messagesError) {
+    if (chatError) {
       throw new Error('Failed to fetch chat history')
     }
 
-    // Get conversation info
-    const { data: conversation } = await supabase
-      .from('conversations')
-      .select('*')
-      .eq('id', targetConversationId)
-      .eq('seller_id', user.id)
-      .single()
+    // Extract messages from the JSON field
+    let messages: any[] = []
+    if (chatRecord?.messages) {
+      messages = Array.isArray(chatRecord.messages) ? chatRecord.messages : []
+      messages = messages.slice(-limit) // Get last N messages
+    }
 
-    if (!conversation) {
-      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
+    if (!chatRecord) {
+      return NextResponse.json({ error: 'Chat record not found' }, { status: 404 })
     }
 
     return NextResponse.json({
       messages: messages || [],
       conversation_id: targetConversationId,
-      conversation: conversation
+      conversation: {
+        id: chatRecord.conversation_id,
+        seller_id: chatRecord.seller_id,
+        last_message_at: chatRecord.last_message_at,
+        updated_at: chatRecord.updated_at
+      }
     })
 
   } catch (error: any) {

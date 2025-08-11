@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: ProfilePageProps): Promise<Me
   
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name, bio, username')
+    .select('username, seller_personality, buyer_personality')
     .eq('username', username)
     .eq('is_active', true)
     .single()
@@ -28,11 +28,11 @@ export async function generateMetadata({ params }: ProfilePageProps): Promise<Me
   }
 
   return {
-    title: `${profile.display_name} (@${profile.username})`,
-    description: profile.bio || `View ${profile.display_name}'s furniture listings and profile.`,
+    title: `${profile.username} - Marketplace Profile`,
+    description: `View ${profile.username}'s furniture listings and profile.`,
     openGraph: {
-      title: `${profile.display_name} (@${profile.username})`,
-      description: profile.bio || `View ${profile.display_name}'s furniture listings and profile.`,
+      title: `${profile.username} - Marketplace Profile`,
+      description: `View ${profile.username}'s furniture listings and profile.`,
       type: 'profile',
     },
   }

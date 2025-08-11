@@ -61,26 +61,21 @@ export async function POST(
       return NextResponse.json({ error: 'Negotiation is not active' }, { status: 400 })
     }
 
-    if (negotiation.round_number >= negotiation.max_rounds) {
+    // Get current round number and check limits
+    const { data: currentRound } = await supabase
+      .rpc('get_round_count', { neg_id: negotiationId })
+    
+    const roundNumber = (currentRound as number) || 0
+    
+    if (roundNumber >= (negotiation.max_rounds || 10)) {
       return NextResponse.json({ error: 'Maximum rounds reached' }, { status: 400 })
     }
 
-    const newRoundNumber = negotiation.round_number + 1
+    const newRoundNumber = roundNumber + 1
     const offerType = negotiation.seller_id === user.id ? 'seller' : 'buyer'
 
-    // Update negotiation
-    const { error: updateError } = await supabase
-      .from('negotiations')
-      .update({
-        current_offer: body.price,
-        round_number: newRoundNumber
-      })
-      .eq('id', negotiationId)
+    // No need to update negotiation table - the helper functions handle current offer calculation
 
-    if (updateError) {
-      console.error('Error updating negotiation:', updateError)
-      return NextResponse.json({ error: 'Failed to create counter offer' }, { status: 500 })
-    }
 
     // Create counter offer
     const { data: offer, error: offerError } = await supabase
