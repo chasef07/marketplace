@@ -186,24 +186,6 @@ export function InteractiveLivingRoom({ onUploadClick }: InteractiveLivingRoomPr
         )}
       </div>
 
-      {/* Upload Box - Center Focus */}
-      <div 
-        className={`upload-box ${isLoading ? 'loading' : ''}`}
-        onClick={handleUploadClick}
-      >
-        {isLoading ? (
-          <>
-            <div className="loading-spinner"></div>
-            <div className="loading-text">{loadingText}</div>
-          </>
-        ) : (
-          <>
-            <div className="upload-icon">📸</div>
-            <div className="upload-text">Create Your Listing</div>
-            <div className="upload-subtext">Snap • Price • Sell</div>
-          </>
-        )}
-      </div>
 
 
       <style jsx>{`
@@ -443,68 +425,6 @@ export function InteractiveLivingRoom({ onUploadClick }: InteractiveLivingRoomPr
           );
         }
 
-        /* Upload Box */
-        .upload-box {
-          position: absolute;
-          left: 50%;
-          bottom: 25%;
-          transform: translateX(-50%);
-          width: 160px;
-          height: 100px;
-          border: 3px dashed ${colors.secondary};
-          border-radius: 12px;
-          background: ${colors.neutralLight}90;
-          backdrop-filter: blur(10px);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          animation: pulse 2s ease-in-out infinite;
-        }
-
-        .upload-box:hover {
-          transform: translateX(-50%) translateY(-5px);
-          border-color: ${colors.alert};
-          background: ${colors.background}95;
-          box-shadow: 0 10px 25px ${colors.secondary}40;
-        }
-
-        .upload-box.loading {
-          border-color: ${colors.primary};
-          background: ${colors.neutralLight}95;
-          animation: none;
-        }
-
-        @keyframes pulse {
-          0%, 100% { 
-            box-shadow: 0 0 0 0 ${colors.secondary}40;
-          }
-          50% { 
-            box-shadow: 0 0 0 10px transparent;
-          }
-        }
-
-        .upload-icon {
-          font-size: 2rem;
-          margin-bottom: 8px;
-        }
-
-        .upload-text {
-          font-size: 14px;
-          font-weight: 700;
-          color: ${colors.neutralDark};
-          text-align: center;
-          line-height: 1.2;
-        }
-
-        .upload-subtext {
-          font-size: 11px;
-          color: ${colors.primary};
-          margin-top: 4px;
-          font-weight: 500;
-        }
 
         /* Price Tags */
         .price-tag {
@@ -586,28 +506,6 @@ export function InteractiveLivingRoom({ onUploadClick }: InteractiveLivingRoomPr
           }
         }
 
-        /* Loading States */
-        .loading-spinner {
-          width: 20px;
-          height: 20px;
-          border: 2px solid ${colors.primary}30;
-          border-top: 2px solid ${colors.primary};
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin-bottom: 8px;
-        }
-
-        .loading-text {
-          font-size: 12px;
-          color: ${colors.primary};
-          font-weight: 600;
-        }
-
-
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
 
         /* Responsive Design */
         @media (max-width: 768px) {
@@ -617,18 +515,6 @@ export function InteractiveLivingRoom({ onUploadClick }: InteractiveLivingRoomPr
             transform-origin: center;
           }
 
-          .upload-box {
-            width: 140px;
-            height: 80px;
-          }
-
-          .upload-text {
-            font-size: 12px;
-          }
-
-          .upload-subtext {
-            font-size: 10px;
-          }
         }
 
         @media (max-width: 480px) {
@@ -636,6 +522,7 @@ export function InteractiveLivingRoom({ onUploadClick }: InteractiveLivingRoomPr
             height: 250px;
             transform: scale(0.7);
           }
+
         }
       `}</style>
     </div>

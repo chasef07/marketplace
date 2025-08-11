@@ -7,6 +7,7 @@ import { AnimatedBackground } from './AnimatedBackground'
 import { colors, gradients, shadows, cssVariables } from './design-system/colors'
 import { animations, animationClasses } from './design-system/animations'
 import { type AIAnalysisResult } from "@/lib/api-client-new"
+import { getRotatingGreeting } from "@/lib/greetings"
 
 interface User {
   id: string
@@ -56,7 +57,7 @@ export function HeroSection({
             <div className="nav-buttons">
               {user ? (
                 <>
-                  <span className="welcome-text">Welcome back, {user.username}!</span>
+                  <span className="welcome-text">{getRotatingGreeting(user.id)}, {user.username}!</span>
                   <Button 
                     variant="ghost" 
                     onClick={onBrowseItems}
@@ -113,6 +114,44 @@ export function HeroSection({
             <p className="hero-subtitle">
               Snap a photo, get AI pricing, list instantly on our marketplace
             </p>
+          </div>
+
+          {/* Create Your Listing Button */}
+          <div className="create-listing-section">
+            <div 
+              className="create-listing-button"
+              onClick={() => {
+                // Create a temporary file input and trigger it
+                const input = document.createElement('input')
+                input.type = 'file'
+                input.accept = 'image/*'
+                input.multiple = true
+                input.style.display = 'none'
+                
+                input.onchange = async (e) => {
+                  const files = Array.from((e.target as HTMLInputElement).files || [])
+                  if (files.length > 0) {
+                    // We need to call the same upload handling logic
+                    // Let's trigger the hidden upload zone's file input instead
+                    const hiddenInput = document.querySelector('#hidden-file-input') as HTMLInputElement
+                    if (hiddenInput) {
+                      // Copy files to hidden input and trigger its change event
+                      const dt = new DataTransfer()
+                      files.forEach(file => dt.items.add(file))
+                      hiddenInput.files = dt.files
+                      hiddenInput.dispatchEvent(new Event('change', { bubbles: true }))
+                    }
+                  }
+                }
+                
+                document.body.appendChild(input)
+                input.click()
+                document.body.removeChild(input)
+              }}
+            >
+              <div className="create-listing-text">Create Your Listing</div>
+              <div className="create-listing-subtext">Snap • Price • Sell</div>
+            </div>
           </div>
 
           {/* Interactive Living Room */}
@@ -297,6 +336,68 @@ export function HeroSection({
           animation-delay: 200ms;
         }
 
+        .create-listing-section {
+          display: flex;
+          justify-content: center;
+          margin: 2rem 0;
+          ${animationClasses.fadeIn}
+          animation-delay: 300ms;
+        }
+
+        .create-listing-button {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          width: 300px;
+          height: 120px;
+          background: linear-gradient(135deg, ${colors.neutralLight}95, ${colors.background}90);
+          backdrop-filter: blur(15px);
+          border: 4px dashed ${colors.secondary};
+          border-radius: 20px;
+          cursor: pointer;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 8px 32px ${colors.secondary}20, 0 0 0 1px ${colors.neutralLight}50;
+          animation: pulse 2.5s ease-in-out infinite;
+        }
+
+        .create-listing-button:hover {
+          transform: translateY(-8px) scale(1.05);
+          border-color: ${colors.alert};
+          background: linear-gradient(135deg, ${colors.background}98, ${colors.neutralLight}95);
+          box-shadow: 0 20px 50px ${colors.secondary}40, 0 0 0 2px ${colors.alert}30, 0 10px 30px ${colors.alert}20;
+        }
+
+        .create-listing-text {
+          font-size: 24px;
+          font-weight: 800;
+          color: ${colors.neutralDark};
+          text-align: center;
+          line-height: 1.2;
+          text-shadow: 0 1px 2px ${colors.neutralLight}80;
+          letter-spacing: -0.5px;
+          margin-bottom: 8px;
+        }
+
+        .create-listing-subtext {
+          font-size: 16px;
+          font-weight: 600;
+          text-align: center;
+          background: linear-gradient(45deg, ${colors.primary}, ${colors.accent});
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        @keyframes pulse {
+          0%, 100% { 
+            box-shadow: 0 8px 32px ${colors.secondary}20, 0 0 0 1px ${colors.neutralLight}50, 0 0 0 0 ${colors.secondary}40;
+          }
+          50% { 
+            box-shadow: 0 8px 32px ${colors.secondary}20, 0 0 0 1px ${colors.neutralLight}50, 0 0 0 15px transparent;
+          }
+        }
+
         .living-room-section {
           display: flex;
           justify-content: center;
@@ -335,6 +436,19 @@ export function HeroSection({
           
           .hero-subtitle {
             font-size: 1rem;
+          }
+
+          .create-listing-button {
+            width: 260px;
+            height: 100px;
+          }
+
+          .create-listing-text {
+            font-size: 20px;
+          }
+
+          .create-listing-subtext {
+            font-size: 14px;
           }
 
           .nav-content {

@@ -12,6 +12,7 @@ import { apiClient, Item, PaginationInfo } from "@/lib/api-client-new"
 import { FURNITURE_BLUR_DATA_URL } from "@/lib/blur-data"
 import Image from "next/image"
 import { ItemSkeleton } from "@/components/ui/skeleton"
+import { getRotatingGreeting } from "@/lib/greetings"
 
 
 interface User {
@@ -186,7 +187,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
             <div className="nav-buttons">
               {user ? (
                 <>
-                  <span className="welcome-text">Welcome back, {user.username}!</span>
+                  <span className="welcome-text">{getRotatingGreeting(user.id)}, {user.username}!</span>
                   <Button 
                     variant="ghost"
                     onClick={onCreateListing}
