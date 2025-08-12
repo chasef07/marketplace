@@ -22,6 +22,7 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [conversationId, setConversationId] = useState<number | null>(null)
   const [hasLoadedWelcome, setHasLoadedWelcome] = useState(false)
+  const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -59,7 +60,10 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
         conversation_id: response.conversation_id,
         role: 'assistant',
         content: response.message,
-        metadata: { buttons: (response as any).buttons },
+        metadata: { 
+          buttons: (response as any).buttons,
+          inputField: (response as any).inputField
+        },
         created_at: new Date().toISOString()
       }
 
@@ -117,7 +121,10 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
         conversation_id: response.conversation_id,
         role: 'assistant',
         content: response.message,
-        metadata: { buttons: (response as any).buttons },
+        metadata: { 
+          buttons: (response as any).buttons,
+          inputField: (response as any).inputField
+        },
         created_at: new Date().toISOString()
       }
 
@@ -142,12 +149,83 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
     }
   }
 
+  const handleInputSubmit = async (inputFieldAction: string) => {
+    if (isLoading || !inputValue.trim()) return
+    
+    setIsLoading(true)
+
+    // Add user message showing the input value
+    const userMessageObj: ChatMessage = {
+      id: Date.now(),
+      conversation_id: conversationId || 0,
+      role: 'user',
+      content: inputValue.trim(),
+      metadata: {},
+      created_at: new Date().toISOString()
+    }
+    
+    setMessages(prev => [...prev, userMessageObj])
+
+    try {
+      console.log('Sending input value:', inputValue.trim(), 'to conversation:', conversationId)
+      const response: ChatResponse = await apiClient.sendChatMessage(inputValue.trim(), conversationId || undefined)
+      console.log('Received response:', response)
+      
+      if (!conversationId) {
+        setConversationId(response.conversation_id)
+      }
+
+      // Add assistant response
+      const assistantMessageObj: ChatMessage = {
+        id: Date.now() + 1,
+        conversation_id: response.conversation_id,
+        role: 'assistant',
+        content: response.message,
+        metadata: { 
+          buttons: (response as any).buttons,
+          inputField: (response as any).inputField
+        },
+        created_at: new Date().toISOString()
+      }
+
+      setMessages(prev => [...prev, assistantMessageObj])
+      
+      // Clear input after successful submission
+      setInputValue('')
+      
+    } catch (error: any) {
+      console.error('Failed to send input:', error)
+      
+      // Add error message
+      const errorMessageObj: ChatMessage = {
+        id: Date.now() + 2,
+        conversation_id: conversationId || 0,
+        role: 'assistant',
+        content: "I'm having trouble connecting right now. Please try again.",
+        metadata: { error: true },
+        created_at: new Date().toISOString()
+      }
+      
+      setMessages(prev => [...prev, errorMessageObj])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <>
       {/* Floating Chat Icon */}
       <div className="fixed bottom-6 right-6 z-50">
         <Button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => {
+            if (isOpen) {
+              // Reset welcome flag when closing so it refreshes on reopen
+              setHasLoadedWelcome(false)
+              setMessages([])
+              setInputValue('')
+            }
+            setIsOpen(!isOpen)
+          }}
           className="w-14 h-14 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 backdrop-blur-2xl relative overflow-hidden group"
           style={{
             background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.1) 100%)',
@@ -204,7 +282,12 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => {
+                    setHasLoadedWelcome(false)
+                    setMessages([])
+                    setInputValue('')
+                    setIsOpen(false)
+                  }}
                   className="h-8 w-8 p-0 rounded-full hover:bg-white/20 transition-all duration-200"
                   style={{ color: '#374151' }}
                 >
@@ -275,6 +358,62 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
                                 {button.text}
                               </button>
                             ))}
+                          </div>
+                        )}
+
+                        {/* Input Field */}
+                        {message.role === 'assistant' && message.metadata?.inputField && (
+                          <div className="mt-3 space-y-2">
+                            <div className="flex gap-2">
+                              <div className="relative flex-1">
+                                {message.metadata.inputField.prefix && (
+                                  <span 
+                                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm font-medium"
+                                    style={{ color: '#374151' }}
+                                  >
+                                    {message.metadata.inputField.prefix}
+                                  </span>
+                                )}
+                                <input
+                                  type={message.metadata.inputField.type}
+                                  value={inputValue}
+                                  onChange={(e) => setInputValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !isLoading && inputValue.trim()) {
+                                      handleInputSubmit(message.metadata.inputField.submitAction)
+                                    }
+                                  }}
+                                  placeholder={message.metadata.inputField.placeholder}
+                                  disabled={isLoading}
+                                  className={`w-full px-3 py-2 text-sm rounded-lg border-0 outline-none transition-all duration-200 ${
+                                    message.metadata.inputField.prefix ? 'pl-8' : 'pl-3'
+                                  }`}
+                                  style={{
+                                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.2) 100%)',
+                                    backdropFilter: 'blur(15px) saturate(150%)',
+                                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                                    color: '#374151',
+                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
+                                  }}
+                                />
+                              </div>
+                              <button
+                                onClick={() => handleInputSubmit(message.metadata.inputField.submitAction)}
+                                disabled={isLoading || !inputValue.trim()}
+                                className="px-4 py-2 text-xs rounded-lg font-medium transition-all duration-200 hover:scale-105 hover:shadow-md relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
+                                style={{ 
+                                  background: isLoading || !inputValue.trim() 
+                                    ? 'linear-gradient(135deg, rgba(156, 163, 175, 0.3) 0%, rgba(156, 163, 175, 0.1) 100%)'
+                                    : 'linear-gradient(135deg, rgba(139, 69, 19, 0.9), rgba(205, 133, 63, 0.9))',
+                                  backdropFilter: 'blur(10px) saturate(150%)',
+                                  border: '1px solid rgba(255, 255, 255, 0.4)',
+                                  color: isLoading || !inputValue.trim() ? '#9CA3AF' : '#FFFFFF',
+                                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
+                                }}
+                              >
+                                {isLoading ? 'Sending...' : message.metadata.inputField.submitText}
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>

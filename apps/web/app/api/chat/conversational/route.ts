@@ -34,13 +34,12 @@ class ConversationManager {
     this.context = {
       state: ConversationState.VIEWING_OFFERS,
       userId,
-      activeNegotiations: [],
-      authToken
+      activeNegotiations: []
     }
     this.authToken = authToken
   }
 
-  async processMessage(message: string): Promise<{ message: string; buttons: any[] }> {
+  async processMessage(message: string): Promise<{ message: string; buttons: any[]; inputField?: any }> {
     // Load fresh negotiations data
     await this.loadNegotiations()
     
@@ -120,7 +119,7 @@ class ConversationManager {
       return ConversationState.VIEWING_OFFERS
     }
     
-    if (msg === 'counter_all_offers' || msg.startsWith('counter_price_')) {
+    if (msg === 'counter_all_offers' || msg.startsWith('counter_price_') || msg === 'custom_counter_input') {
       return ConversationState.COUNTERING
     }
     
@@ -136,7 +135,7 @@ class ConversationManager {
     return this.context.state
   }
 
-  private async generateStateResponse(message: string): Promise<{ message: string; buttons: any[] }> {
+  private async generateStateResponse(message: string): Promise<{ message: string; buttons: any[]; inputField?: any }> {
     switch (this.context.state) {
       case ConversationState.ERROR_STATE:
         return this.handleErrorState()
@@ -172,25 +171,19 @@ class ConversationManager {
     if (this.context.activeNegotiations.length === 0) {
       return {
         message: "🏠 No active offers at the moment! Your items are live on the marketplace. I'll notify you as soon as buyers start making offers.",
-        buttons: [
-          { text: "📦 View My Items", action: "view_items" },
-          { text: "➕ Create Listing", action: "create_listing" },
-          { text: "📊 Sales Tips", action: "sales_tips" }
-        ]
+        buttons: []
       }
     }
 
     // Create clear offer summary
     const totalOffers = this.context.activeNegotiations.length
-    const totalValue = this.context.activeNegotiations.reduce((sum, neg) => sum + parseFloat(neg.current_offer), 0)
-    const highestOffer = Math.max(...this.context.activeNegotiations.map(neg => parseFloat(neg.current_offer)))
     
-    let offerText = `💰 **${totalOffers} Active Offer${totalOffers > 1 ? 's' : ''}** (Total: $${totalValue.toFixed(0)})\n\n`
+    let offerText = `💰 ${totalOffers} Active Offer${totalOffers > 1 ? 's' : ''}\n\n`
     
     // Group by item for clarity
     const offersByItem = this.groupOffersByItem()
     Object.values(offersByItem).forEach((item: any) => {
-      offerText += `📦 **${item.itemName}**\n`
+      offerText += `📦 ${item.itemName}\n`
       offerText += `   💵 ${item.offerCount} offer${item.offerCount > 1 ? 's' : ''} • High: $${item.highestOffer}\n`
       if (item.hasRecentActivity) {
         offerText += `   🔥 Recent activity!\n`
@@ -203,7 +196,6 @@ class ConversationManager {
       buttons: [
         { text: "💰 Counter All Offers", action: "counter_all_offers" },
         { text: "✅ Accept Best Offers", action: "accept_best_offers" },
-        { text: "👀 View Details", action: "view_details" },
         { text: "🔄 Refresh", action: "show_offers" }
       ]
     }
@@ -237,23 +229,24 @@ class ConversationManager {
     }, {})
   }
 
-  private async handleCountering(message: string): Promise<{ message: string; buttons: any[] }> {
+  private async handleCountering(message: string): Promise<{ message: string; buttons: any[]; inputField?: any }> {
     if (message === 'counter_all_offers') {
       const avgOffer = this.context.activeNegotiations.reduce((sum, neg) => sum + parseFloat(neg.current_offer), 0) / this.context.activeNegotiations.length
-      
-      const conservative = Math.round(avgOffer * 1.05)
-      const moderate = Math.round(avgOffer * 1.15) 
-      const aggressive = Math.round(avgOffer * 1.25)
+      const minSuggested = Math.round(avgOffer * 1.05)
+      const maxSuggested = Math.round(avgOffer * 1.25)
       
       return {
-        message: `💰 **Counter Offer Strategy**\n\nCurrent average offer: $${Math.round(avgOffer)}\n\nChoose your counter price or enter a custom amount:`,
+        message: `💰 Counter Offer\n\nCurrent average offer: $${Math.round(avgOffer)}\nSuggested range: $${minSuggested} - $${maxSuggested}\n\nEnter your counter price:`,
         buttons: [
-          { text: `🤝 $${conservative} (Conservative)`, action: `counter_price_${conservative}` },
-          { text: `📈 $${moderate} (Recommended)`, action: `counter_price_${moderate}` },
-          { text: `🚀 $${aggressive} (Aggressive)`, action: `counter_price_${aggressive}` },
-          { text: "✏️ Enter Custom Price", action: "custom_counter_input" },
           { text: "⬅️ Back", action: "show_offers" }
-        ]
+        ],
+        inputField: {
+          type: 'number',
+          placeholder: 'Enter price amount',
+          submitText: 'Submit Counter Offer',
+          submitAction: 'counter_price_input',
+          prefix: '$'
+        }
       }
     }
     
@@ -263,19 +256,33 @@ class ConversationManager {
       const maxSuggested = Math.round(avgOffer * 1.25)
       
       return {
-        message: `✏️ **Enter Custom Counter Price**\n\nCurrent average offer: $${Math.round(avgOffer)}\nSuggested range: $${minSuggested} - $${maxSuggested}\n\nType your desired price amount (numbers only):`,
+        message: `✏️ Enter Custom Counter Price\n\nCurrent average offer: $${Math.round(avgOffer)}\nSuggested range: $${minSuggested} - $${maxSuggested}`,
         buttons: [
-          { text: `$${minSuggested}`, action: `counter_price_${minSuggested}` },
-          { text: `$${Math.round((minSuggested + maxSuggested) / 2)}`, action: `counter_price_${Math.round((minSuggested + maxSuggested) / 2)}` },
-          { text: `$${maxSuggested}`, action: `counter_price_${maxSuggested}` },
-          { text: "⬅️ Back to Options", action: "counter_all_offers" }
-        ]
+          { text: "⬅️ Back", action: "counter_all_offers" }
+        ],
+        inputField: {
+          type: 'number',
+          placeholder: 'Enter price amount',
+          submitText: 'Submit Counter Offer',
+          submitAction: 'counter_price_input',
+          prefix: '$'
+        }
       }
     }
     
     if (message.startsWith('counter_price_')) {
       const price = parseInt(message.split('_')[2])
       return await this.executeCounterOffers(price)
+    }
+    
+    if (message === 'counter_price_input') {
+      // This will be handled by the input field submission
+      return {
+        message: "Please enter a price amount in the input field above.",
+        buttons: [
+          { text: "⬅️ Back", action: "counter_all_offers" }
+        ]
+      }
     }
     
     // Handle direct numeric input for custom prices
@@ -285,7 +292,7 @@ class ConversationManager {
       
       if (price < avgOffer) {
         return {
-          message: `⚠️ **Price too low!**\n\nYour price ($${price}) is below the current average offer ($${Math.round(avgOffer)}). Counter offers should be higher than current offers.\n\nPlease enter a higher amount:`,
+          message: `⚠️ Price too low!\n\nYour price ($${price}) is below the current average offer ($${Math.round(avgOffer)}). Counter offers should be higher than current offers.\n\nPlease enter a higher amount:`,
           buttons: [
             { text: `$${Math.round(avgOffer * 1.05)}`, action: `counter_price_${Math.round(avgOffer * 1.05)}` },
             { text: `$${Math.round(avgOffer * 1.15)}`, action: `counter_price_${Math.round(avgOffer * 1.15)}` },
@@ -296,7 +303,7 @@ class ConversationManager {
       
       if (price > avgOffer * 3) {
         return {
-          message: `🤔 **Very high price!**\n\nYour price ($${price}) is much higher than current offers ($${Math.round(avgOffer)}). This might discourage buyers.\n\nProceed anyway?`,
+          message: `🤔 Very high price!\n\nYour price ($${price}) is much higher than current offers ($${Math.round(avgOffer)}). This might discourage buyers.\n\nProceed anyway?`,
           buttons: [
             { text: `✅ Yes, counter $${price}`, action: `counter_price_${price}` },
             { text: "📉 Lower amount", action: "custom_counter_input" },
@@ -313,7 +320,12 @@ class ConversationManager {
 
   private async executeCounterOffers(price: number): Promise<{ message: string; buttons: any[] }> {
     try {
+      console.log(`🚀 Starting executeCounterOffers with price: $${price}`)
+      console.log(`🔑 Auth token exists: ${!!this.authToken}`)
+      console.log(`📊 Active negotiations count: ${this.context.activeNegotiations.length}`)
+      
       if (!this.authToken) {
+        console.error(`❌ No auth token available`)
         return {
           message: "⚠️ Authentication error. Please refresh and try again.",
           buttons: [{ text: "🔄 Refresh", action: "show_offers" }]
@@ -323,39 +335,50 @@ class ConversationManager {
       const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
       let successCount = 0
 
-      console.log(`Attempting to counter ${this.context.activeNegotiations.length} negotiations with price $${price}`)
+      console.log(`🌐 Using base URL: ${baseUrl}`)
+      console.log(`📋 Negotiations to counter:`, this.context.activeNegotiations.map(n => ({ id: n.id, item: n.items?.name })))
       
       for (const neg of this.context.activeNegotiations) {
         try {
-          console.log(`Countering negotiation ${neg.id} at ${baseUrl}/api/negotiations/${neg.id}/counter`)
+          const url = `${baseUrl}/api/negotiations/${neg.id}/counter`
+          const payload = {
+            price: price,
+            message: `Counter offer: $${price}`
+          }
           
-          const response = await fetch(`${baseUrl}/api/negotiations/${neg.id}/counter`, {
+          console.log(`📤 Sending counter offer for negotiation ${neg.id}:`)
+          console.log(`   URL: ${url}`)
+          console.log(`   Payload:`, payload)
+          console.log(`   Auth header: Bearer ${this.authToken?.substring(0, 20)}...`)
+          
+          const response = await fetch(url, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${this.authToken}`
             },
-            body: JSON.stringify({
-              price: price,
-              message: `Counter offer: $${price}`
-            })
+            body: JSON.stringify(payload)
           })
 
+          console.log(`📥 Response for negotiation ${neg.id}: ${response.status} ${response.statusText}`)
+
           if (response.ok) {
-            console.log(`✅ Counter offer successful for negotiation ${neg.id}`)
+            const responseData = await response.json()
+            console.log(`✅ Counter offer successful for negotiation ${neg.id}:`, responseData)
             successCount++
           } else {
             const errorText = await response.text()
             console.error(`❌ Counter offer failed for negotiation ${neg.id}: ${response.status} - ${errorText}`)
+            console.error(`❌ Response headers:`, Object.fromEntries(response.headers.entries()))
           }
         } catch (error) {
-          console.error(`Counter error for negotiation ${neg.id}:`, error)
+          console.error(`💥 Exception during counter offer for negotiation ${neg.id}:`, error)
         }
       }
 
       if (successCount > 0) {
         return {
-          message: `✅ **Counter offers sent!**\n\nOffered $${price} to ${successCount} buyer${successCount > 1 ? 's' : ''}. They'll be notified and can respond.`,
+          message: `✅ Counter offers sent!\n\nOffered $${price} to ${successCount} buyer${successCount > 1 ? 's' : ''}. They'll be notified and can respond.`,
           buttons: [
             { text: "💰 View My Offers", action: "show_offers" },
             { text: "📱 Check Status", action: "show_offers" }
@@ -363,7 +386,7 @@ class ConversationManager {
         }
       } else {
         return {
-          message: "❌ **Counter offers failed**\n\nTechnical error occurred. Please try again.",
+          message: "❌ Counter offers failed\n\nTechnical error occurred. Please try again.",
           buttons: [
             { text: "🔄 Try Again", action: "counter_all_offers" },
             { text: "💰 View Offers", action: "show_offers" }
@@ -413,7 +436,7 @@ class ConversationManager {
           this.context.state = ConversationState.DEAL_COMPLETED
           
           return {
-            message: `🎉 **Deals accepted!**\n\nAccepted ${successCount} offer${successCount > 1 ? 's' : ''} worth $${totalValue.toFixed(0)} total.\n\n📱 Buyers have been notified!`,
+            message: `🎉 Deals accepted!\n\nAccepted ${successCount} offer${successCount > 1 ? 's' : ''} worth $${totalValue.toFixed(0)} total.\n\n📱 Buyers have been notified!`,
             buttons: [
               { text: "💬 Chat with Buyers", action: "start_buyer_chat" },
               { text: "📅 Arrange Pickup", action: "arrange_pickup" },
@@ -422,7 +445,7 @@ class ConversationManager {
           }
         } else {
           return {
-            message: "❌ **Accept failed** - Unable to accept offers. Please try again.",
+            message: "❌ Accept failed - Unable to accept offers. Please try again.",
             buttons: [
               { text: "🔄 Try Again", action: "accept_best_offers" },
               { text: "💰 View Offers", action: "show_offers" }
@@ -447,7 +470,7 @@ class ConversationManager {
   private handleArrangingMeetup(message: string): { message: string; buttons: any[] } {
     if (message === 'start_buyer_chat' || message === 'message_buyers') {
       return {
-        message: "💬 **Buyer Communication**\n\nChoose how you'd like to connect with your buyers:",
+        message: "💬 Buyer Communication\n\nChoose how you'd like to connect with your buyers:",
         buttons: [
           { text: "📱 View All Conversations", action: "view_conversations" },
           { text: "📋 Send Meeting Templates", action: "send_templates" },
@@ -459,7 +482,7 @@ class ConversationManager {
 
     if (message === 'schedule_pickup' || message === 'arrange_pickup') {
       return {
-        message: "📅 **Schedule Pickup**\n\nLet's help you coordinate with buyers:",
+        message: "📅 Schedule Pickup\n\nLet's help you coordinate with buyers:",
         buttons: [
           { text: "📅 This Weekend", action: "suggest_weekend" },
           { text: "🕐 Weekday Evening", action: "suggest_evening" },
@@ -475,7 +498,7 @@ class ConversationManager {
     }
 
     return {
-      message: "🤝 **Deal Management**\n\nYour deals are accepted! Next steps:\n\n1. Communicate with buyers\n2. Arrange pickup time/location\n3. Complete the exchange\n\nWhat would you like to do?",
+      message: "🤝 Deal Management\n\nYour deals are accepted! Next steps:\n\n1. Communicate with buyers\n2. Arrange pickup time/location\n3. Complete the exchange\n\nWhat would you like to do?",
       buttons: [
         { text: "💬 Message Buyers", action: "start_buyer_chat" },
         { text: "📅 Schedule Pickup", action: "schedule_pickup" },
@@ -488,7 +511,7 @@ class ConversationManager {
   private getCompletedDealsView(): { message: string; buttons: any[] } {
     // This would typically load actual completed deals from the database
     return {
-      message: "📊 **Your Completed Deals**\n\nHere are your recently accepted deals. Click on any deal to start messaging the buyer or update the status.\n\n*Note: Deal details will be loaded from your actual negotiations.*",
+      message: "📊 Your Completed Deals\n\nHere are your recently accepted deals. Click on any deal to start messaging the buyer or update the status.\n\n*Note: Deal details will be loaded from your actual negotiations.*",
       buttons: [
         { text: "🔄 Refresh Deals", action: "view_deals" },
         { text: "💬 Open Chat", action: "start_buyer_chat" },
@@ -530,6 +553,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         message: response.message,
         buttons: response.buttons,
+        inputField: response.inputField,
         action: null,
         conversation_id: conversation_id || 1
       })

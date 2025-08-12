@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { User, MapPin, Calendar, Star, Package, ShoppingBag, Edit, ArrowLeft, Home, Store } from 'lucide-react'
+import { User, MapPin, Calendar, Star, Package, ShoppingBag, Edit, ArrowLeft, Home, Store, Bell, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase'
 import { colors, gradients, shadows } from '../home/design-system/colors'
 import { animations } from '../home/design-system/animations'
 import { FloatingSellerChat } from '../chat/FloatingSellerChat'
+import useSWR from 'swr'
+import { apiClient } from '@/src/lib/api-client-new'
 
 interface ProfileData {
   id: string
@@ -350,6 +352,12 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
           </div>
         )}
       </div>
+
+      {/* Buyer Notifications Section - Only for own profile */}
+      {isOwnProfile && (
+        <BuyerNotificationsSection userId={profile.id} />
+      )}
+      
       </div>
 
       {/* Styles */}
@@ -440,6 +448,304 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
           }} 
         />
       )}
+    </div>
+  )
+}
+
+// Buyer Notifications Section Component
+interface BuyerNotificationsSectionProps {
+  userId: string
+}
+
+interface Negotiation {
+  id: number
+  status: string
+  created_at: string
+  updated_at: string
+  display_status: string
+  needs_attention: boolean
+  time_since_last_update: number
+  offer_count: number
+  latest_offer?: {
+    id: number
+    price: number
+    message?: string
+    offer_type: string
+    created_at: string
+    is_counter_offer: boolean
+  }
+  items: {
+    id: number
+    name: string
+    starting_price: number
+    image_filename?: string
+    furniture_type: string
+  }
+  profiles: {
+    id: string
+    username: string
+  }
+}
+
+function BuyerNotificationsSection({ userId }: BuyerNotificationsSectionProps) {
+  const [processingNegotiation, setProcessingNegotiation] = useState<number | null>(null)
+  
+  const { data: negotiationsData, error, mutate } = useSWR(
+    `/api/buyer/negotiations`,
+    async (url) => {
+      const headers = await apiClient.getAuthHeaders()
+      const response = await fetch(url, { headers })
+      if (!response.ok) throw new Error('Failed to fetch')
+      return response.json()
+    },
+    { refreshInterval: 30000 } // Refresh every 30 seconds
+  )
+
+  const handleAcceptCounter = async (negotiationId: number) => {
+    setProcessingNegotiation(negotiationId)
+    try {
+      await apiClient.acceptNegotiation(negotiationId)
+      await mutate() // Refresh the data
+    } catch (error) {
+      console.error('Failed to accept counter offer:', error)
+      alert('Failed to accept counter offer. Please try again.')
+    } finally {
+      setProcessingNegotiation(null)
+    }
+  }
+
+  const handleMakeNewOffer = (itemId: number) => {
+    // Navigate to the item page where they can make a new offer
+    window.location.href = `/marketplace/${itemId}`
+  }
+
+  const handleUpdateOffer = (itemId: number) => {
+    // Navigate to the item page where they can update their offer
+    window.location.href = `/marketplace/${itemId}`
+  }
+
+  const handleArrangePickup = (negotiationId: number) => {
+    // For now, just show an alert - this could be enhanced later
+    alert('Pickup arrangement feature coming soon! Please contact the seller directly.')
+  }
+
+  const getNegotiationItemImageUrl = (filename?: string) => {
+    if (!filename) return null
+    const supabase = createClient()
+    const { data } = supabase.storage.from('furniture-images').getPublicUrl(filename)
+    return data.publicUrl
+  }
+
+  const negotiations: Negotiation[] = negotiationsData?.negotiations || []
+  const pendingCount = negotiations.filter(n => n.needs_attention).length
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'counter_received':
+        return <AlertCircle className="h-5 w-5 text-orange-500" />
+      case 'awaiting_response':
+        return <Clock className="h-5 w-5 text-blue-500" />
+      case 'accepted':
+        return <CheckCircle className="h-5 w-5 text-green-500" />
+      case 'declined':
+        return <XCircle className="h-5 w-5 text-red-500" />
+      default:
+        return <Bell className="h-5 w-5 text-gray-500" />
+    }
+  }
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'counter_received':
+        return 'Counter Offer Received'
+      case 'awaiting_response':
+        return 'Awaiting Seller Response'
+      case 'accepted':
+        return 'Offer Accepted'
+      case 'declined':
+        return 'Offer Declined'
+      default:
+        return 'Unknown Status'
+    }
+  }
+
+  const formatTimeAgo = (hours: number) => {
+    if (hours < 1) return 'Just now'
+    if (hours < 24) return `${hours}h ago`
+    const days = Math.floor(hours / 24)
+    return `${days}d ago`
+  }
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price)
+  }
+
+  if (negotiations.length === 0) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 mt-8">
+        <div className="flex items-center gap-3 mb-6">
+          <ShoppingBag className="h-6 w-6 text-gray-700" />
+          <h2 className="text-xl font-semibold text-gray-900">My Offers & Negotiations</h2>
+        </div>
+        
+        <Card className="p-8 text-center">
+          <ShoppingBag className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No active offers</h3>
+          <p className="text-gray-500">
+            You haven't made any offers yet. Browse the marketplace to start negotiating!
+          </p>
+          <Link href="/marketplace" className="inline-block mt-4">
+            <Button>Browse Marketplace</Button>
+          </Link>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto p-6 mt-8">
+      <div className="flex items-center gap-3 mb-6">
+        <ShoppingBag className="h-6 w-6 text-gray-700" />
+        <h2 className="text-xl font-semibold text-gray-900">My Offers & Negotiations</h2>
+        {pendingCount > 0 && (
+          <span className="bg-orange-100 text-orange-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+            {pendingCount} need{pendingCount === 1 ? 's' : ''} attention
+          </span>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        {negotiations.map((negotiation) => (
+          <Card key={negotiation.id} className={`p-4 transition-all hover:shadow-lg border-l-4 ${
+            negotiation.needs_attention 
+              ? 'border-l-orange-400 bg-orange-50/30' 
+              : 'border-l-gray-200'
+          }`}>
+            <div className="flex items-start gap-4">
+              {/* Item Image */}
+              <div className="w-20 h-20 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 shadow-sm">
+                {negotiation.items.image_filename ? (
+                  <Image
+                    src={getNegotiationItemImageUrl(negotiation.items.image_filename) || '/placeholder-image.jpg'}
+                    alt={negotiation.items.name}
+                    width={80}
+                    height={80}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Package className="h-8 w-8 text-gray-400" />
+                  </div>
+                )}
+              </div>
+
+              {/* Negotiation Details */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-gray-900 truncate text-lg">
+                      {negotiation.items.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Seller: <span className="font-medium">@{negotiation.profiles.username}</span>
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      {getStatusIcon(negotiation.display_status)}
+                      <span className={`text-sm font-medium ${
+                        negotiation.needs_attention ? 'text-orange-700' : 'text-gray-700'
+                      }`}>
+                        {getStatusText(negotiation.display_status)}
+                      </span>
+                      {negotiation.needs_attention && (
+                        <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full font-medium">
+                          Action needed
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="text-right ml-4">
+                    <p className="text-sm text-gray-500">
+                      {formatTimeAgo(negotiation.time_since_last_update)}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {negotiation.offer_count} offer{negotiation.offer_count !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Latest Offer Info */}
+                {negotiation.latest_offer && (
+                  <div className="mt-3 p-3 bg-white border border-gray-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-gray-700">Latest offer:</span>
+                      <span className="text-lg font-bold text-gray-900">
+                        {formatPrice(negotiation.latest_offer.price)}
+                        {negotiation.latest_offer.is_counter_offer && (
+                          <span className="text-sm font-normal text-orange-600 ml-2">(Counter)</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-gray-100">
+                  {negotiation.display_status === 'counter_received' && (
+                    <>
+                      <Button 
+                        size="sm" 
+                        className="bg-green-600 hover:bg-green-700 text-white font-medium"
+                        onClick={() => handleAcceptCounter(negotiation.id)}
+                        disabled={processingNegotiation === negotiation.id}
+                      >
+                        {processingNegotiation === negotiation.id ? 'Accepting...' : '✓ Accept Counter'}
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                        onClick={() => handleMakeNewOffer(negotiation.items.id)}
+                      >
+                        💰 Make New Offer
+                      </Button>
+                    </>
+                  )}
+                  {negotiation.display_status === 'awaiting_response' && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                      onClick={() => handleUpdateOffer(negotiation.items.id)}
+                    >
+                      ✏️ Update Offer
+                    </Button>
+                  )}
+                  {negotiation.display_status === 'accepted' && (
+                    <Button 
+                      size="sm" 
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                      onClick={() => handleArrangePickup(negotiation.id)}
+                    >
+                      📅 Arrange Pickup
+                    </Button>
+                  )}
+                  <Link href={`/marketplace/${negotiation.items.id}`}>
+                    <Button size="sm" variant="ghost" className="text-gray-600 hover:text-gray-800">
+                      👁️ View Item
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
     </div>
   )
 }
