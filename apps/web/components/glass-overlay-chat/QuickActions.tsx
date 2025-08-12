@@ -37,14 +37,14 @@ export function QuickActions({ onActionSelect, isCompact = false, className = ''
     {
       id: 'listings',
       label: 'My listings',
-      action: () => onActionSelect('Show me my active listings'),
+      action: () => onActionSelect('show_listings'),
       icon: <Package className="w-3 h-3" />
     },
     {
-      id: 'pricing',
-      label: 'Pricing help',
-      action: () => onActionSelect('Help me price my items better'),
-      icon: <Star className="w-3 h-3" />
+      id: 'inbox',
+      label: 'Inbox',
+      action: () => onActionSelect('inbox'),
+      icon: <MessageSquare className="w-3 h-3" />
     }
   ]
 

@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { PerformanceProvider } from '@/components/performance-provider';
-import { QuickActionsOverlay } from '@/components/marketplace/QuickActionsOverlay';
+import { FloatingChatButton } from '@/components/chat/FloatingChatButton';
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,7 +33,7 @@ export default function RootLayout({
       >
         <PerformanceProvider>
           {children}
-          <QuickActionsOverlay />
+          <FloatingChatButton />
         </PerformanceProvider>
         <Analytics />
         <SpeedInsights />

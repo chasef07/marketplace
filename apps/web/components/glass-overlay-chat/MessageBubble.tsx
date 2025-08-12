@@ -9,9 +9,10 @@ interface MessageBubbleProps {
   message: ChatUIMessage
   isCompact?: boolean
   className?: string
+  onButtonClick?: (action: string, data?: any) => void
 }
 
-export function MessageBubble({ message, isCompact = false, className = '' }: MessageBubbleProps) {
+export function MessageBubble({ message, isCompact = false, className = '', onButtonClick }: MessageBubbleProps) {
   const isUser = message.role === 'user'
   const isError = message.metadata?.error
   const isWelcome = message.metadata?.welcome
@@ -119,6 +120,35 @@ export function MessageBubble({ message, isCompact = false, className = '' }: Me
               </motion.div>
             )}
           </motion.div>
+
+          {/* Interactive Buttons */}
+          {!isUser && message.metadata?.buttons && message.metadata.buttons.length > 0 && !isCompact && (
+            <div className="mt-3 flex gap-2 justify-start">
+              {message.metadata.buttons.map((button: any, index: number) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => {
+                    console.log('Button clicked in MessageBubble:', button.action, button.data)
+                    if (onButtonClick) {
+                      onButtonClick(button.action, button.data)
+                    }
+                  }}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 hover:shadow-md cursor-pointer ${
+                    button.text.includes('Accept') || button.text.includes('Yes')
+                      ? 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100'
+                      : button.text.includes('Decline') || button.text.includes('Cancel')
+                      ? 'bg-red-50 border-red-200 text-red-800 hover:bg-red-100'  
+                      : button.text.includes('Counter') || button.text.includes('$')
+                      ? 'bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100'
+                      : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {button.text}
+                </button>
+              ))}
+            </div>
+          )}
           
           {/* Timestamp */}
           {!isCompact && (

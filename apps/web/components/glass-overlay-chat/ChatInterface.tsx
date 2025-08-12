@@ -24,6 +24,7 @@ export function ChatInterface({ isExpanded, onNotification, className = '' }: Ch
     queuedCount,
     sendMessage,
     initializeChat,
+    handleButtonClick,
     clearMessages
   } = useMarketplaceChat()
 
@@ -190,6 +191,10 @@ export function ChatInterface({ isExpanded, onNotification, className = '' }: Ch
                 key={message.id}
                 message={message}
                 isCompact={!isExpanded}
+                onButtonClick={(action, data) => {
+                  console.log('ChatInterface received button click:', action, data)
+                  handleButtonClick(action, data)
+                }}
               />
             ))
           )}

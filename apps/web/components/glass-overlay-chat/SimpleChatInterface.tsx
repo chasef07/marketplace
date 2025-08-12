@@ -22,7 +22,8 @@ export function SimpleChatInterface({ onNotification, className = '' }: SimpleCh
     connectionStatus,
     queuedCount,
     sendMessage,
-    initializeChat
+    initializeChat,
+    handleButtonClick
   } = useMarketplaceChat()
 
   const [inputMessage, setInputMessage] = useState('')
@@ -151,6 +152,10 @@ export function SimpleChatInterface({ onNotification, className = '' }: SimpleCh
                 key={message.id}
                 message={message}
                 isCompact={false}
+                onButtonClick={(action, data) => {
+                  console.log('SimpleChatInterface button click:', action, data)
+                  handleButtonClick(action, data)
+                }}
               />
             ))
           )}

@@ -23,6 +23,11 @@ interface Negotiation {
   current_offer: number
   status: string
   created_at: string
+  recent_message?: string
+  recent_offer_time?: string
+  hours_since_offer?: number
+  is_recent: boolean
+  buyer_offer_type?: string
   items: Array<{
     id: number
     name: string
@@ -48,6 +53,8 @@ export function QuickActionsOverlay({ trigger }: QuickActionsOverlayProps) {
   const [declineReason, setDeclineReason] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [dashboardStats, setDashboardStats] = useState({ totalItems: 0, totalViews: 0 })
+  const [bulkActionType, setBulkActionType] = useState<'accept-highest' | 'decline-lowballs' | 'counter-all' | null>(null)
+  const [bulkCounterPrice, setBulkCounterPrice] = useState('')
 
   // Load negotiations when overlay opens
   useEffect(() => {
@@ -122,6 +129,18 @@ export function QuickActionsOverlay({ trigger }: QuickActionsOverlayProps) {
         throw new Error(errorData.error || 'Action failed')
       }
       
+      // If offer was accepted, trigger chat mode switch
+      if (actionType === 'accept') {
+        const buyerName = selectedNegotiation.profiles[0]?.username || 'Unknown'
+        // Dispatch custom event for chat handoff
+        window.dispatchEvent(new CustomEvent('offerAccepted', {
+          detail: { 
+            buyerName: buyerName,
+            negotiationId: selectedNegotiation.id 
+          }
+        }))
+      }
+      
       // Refresh negotiations and reset state
       await loadNegotiations()
       setSelectedNegotiation(null)
@@ -136,11 +155,99 @@ export function QuickActionsOverlay({ trigger }: QuickActionsOverlayProps) {
     }
   }
 
+  const handleBulkAction = async () => {
+    if (!bulkActionType || isProcessing || negotiations.length === 0) return
+
+    setIsProcessing(true)
+    try {
+      const headers = await apiClient.getAuthHeaders(true)
+      
+      if (bulkActionType === 'accept-highest') {
+        // Find the highest offer and accept it
+        const highest = negotiations.reduce((max, neg) => 
+          parseFloat(neg.current_offer.toString()) > parseFloat(max.current_offer.toString()) ? neg : max
+        )
+        
+        const response = await fetch('/api/marketplace/quick-actions', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            action: 'accept',
+            negotiation_id: highest.id
+          })
+        })
+        
+        if (!response.ok) throw new Error('Failed to accept highest offer')
+        
+        // Trigger chat mode switch for highest offer acceptance
+        const buyerName = highest.profiles[0]?.username || 'Unknown'
+        window.dispatchEvent(new CustomEvent('offerAccepted', {
+          detail: { 
+            buyerName: buyerName,
+            negotiationId: highest.id 
+          }
+        }))
+        
+      } else if (bulkActionType === 'decline-lowballs') {
+        // Decline offers below 70% of starting price
+        const lowballs = negotiations.filter(neg => {
+          const startingPrice = parseFloat(neg.items[0]?.starting_price.toString() || '0')
+          const offerPrice = parseFloat(neg.current_offer.toString())
+          return startingPrice > 0 && (offerPrice / startingPrice) < 0.7
+        })
+        
+        for (const neg of lowballs) {
+          await fetch('/api/marketplace/quick-actions', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              action: 'decline',
+              negotiation_id: neg.id,
+              reason: 'Offer too low'
+            })
+          })
+        }
+        
+      } else if (bulkActionType === 'counter-all') {
+        const price = parseFloat(bulkCounterPrice)
+        if (isNaN(price) || price <= 0) {
+          throw new Error('Please enter a valid counter price')
+        }
+        
+        // Counter all negotiations with the same price
+        for (const neg of negotiations) {
+          await fetch('/api/marketplace/quick-actions', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              action: 'counter',
+              negotiation_id: neg.id,
+              price: price,
+              message: 'Counter offer to all buyers'
+            })
+          })
+        }
+      }
+      
+      // Refresh negotiations and reset state
+      await loadNegotiations()
+      setBulkActionType(null)
+      setBulkCounterPrice('')
+    } catch (error) {
+      console.error('Bulk action failed:', error)
+      alert((error as Error).message || 'Bulk action failed')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
   const resetToMain = () => {
     setSelectedNegotiation(null)
     setActionType(null)
     setCounterPrice('')
     setDeclineReason('')
+    setBulkActionType(null)
+    setBulkCounterPrice('')
   }
 
   const formatPrice = (price: number) => {
@@ -191,6 +298,68 @@ export function QuickActionsOverlay({ trigger }: QuickActionsOverlayProps) {
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="h-16 bg-white/10 rounded-xl animate-pulse" />
                 ))}
+              </div>
+            ) : bulkActionType ? (
+              // Bulk action confirmation view
+              <div className="space-y-4">
+                <Button
+                  onClick={resetToMain}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 p-0 h-auto"
+                >
+                  ← Back to offers
+                </Button>
+
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Sparkles className="w-4 h-4 text-blue-600" />
+                    <span className="text-gray-800 font-medium">
+                      {bulkActionType === 'accept-highest' ? 'Accept Highest Offer' :
+                       bulkActionType === 'decline-lowballs' ? 'Decline Lowballs (<70% of asking)' :
+                       'Counter All Offers'}
+                    </span>
+                  </div>
+                  <p className="text-gray-600 text-sm">
+                    {bulkActionType === 'accept-highest' ? `Accept the highest offer: ${formatPrice(Math.max(...negotiations.map(n => parseFloat(n.current_offer.toString()))))}` :
+                     bulkActionType === 'decline-lowballs' ? `Decline ${negotiations.filter(n => {
+                       const sp = parseFloat(n.items[0]?.starting_price.toString() || '0')
+                       const op = parseFloat(n.current_offer.toString())
+                       return sp > 0 && (op / sp) < 0.7
+                     }).length} offers below 70% of asking price` :
+                     `Send counter offer to all ${negotiations.length} buyers`}
+                  </p>
+                </div>
+
+                {bulkActionType === 'counter-all' && (
+                  <div className="space-y-2">
+                    <label className="text-gray-700 text-sm">Counter offer amount:</label>
+                    <Input
+                      type="number"
+                      placeholder="Enter price..."
+                      value={bulkCounterPrice}
+                      onChange={(e) => setBulkCounterPrice(e.target.value)}
+                      className="bg-white border-gray-300 text-gray-800 placeholder:text-gray-500 focus:border-blue-500"
+                    />
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    onClick={handleBulkAction}
+                    disabled={isProcessing || (bulkActionType === 'counter-all' && !bulkCounterPrice)}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {isProcessing ? 'Processing...' : 'Confirm'}
+                  </Button>
+                  <Button
+                    onClick={resetToMain}
+                    variant="ghost"
+                    className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </div>
             ) : selectedNegotiation && actionType ? (
               // Action confirmation view
@@ -371,6 +540,36 @@ export function QuickActionsOverlay({ trigger }: QuickActionsOverlayProps) {
                       </Button>
                     </div>
 
+                    {/* Smart Bulk Action Buttons */}
+                    {negotiations.length > 1 && (
+                      <div className="mb-4 space-y-2">
+                        <div className="text-xs text-gray-500 mb-2">Quick Actions:</div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <Button
+                            onClick={() => setBulkActionType('accept-highest')}
+                            size="sm"
+                            className="text-xs bg-green-50 hover:bg-green-100 text-green-800 border border-green-200"
+                          >
+                            Accept Highest
+                          </Button>
+                          <Button
+                            onClick={() => setBulkActionType('counter-all')}
+                            size="sm"
+                            className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200"
+                          >
+                            Counter All
+                          </Button>
+                          <Button
+                            onClick={() => setBulkActionType('decline-lowballs')}
+                            size="sm"
+                            className="text-xs bg-red-50 hover:bg-red-100 text-red-800 border border-red-200"
+                          >
+                            Decline Lowballs
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-3 max-h-80 overflow-y-auto">
                       {negotiations.map((negotiation) => (
                         <div
@@ -385,12 +584,24 @@ export function QuickActionsOverlay({ trigger }: QuickActionsOverlayProps) {
                                   {negotiation.items[0]?.name || 'Unknown Item'}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                                 <User className="w-3 h-3" />
                                 <span>{negotiation.profiles[0]?.username || 'Unknown'}</span>
+                                {negotiation.profiles[0]?.username === 'Unknown' && (
+                                  <Badge variant="secondary" className="text-xs px-1.5 py-0.5">New</Badge>
+                                )}
                                 <Clock className="w-3 h-3 ml-2" />
                                 <span>{formatTimeAgo(negotiation.created_at)}</span>
+                                {negotiation.is_recent && (
+                                  <Badge className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-800">Recent</Badge>
+                                )}
                               </div>
+                              {negotiation.recent_message && (
+                                <div className="flex items-center gap-2 text-sm text-gray-700 bg-gray-100 rounded-lg px-3 py-2 mt-2">
+                                  <MessageCircle className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                                  <span className="italic">"{negotiation.recent_message}"</span>
+                                </div>
+                              )}
                             </div>
                             <Badge className="bg-blue-100 text-blue-800 border-blue-200">
                               {formatPrice(negotiation.current_offer)}

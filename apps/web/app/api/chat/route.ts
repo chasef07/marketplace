@@ -5,8 +5,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    // Forward the request to the simplified chat API
-    const response = await fetch(`${request.nextUrl.origin}/api/chat/simple`, {
+    // Forward the request to the conversational chat API
+    const response = await fetch(`${request.nextUrl.origin}/api/chat/conversational`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
