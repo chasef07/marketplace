@@ -5,7 +5,7 @@ import { ratelimit, withRateLimit } from '@/lib/rate-limit'
 const supabase = createSupabaseServerClient()
 
 // Generate conversational responses with interactive buttons
-async function generateConversationalResponse(message: string, userId: string) {
+async function generateConversationalResponse(message: string, userId: string, authToken: string | null = null) {
   let negotiations: any[] = []
   
   // Get negotiations directly from database instead of API call
@@ -97,11 +97,10 @@ async function generateConversationalResponse(message: string, userId: string) {
   // Handle different conversational flows
   if (message === 'hello' || message === 'hi' || message === 'hey' || messageLower.startsWith('hello') || messageLower.startsWith('hi ') || messageLower.startsWith('hey')) {
     return {
-      message: `Hey! 👋 You've got ${negotiations.length} active offer${negotiations.length > 1 ? 's' : ''}${negotiations.filter((neg: any) => neg.is_recent).length > 0 ? ` (${negotiations.filter((neg: any) => neg.is_recent).length} recent!)` : ''}. What would you like to do?`,
+      message: `Hello! You have ${negotiations.length} active offer${negotiations.length > 1 ? 's' : ''}${negotiations.filter((neg: any) => neg.is_recent).length > 0 ? ` (${negotiations.filter((neg: any) => neg.is_recent).length} recent!)` : ''}. What would you like to do?`,
       buttons: [
-        { text: "💰 Show Offers", action: "show_offers" },
-        { text: "⚡ Quick Actions", action: "quick_actions" },
-        { text: "📊 View Details", action: "view_details" }
+        { text: "Show Offers", action: "show_offers" },
+        { text: "View Details", action: "view_details" }
       ]
     }
   }
@@ -110,59 +109,92 @@ async function generateConversationalResponse(message: string, userId: string) {
   if (messageLower.includes('offer') || messageLower.includes('show') || message === "show_offers" || message.startsWith("show_offers")) {
     if (negotiations.length === 0) {
       return {
-        message: "No active offers at the moment! 📭 But don't worry, I can help you get more visibility.",
+        message: "No active offers at the moment. I can help you get more visibility.",
         buttons: [
-          { text: "💡 Get Tips", action: "get_tips" },
-          { text: "📸 Update Photos", action: "update_photos" },
-          { text: "💰 Adjust Prices", action: "adjust_prices" }
+          { text: "Get Tips", action: "get_tips" },
+          { text: "Update Photos", action: "update_photos" },
+          { text: "Adjust Prices", action: "adjust_prices" }
         ]
       }
     }
 
-    // Group offers by item for cleaner display
+    // Group offers by item with enhanced data structure
     const offersByItem = negotiations.reduce((acc: any, neg: any) => {
+      const itemId = neg.item_id
       const itemName = neg.items?.[0]?.name || 'Unknown Item'
-      if (!acc[itemName]) {
-        acc[itemName] = []
+      const startingPrice = parseFloat(neg.items?.[0]?.starting_price || 0)
+      
+      if (!acc[itemId]) {
+        acc[itemId] = {
+          itemId,
+          itemName,
+          startingPrice,
+          negotiations: [],
+          offerCount: 0,
+          highestOffer: 0,
+          averageOffer: 0,
+          hasRecentActivity: false
+        }
       }
-      acc[itemName].push(neg)
+      
+      acc[itemId].negotiations.push(neg)
+      acc[itemId].offerCount++
+      
+      const offerPrice = parseFloat(neg.current_offer)
+      if (offerPrice > acc[itemId].highestOffer) {
+        acc[itemId].highestOffer = offerPrice
+      }
+      
+      if (neg.is_recent) {
+        acc[itemId].hasRecentActivity = true
+      }
+      
       return acc
     }, {})
 
-    let offerText = `Your Active Offers (${negotiations.length}):\n\n`
+    // Calculate averages for each item
+    Object.values(offersByItem).forEach((item: any) => {
+      const totalOffers = item.negotiations.reduce((sum: number, neg: any) => sum + parseFloat(neg.current_offer), 0)
+      item.averageOffer = totalOffers / item.offerCount
+    })
 
-    // Display each item with its offers
-    Object.entries(offersByItem).forEach(([itemName, itemOffers]: [string, any]) => {
-      offerText += `📦 ${itemName}\n`
+    let offerText = `Your Active Offers (${negotiations.length} total):\n\n`
+
+    // Display each item with summary stats
+    const sortedItems = Object.values(offersByItem).sort((a: any, b: any) => b.highestOffer - a.highestOffer)
+    
+    sortedItems.forEach((item: any) => {
+      const recentBadge = item.hasRecentActivity ? " [Recent]" : ""
+      const priceRange = item.offerCount > 1 
+        ? `$${Math.min(...item.negotiations.map((n: any) => parseFloat(n.current_offer))).toFixed(0)}-$${item.highestOffer.toFixed(0)}`
+        : `$${item.highestOffer.toFixed(0)}`
       
-      // Sort offers by price (highest first) and take up to 5
-      const sortedItemOffers = (itemOffers as any[])
-        .sort((a: any, b: any) => parseFloat(b.current_offer) - parseFloat(a.current_offer))
-        .slice(0, 5)
+      offerText += `${item.itemName}${recentBadge}\n`
+      offerText += `   ${item.offerCount} offer${item.offerCount > 1 ? 's' : ''} • High: ${priceRange}\n`
       
-      sortedItemOffers.forEach((neg: any, index: number) => {
-        const buyerName = neg.profiles?.[0]?.username || 'Someone'
-        const price = `$${parseFloat(neg.current_offer).toFixed(0)}`
-        
-        offerText += `  ${index + 1}. ${price} from ${buyerName}\n`
-      })
-      
-      if ((itemOffers as any[]).length > 5) {
-        offerText += `  ... and ${(itemOffers as any[]).length - 5} more offers\n`
+      if (item.startingPrice > 0) {
+        const bestRatio = (item.highestOffer / item.startingPrice * 100).toFixed(0)
+        offerText += `   Best offer: ${bestRatio}% of asking ($${item.startingPrice.toFixed(0)})\n`
       }
+      
       offerText += `\n`
     })
 
-    const sortedOffers = negotiations.sort((a: any, b: any) => parseFloat(b.current_offer) - parseFloat(a.current_offer))
+    // Create inspection buttons for each item with offers
+    const inspectionButtons = sortedItems.map((item: any) => ({
+      text: `Inspect ${item.itemName} (${item.offerCount})`,
+      action: `inspect_item_${item.itemId}`
+    }))
+
+    // Add general action buttons
+    const generalButtons = [
+      { text: "⚡ Quick Actions", action: "quick_actions" },
+      { text: "View All Items", action: "show_listings" }
+    ]
 
     return {
-      message: offerText,
-      buttons: [
-        { text: "✅ Accept Highest", action: "accept_highest", data: sortedOffers[0]?.id },
-        { text: "💬 Counter All", action: "counter_all" },
-        { text: "❌ Decline Lowballs", action: "decline_lowballs" },
-        { text: "👀 View Details", action: "view_details" }
-      ]
+      message: offerText + "Inspect a specific item for detailed offer management:",
+      buttons: [...inspectionButtons, ...generalButtons]
     }
   }
 
@@ -179,8 +211,8 @@ async function generateConversationalResponse(message: string, userId: string) {
         return {
           message: "Sorry, I couldn't find that negotiation. It may have already been resolved.",
           buttons: [
-            { text: "💰 Show Current Offers", action: "show_offers" },
-            { text: "🔄 Refresh", action: "refresh" }
+            { text: "Show Current Offers", action: "show_offers" },
+            { text: "Refresh", action: "refresh" }
           ]
         }
       }
@@ -241,9 +273,9 @@ async function generateConversationalResponse(message: string, userId: string) {
       const itemName = acceptedNeg.items?.[0]?.name || 'your item'
       
       return {
-        message: `🎉 Offer accepted! You've sold ${itemName} to ${buyerName} for $${parseFloat(acceptedNeg.current_offer).toFixed(0)}.\n\nTime to coordinate pickup with ${buyerName}! 📦`,
+        message: `Offer accepted! You've sold ${itemName} to ${buyerName} for $${parseFloat(acceptedNeg.current_offer).toFixed(0)}.\n\nTime to coordinate pickup with ${buyerName}! `,
         buttons: [
-          { text: "💬 Message " + buyerName, action: "direct_message", data: acceptedNeg.buyer_id },
+          { text: "Message " + buyerName, action: "direct_message", data: acceptedNeg.buyer_id },
           { text: "📋 View Deal Details", action: "view_deal", data: negotiationId },
           { text: "🏠 Back to Overview", action: "refresh" }
         ],
@@ -275,8 +307,8 @@ async function generateConversationalResponse(message: string, userId: string) {
       return {
         message: "I don't see any offers to accept right now. Want me to check for new ones?",
         buttons: [
-          { text: "🔄 Refresh", action: "refresh" },
-          { text: "📦 View Items", action: "view_items" }
+          { text: "Refresh", action: "refresh" },
+          { text: " View Items", action: "view_items" }
         ]
       }
     }
@@ -290,7 +322,7 @@ async function generateConversationalResponse(message: string, userId: string) {
       buttons: [
         { text: "✅ Yes, Accept!", action: "confirm_accept", data: highest.id },
         { text: "💭 Let me think", action: "show_offers" },
-        { text: "💰 Counter instead", action: "counter_offer", data: highest.id }
+        { text: "Counter instead", action: "counter_offer", data: highest.id }
       ]
     }
   }
@@ -300,10 +332,29 @@ async function generateConversationalResponse(message: string, userId: string) {
     const price = message.split('_')[2] // Extract price from "counter_price_150"
     
     try {
-      const headers = { 'Authorization': `Bearer ${userId}` }
+      if (!authToken) {
+        throw new Error('Authentication token required for counter offers')
+      }
+      
+      // For debug mode, use a different approach
+      if (authToken === 'debug') {
+        return {
+          message: `Counter offers sent! I've offered **$${price}** to all ${negotiations.length} buyer${negotiations.length > 1 ? 's' : ''}.\n\n⚠️ Debug mode: Counter offers simulated.`,
+          buttons: [
+            { text: "📊 View Status", action: "show_offers" },
+            { text: "💬 Send Message", action: "send_message" },
+            { text: "🏠 Back to Home", action: "refresh" }
+          ]
+        }
+      }
+      
+      const headers = { 'Authorization': `Bearer ${authToken}` }
+      
       // Counter all negotiations with the specified price
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'
+      
       for (const neg of negotiations) {
-        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/marketplace/quick-actions`, {
+        const response = await fetch(`${baseUrl}/api/marketplace/quick-actions`, {
           method: 'POST',
           headers: {
             ...headers,
@@ -316,10 +367,16 @@ async function generateConversationalResponse(message: string, userId: string) {
             message: 'Counter offer from seller'
           })
         })
+        
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error(`Counter offer failed for negotiation ${neg.id}:`, response.status, errorText)
+          throw new Error(`Counter offer failed: ${response.status} - ${errorText}`)
+        }
       }
       
       return {
-        message: `🚀 Counter offers sent! I've offered **$${price}** to all ${negotiations.length} buyer${negotiations.length > 1 ? 's' : ''}.\n\nThey'll receive notifications and can respond with their own counter-offers.`,
+        message: `Counter offers sent! I've offered **$${price}** to all ${negotiations.length} buyer${negotiations.length > 1 ? 's' : ''}.\n\nThey'll receive notifications and can respond with their own counter-offers.`,
         buttons: [
           { text: "📊 View Status", action: "show_offers" },
           { text: "💬 Send Message", action: "send_message" },
@@ -331,7 +388,7 @@ async function generateConversationalResponse(message: string, userId: string) {
         message: "I had trouble sending those counter offers. Want to try again?",
         buttons: [
           { text: "🔄 Try Again", action: "counter_all" },
-          { text: "💰 Show Offers", action: "show_offers" }
+          { text: "Show Offers", action: "show_offers" }
         ]
       }
     }
@@ -365,10 +422,10 @@ async function generateConversationalResponse(message: string, userId: string) {
       return {
         message: `✅ Done! I've declined ${lowballs.length} lowball offer${lowballs.length > 1 ? 's' : ''} for you.\n\n${negotiations.length - lowballs.length > 0 ? `You still have ${negotiations.length - lowballs.length} other offer${negotiations.length - lowballs.length > 1 ? 's' : ''} to consider.` : 'That clears up your offer list!'}`,
         buttons: negotiations.length - lowballs.length > 0 ? [
-          { text: "💰 Show Remaining", action: "show_offers" },
+          { text: "Show Remaining", action: "show_offers" },
           { text: "⚡ Quick Actions", action: "quick_actions" }
         ] : [
-          { text: "📦 View Items", action: "view_items" },
+          { text: " View Items", action: "view_items" },
           { text: "➕ Create Listing", action: "create_listing" }
         ]
       }
@@ -378,23 +435,23 @@ async function generateConversationalResponse(message: string, userId: string) {
         message: "I had trouble declining those offers. Want to try again?",
         buttons: [
           { text: "🔄 Try Again", action: "decline_lowballs" },
-          { text: "💰 Show Offers", action: "show_offers" }
+          { text: "Show Offers", action: "show_offers" }
         ]
       }
     }
   }
 
-  if (messageLower.includes('counter') || message === "counter_all") {
+  if (message === "counter_all" || (messageLower.includes('counter') && messageLower.includes('all'))) {
     const avgPrice = negotiations.reduce((sum: number, neg: any) => 
       sum + parseFloat(neg.current_offer), 0) / negotiations.length
     const suggestedCounter = Math.round(avgPrice * 1.15) // 15% higher
 
     return {
-      message: `Want to counter all ${negotiations.length} offers? 💪\n\nI suggest **$${suggestedCounter}** (15% above their average). Or pick your own price!`,
+      message: `Want to counter all ${negotiations.length} offers across all items? 💪\n\nI suggest **$${suggestedCounter}** (15% above their average). Or pick your own price!`,
       buttons: [
-        { text: `💰 Counter at $${suggestedCounter}`, action: "counter_price", data: suggestedCounter },
-        { text: "🎯 Choose My Price", action: "custom_counter" },
-        { text: "🔙 Back to Offers", action: "show_offers" }
+        { text: `Counter at $${suggestedCounter}`, action: "counter_price", data: suggestedCounter },
+        { text: "Choose My Price", action: "custom_counter_global" },
+        { text: "Back to Offers", action: "show_offers" }
       ]
     }
   }
@@ -411,7 +468,7 @@ async function generateConversationalResponse(message: string, userId: string) {
         message: "Actually, all your offers look pretty reasonable! 👍 No obvious lowballs to decline.",
         buttons: [
           { text: "📊 Show All Offers", action: "show_offers" },
-          { text: "💰 Counter Some", action: "counter_all" }
+          { text: "Counter Some", action: "counter_all" }
         ]
       }
     }
@@ -421,7 +478,7 @@ async function generateConversationalResponse(message: string, userId: string) {
       buttons: [
         { text: "❌ Yes, Decline Them", action: "confirm_decline_lowballs" },
         { text: "👀 Show Me First", action: "show_lowballs" },
-        { text: "🔙 Back to Offers", action: "show_offers" }
+        { text: "Back to Offers", action: "show_offers" }
       ]
     }
   }
@@ -431,7 +488,7 @@ async function generateConversationalResponse(message: string, userId: string) {
       return {
         message: "No active offers for quick actions right now! 📭 Here's what you can do instead:",
         buttons: [
-          { text: "📦 View My Items", action: "view_items" },
+          { text: " View My Items", action: "view_items" },
           { text: "➕ Create Listing", action: "create_listing" },
           { text: "📊 Show Stats", action: "show_stats" }
         ]
@@ -443,10 +500,10 @@ async function generateConversationalResponse(message: string, userId: string) {
     return {
       message: `⚡ Quick Actions for your ${negotiations.length} offer${negotiations.length > 1 ? 's' : ''}:\n\nChoose an action to apply to all offers:`,
       buttons: [
-        { text: "✅ Accept Highest ($" + highestOffer.toFixed(0) + ")", action: "accept_highest" },
-        { text: "💬 Counter All", action: "counter_all" },
-        { text: "❌ Decline Lowballs", action: "decline_lowballs" },
-        { text: "🔙 Back", action: "show_offers" }
+        { text: "Accept Highest ($" + highestOffer.toFixed(0) + ")", action: "accept_highest" },
+        { text: "Counter All", action: "counter_all" },
+        { text: "Decline Lowballs", action: "decline_lowballs" },
+        { text: "Back", action: "show_offers" }
       ]
     }
   }
@@ -479,7 +536,7 @@ async function generateConversationalResponse(message: string, userId: string) {
 
     if (!userItems || userItems.length === 0) {
       return {
-        message: "You don't have any listings yet! 📦\n\nReady to start selling?",
+        message: "You don't have any listings yet! \n\nReady to start selling?",
         buttons: [
           { text: "➕ Create First Listing", action: "create_listing" },
           { text: "💡 Get Tips", action: "selling_tips" },
@@ -523,7 +580,7 @@ async function generateConversationalResponse(message: string, userId: string) {
 
     // Available items section
     if (availableItems.length > 0) {
-      listingsText += `📦 Available (${availableItems.length}):\n`
+      listingsText += ` Available (${availableItems.length}):\n`
       availableItems.forEach((item, index) => {
         const price = `$${parseFloat(item.starting_price.toString()).toFixed(0)}`
         const offers = item.offer_count > 0 ? ` • ${item.offer_count} offer${item.offer_count > 1 ? 's' : ''}` : ''
@@ -590,7 +647,7 @@ async function generateConversationalResponse(message: string, userId: string) {
         message: "Your inbox is empty! 📭\n\nAccepted offers will appear here so you can coordinate with buyers.",
         buttons: [
           { text: "💰 View Active Offers", action: "show_offers" },
-          { text: "📦 My Listings", action: "show_listings" },
+          { text: " My Listings", action: "show_listings" },
           { text: "🏠 Back to Home", action: "refresh" }
         ]
       }
@@ -626,7 +683,7 @@ async function generateConversationalResponse(message: string, userId: string) {
       message: inboxText,
       buttons: [
         ...messageButtons,
-        { text: "🔄 Refresh", action: "inbox" },
+        { text: "Refresh", action: "inbox" },
         { text: "🏠 Back to Home", action: "refresh" }
       ]
     }
@@ -647,8 +704,8 @@ async function generateConversationalResponse(message: string, userId: string) {
       return {
         message: "Sorry, I couldn't find that buyer's information. Please try again.",
         buttons: [
-          { text: "💰 Show Offers", action: "show_offers" },
-          { text: "🔄 Refresh", action: "refresh" }
+          { text: "Show Offers", action: "show_offers" },
+          { text: "Refresh", action: "refresh" }
         ]
       }
     }
@@ -661,7 +718,7 @@ async function generateConversationalResponse(message: string, userId: string) {
         { text: "📞 Share Contact Info", action: "share_contact" },
         { text: "📅 Schedule Pickup", action: "schedule_pickup" },
         { text: "💬 Send Custom Message", action: "custom_message" },
-        { text: "🔙 Back to Overview", action: "refresh" }
+        { text: "Back to Overview", action: "refresh" }
       ],
       action: "direct_message_started",
       handoff: {
@@ -672,12 +729,436 @@ async function generateConversationalResponse(message: string, userId: string) {
     }
   }
 
+  // Handle item inspection - inspect_item_<itemId>
+  if (message.startsWith("inspect_item_")) {
+    const itemId = message.split('_')[2] // Extract ID from "inspect_item_123"
+    
+    if (!itemId) {
+      return {
+        message: "Sorry, I couldn't identify which item to inspect. Please try again.",
+        buttons: [
+          { text: "Show All Offers", action: "show_offers" },
+          { text: "Refresh", action: "refresh" }
+        ]
+      }
+    }
+
+    // Filter negotiations for this specific item
+    const itemNegotiations = negotiations.filter(neg => neg.item_id.toString() === itemId)
+    
+    if (itemNegotiations.length === 0) {
+      return {
+        message: "No offers found for this item. It may have been sold or the offers may have expired.",
+        buttons: [
+          { text: "Show All Offers", action: "show_offers" },
+          { text: " View All Items", action: "show_listings" }
+        ]
+      }
+    }
+
+    // Get item details
+    const firstNeg = itemNegotiations[0]
+    const itemName = firstNeg.items?.[0]?.name || 'Unknown Item'
+    const startingPrice = parseFloat(firstNeg.items?.[0]?.starting_price || 0)
+    
+    // Sort offers by price (highest first)
+    const sortedOffers = itemNegotiations.sort((a: any, b: any) => parseFloat(b.current_offer) - parseFloat(a.current_offer))
+    
+    // Build detailed offer breakdown
+    let inspectionText = `🔍 ${itemName} - Detailed View\n\n`
+    
+    if (startingPrice > 0) {
+      inspectionText += `💰 Your asking price: $${startingPrice.toFixed(0)}\n`
+    }
+    
+    inspectionText += `📊 ${itemNegotiations.length} active offer${itemNegotiations.length > 1 ? 's' : ''}:\n\n`
+
+    sortedOffers.forEach((neg: any, index: number) => {
+      const buyerName = neg.profiles?.[0]?.username || 'Someone'
+      const price = parseFloat(neg.current_offer)
+      const timeAgo = neg.hours_since_offer !== null 
+        ? neg.hours_since_offer < 1 ? 'Just now'
+          : neg.hours_since_offer < 24 ? `${neg.hours_since_offer}h ago`
+          : `${Math.floor(neg.hours_since_offer / 24)}d ago`
+        : 'Unknown'
+      
+      let offerLine = `${index + 1}. $${price.toFixed(0)} from ${buyerName} (${timeAgo})`
+      
+      if (startingPrice > 0) {
+        const percentage = (price / startingPrice * 100).toFixed(0)
+        offerLine += ` • ${percentage}% of asking`
+      }
+      
+      if (neg.is_recent) {
+        offerLine += ` 🔥`
+      }
+      
+      inspectionText += `   ${offerLine}\n`
+      
+      // Add message preview if available
+      if (neg.recent_message) {
+        inspectionText += `      💬 "${neg.recent_message}"\n`
+      }
+      
+      inspectionText += `\n`
+    })
+
+    // Create item-specific action buttons
+    const highestOffer = sortedOffers[0]
+    const highestPrice = parseFloat(highestOffer.current_offer)
+    const averageOffer = sortedOffers.reduce((sum, neg) => sum + parseFloat(neg.current_offer), 0) / sortedOffers.length
+    const suggestedCounter = Math.round(averageOffer * 1.15) // 15% above average
+
+    const actionButtons = [
+      { 
+        text: `Accept $${highestPrice.toFixed(0)}`, 
+        action: `confirm_accept_${highestOffer.id}` 
+      },
+      { 
+        text: `Counter at $${suggestedCounter}`, 
+        action: `counter_item_${itemId}_${suggestedCounter}` 
+      },
+      { 
+        text: `Choose My Price`, 
+        action: `custom_counter_item_${itemId}` 
+      },
+      { 
+        text: `Message ${highestOffer.profiles?.[0]?.username || 'Top Buyer'}`, 
+        action: `direct_message_${highestOffer.buyer_id}` 
+      }
+    ]
+
+    // Add decline button if there are lowball offers
+    const lowballOffers = sortedOffers.filter(neg => {
+      if (startingPrice === 0) return false
+      return (parseFloat(neg.current_offer) / startingPrice) < 0.7
+    })
+
+    if (lowballOffers.length > 0) {
+      actionButtons.push({
+        text: `Decline Lowballs (${lowballOffers.length})`,
+        action: `decline_item_lowballs_${itemId}`
+      })
+    }
+
+    actionButtons.push({ text: "Back to All Offers", action: "show_offers" })
+
+    return {
+      message: inspectionText,
+      buttons: actionButtons
+    }
+  }
+
+  // Handle item-specific counter offers - counter_item_<itemId>_<price>
+  if (message.startsWith("counter_item_")) {
+    const parts = message.split('_')
+    const itemId = parts[2]
+    const counterPrice = parts[3]
+    
+    if (!itemId || !counterPrice) {
+      return {
+        message: "Invalid counter offer format. Please try again.",
+        buttons: [
+          { text: "Show Offers", action: "show_offers" },
+          { text: "Refresh", action: "refresh" }
+        ]
+      }
+    }
+
+    // Filter negotiations for this item
+    const itemNegotiations = negotiations.filter(neg => neg.item_id.toString() === itemId)
+    
+    if (itemNegotiations.length === 0) {
+      return {
+        message: "No active offers found for this item.",
+        buttons: [
+          { text: "Show All Offers", action: "show_offers" }
+        ]
+      }
+    }
+
+    try {
+      if (!authToken) {
+        throw new Error('Authentication token required for counter offers')
+      }
+      
+      // For debug mode, use a different approach
+      if (authToken === 'debug') {
+        const itemName = itemNegotiations[0].items?.[0]?.name || 'this item'
+        return {
+          message: `Counter offers sent! I've offered **$${counterPrice}** to all ${itemNegotiations.length} buyer${itemNegotiations.length > 1 ? 's' : ''} interested in ${itemName}.\n\n⚠️ Debug mode: Counter offers simulated.`,
+          buttons: [
+            { text: `View ${itemName}`, action: `inspect_item_${itemId}` },
+            { text: "Show All Offers", action: "show_offers" },
+            { text: "🏠 Back to Home", action: "refresh" }
+          ]
+        }
+      }
+      
+      const headers = { 'Authorization': `Bearer ${authToken}` }
+      
+      // Send counter offer to all buyers for this item
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'
+      
+      for (const neg of itemNegotiations) {
+        const response = await fetch(`${baseUrl}/api/marketplace/quick-actions`, {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            action: 'counter',
+            negotiation_id: neg.id,
+            price: parseInt(counterPrice),
+            message: `Counter offer for ${neg.items?.[0]?.name || 'this item'}`
+          })
+        })
+        
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error(`Counter offer failed for negotiation ${neg.id}:`, response.status, errorText)
+          throw new Error(`Counter offer failed: ${response.status} - ${errorText}`)
+        }
+      }
+      
+      const itemName = itemNegotiations[0].items?.[0]?.name || 'this item'
+      
+      return {
+        message: `Counter offers sent! I've offered **$${counterPrice}** to all ${itemNegotiations.length} buyer${itemNegotiations.length > 1 ? 's' : ''} interested in ${itemName}.\n\nThey'll receive notifications and can respond with their own counter-offers.`,
+        buttons: [
+          { text: `View ${itemName}`, action: `inspect_item_${itemId}` },
+          { text: "Show All Offers", action: "show_offers" },
+          { text: "🏠 Back to Home", action: "refresh" }
+        ]
+      }
+    } catch (error) {
+      return {
+        message: "I had trouble sending those counter offers. Want to try again?",
+        buttons: [
+          { text: `🔍 Back to Item`, action: `inspect_item_${itemId}` },
+          { text: "Show All Offers", action: "show_offers" }
+        ]
+      }
+    }
+  }
+
+  // Handle decline lowballs for specific item - decline_item_lowballs_<itemId>
+  if (message.startsWith("decline_item_lowballs_")) {
+    const itemId = message.split('_')[3] // Extract ID from "decline_item_lowballs_123"
+    
+    if (!itemId) {
+      return {
+        message: "Invalid item ID. Please try again.",
+        buttons: [
+          { text: "Show All Offers", action: "show_offers" }
+        ]
+      }
+    }
+
+    // Filter negotiations for this item
+    const itemNegotiations = negotiations.filter(neg => neg.item_id.toString() === itemId)
+    
+    if (itemNegotiations.length === 0) {
+      return {
+        message: "No active offers found for this item.",
+        buttons: [
+          { text: "Show All Offers", action: "show_offers" }
+        ]
+      }
+    }
+
+    const itemName = itemNegotiations[0].items?.[0]?.name || 'this item'
+    const startingPrice = parseFloat(itemNegotiations[0].items?.[0]?.starting_price || 0)
+    
+    // Identify lowball offers (below 70% of asking price)
+    const lowballs = itemNegotiations.filter((neg: any) => {
+      if (startingPrice === 0) return false
+      const offerPrice = parseFloat(neg.current_offer)
+      return (offerPrice / startingPrice) < 0.7
+    })
+
+    if (lowballs.length === 0) {
+      return {
+        message: `No lowball offers found for ${itemName}. All offers seem reasonable!`,
+        buttons: [
+          { text: `🔍 Back to ${itemName}`, action: `inspect_item_${itemId}` },
+          { text: "Show All Offers", action: "show_offers" }
+        ]
+      }
+    }
+
+    try {
+      // Decline all lowball offers for this item
+      for (const neg of lowballs) {
+        const { error: updateError } = await supabase
+          .from('negotiations')
+          .update({
+            status: 'cancelled',
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', neg.id)
+          .eq('seller_id', userId)
+        
+        if (updateError) {
+          console.error('Error declining negotiation:', updateError)
+        }
+      }
+      
+      const remainingOffers = itemNegotiations.length - lowballs.length
+      
+      return {
+        message: `✅ Done! I've declined ${lowballs.length} lowball offer${lowballs.length > 1 ? 's' : ''} for ${itemName}.\n\n${remainingOffers > 0 ? `You still have ${remainingOffers} other offer${remainingOffers > 1 ? 's' : ''} to consider for this item.` : 'This item now has no active offers.'}`,
+        buttons: remainingOffers > 0 ? [
+          { text: `View ${itemName}`, action: `inspect_item_${itemId}` },
+          { text: "Show All Offers", action: "show_offers" }
+        ] : [
+          { text: "Show All Offers", action: "show_offers" },
+          { text: " View All Items", action: "show_listings" }
+        ]
+      }
+    } catch (error) {
+      console.error('Error declining lowball offers:', error)
+      return {
+        message: "I had trouble declining those offers. Want to try again?",
+        buttons: [
+          { text: `🔍 Back to ${itemName}`, action: `inspect_item_${itemId}` },
+          { text: "Show All Offers", action: "show_offers" }
+        ]
+      }
+    }
+  }
+
+  // Handle custom counter price input - custom_counter_item_<itemId>
+  if (message.startsWith("custom_counter_item_")) {
+    const itemId = message.split('_')[3] // Extract ID from "custom_counter_item_123"
+    
+    if (!itemId) {
+      return {
+        message: "Invalid item ID. Please try again.",
+        buttons: [
+          { text: "Show All Offers", action: "show_offers" }
+        ]
+      }
+    }
+
+    // Filter negotiations for this item
+    const itemNegotiations = negotiations.filter(neg => neg.item_id.toString() === itemId)
+    
+    if (itemNegotiations.length === 0) {
+      return {
+        message: "No active offers found for this item.",
+        buttons: [
+          { text: "Show All Offers", action: "show_offers" }
+        ]
+      }
+    }
+
+    const itemName = itemNegotiations[0].items?.[0]?.name || 'this item'
+    const startingPrice = parseFloat(itemNegotiations[0].items?.[0]?.starting_price || 0)
+    
+    // Calculate offer range for guidance
+    const offerPrices = itemNegotiations.map(neg => parseFloat(neg.current_offer))
+    const minOffer = Math.min(...offerPrices)
+    const maxOffer = Math.max(...offerPrices)
+    const avgOffer = offerPrices.reduce((sum, price) => sum + price, 0) / offerPrices.length
+    
+    let guidanceText = `💰 What price would you like to counter with for **${itemName}**?\n\n`
+    
+    if (startingPrice > 0) {
+      guidanceText += `🏷️ Your asking price: $${startingPrice.toFixed(0)}\n`
+    }
+    
+    guidanceText += `📊 Current offers: $${minOffer.toFixed(0)} - $${maxOffer.toFixed(0)}\n`
+    guidanceText += `📈 Average offer: $${avgOffer.toFixed(0)}\n\n`
+    guidanceText += `💡 **Tip**: Counter between $${Math.round(avgOffer * 1.1)}-$${Math.round(avgOffer * 1.25)} for best results!\n\n`
+    guidanceText += `Just type your price (e.g., "175" or "$175"):`
+
+    // Create quick suggestion buttons
+    const suggestion1 = Math.round(avgOffer * 1.1) // 10% above average
+    const suggestion2 = Math.round(avgOffer * 1.2) // 20% above average
+    const suggestion3 = startingPrice > 0 ? Math.round((maxOffer + startingPrice) / 2) : Math.round(avgOffer * 1.25) // Midpoint between highest offer and asking
+
+    return {
+      message: guidanceText,
+      buttons: [
+        { text: `💰 $${suggestion1}`, action: `counter_item_${itemId}_${suggestion1}` },
+        { text: `💰 $${suggestion2}`, action: `counter_item_${itemId}_${suggestion2}` },
+        { text: `💰 $${suggestion3}`, action: `counter_item_${itemId}_${suggestion3}` },
+        { text: "Back to Item", action: `inspect_item_${itemId}` }
+      ],
+      metadata: {
+        expecting_price_input: true,
+        item_id: itemId,
+        context: 'custom_counter'
+      }
+    }
+  }
+
+  // Handle global custom counter price input - custom_counter_global
+  if (message === "custom_counter_global") {
+    if (negotiations.length === 0) {
+      return {
+        message: "No active offers to counter at the moment!",
+        buttons: [
+          { text: "Show Offers", action: "show_offers" },
+          { text: " View Items", action: "show_listings" }
+        ]
+      }
+    }
+
+    // Calculate global offer statistics
+    const allOfferPrices = negotiations.map(neg => parseFloat(neg.current_offer))
+    const minOffer = Math.min(...allOfferPrices)
+    const maxOffer = Math.max(...allOfferPrices)
+    const avgOffer = allOfferPrices.reduce((sum, price) => sum + price, 0) / allOfferPrices.length
+
+    let guidanceText = `💰 What price would you like to counter with for **all ${negotiations.length} offers**?\n\n`
+    guidanceText += `📊 Current offer range: $${minOffer.toFixed(0)} - $${maxOffer.toFixed(0)}\n`
+    guidanceText += `📈 Average offer: $${avgOffer.toFixed(0)}\n\n`
+    guidanceText += `💡 **Tip**: Counter between $${Math.round(avgOffer * 1.1)}-$${Math.round(avgOffer * 1.25)} for best results!\n\n`
+    guidanceText += `This will send the same counter price to all buyers across all your items.`
+
+    // Create quick suggestion buttons
+    const suggestion1 = Math.round(avgOffer * 1.1) // 10% above average
+    const suggestion2 = Math.round(avgOffer * 1.2) // 20% above average
+    const suggestion3 = Math.round(avgOffer * 1.25) // 25% above average
+
+    return {
+      message: guidanceText,
+      buttons: [
+        { text: `💰 $${suggestion1}`, action: `counter_price_${suggestion1}` },
+        { text: `💰 $${suggestion2}`, action: `counter_price_${suggestion2}` },
+        { text: `💰 $${suggestion3}`, action: `counter_price_${suggestion3}` },
+        { text: "Back to Offers", action: "show_offers" }
+      ]
+    }
+  }
+
+  // Handle numeric price input (when user types a number after custom counter prompt)
+  const numericInput = parseFloat(message.replace(/[$,\s]/g, '')) // Remove $ , and spaces
+  if (!isNaN(numericInput) && numericInput > 0) {
+    // This might be a price input - check if we have context from previous interaction
+    // For now, we'll handle this more explicitly through button actions
+    // But we can add smart detection here if needed
+    
+    // Check if this looks like a reasonable price (between $1-$100,000)
+    if (numericInput >= 1 && numericInput <= 100000) {
+      return {
+        message: `I see you entered $${numericInput.toFixed(0)}. To counter a specific item, please use the "Choose My Price" button from the item view, or tell me which item you want to counter.\n\nFor example: "Counter the bed at $${numericInput.toFixed(0)}"`,
+        buttons: [
+          { text: "Show My Offers", action: "show_offers" },
+          { text: " View All Items", action: "show_listings" }
+        ]
+      }
+    }
+  }
+
   // Default conversational response
   return {
-    message: "I'm here to help manage your marketplace offers! 🤖 What would you like to do?",
+    message: "I'm here to help manage your marketplace offers. What would you like to do?",
     buttons: [
-      { text: "💰 Show My Offers", action: "show_offers" },
-      { text: "⚡ Quick Actions", action: "quick_actions" }
+      { text: "Show My Offers", action: "show_offers" }
     ]
   }
 }
@@ -690,9 +1171,11 @@ export async function POST(request: NextRequest) {
       // Get authenticated user
       const authHeader = request.headers.get('authorization')
       let user = null
+      let authToken = null
       
       if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.split(' ')[1]
+        authToken = token
         const { data: { user: tokenUser }, error: tokenError } = await supabase.auth.getUser(token)
         if (!tokenError && tokenUser) {
           user = tokenUser
@@ -700,16 +1183,19 @@ export async function POST(request: NextRequest) {
       }
       
       if (!user) {
-        const { data: { user: sessionUser }, error: authError } = await supabase.auth.getUser()
-        if (authError || !sessionUser) {
+        const { data: { session }, error: authError } = await supabase.auth.getSession()
+        if (authError || !session?.user) {
           // Debug mode for testing
           user = { id: 'dffe15ff-6a9f-4be8-b223-3785355878e6' }
+          // For debug mode, we'll bypass the auth token requirement
+          authToken = 'debug'
         } else {
-          user = sessionUser
+          user = session.user
+          authToken = session.access_token // Use session token
         }
       }
 
-      const response = await generateConversationalResponse(message || 'hello', user.id)
+      const response = await generateConversationalResponse(message || 'hello', user.id, authToken)
 
       return NextResponse.json({
         message: response.message,

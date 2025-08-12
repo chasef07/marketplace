@@ -32,6 +32,9 @@ export default function ProfileEdit({ initialProfile }: ProfileEditProps) {
     location_state: '',
     zip_code: ''
   })
+  
+  // Single Supabase client instance for this component
+  const supabase = createClient()
   const [profileImage, setProfileImage] = useState<File | null>(null)
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(!initialProfile)
@@ -58,7 +61,7 @@ export default function ProfileEdit({ initialProfile }: ProfileEditProps) {
 
   const fetchProfile = async () => {
     try {
-      const supabase = createClient()
+      // Using shared supabase instance
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session) {
@@ -126,7 +129,7 @@ export default function ProfileEdit({ initialProfile }: ProfileEditProps) {
   const uploadProfileImage = async (file: File): Promise<string | null> => {
     try {
       setUploading(true)
-      const supabase = createClient()
+      // Using shared supabase instance
       
       // Generate unique filename
       const fileExt = file.name.split('.').pop()
@@ -154,7 +157,7 @@ export default function ProfileEdit({ initialProfile }: ProfileEditProps) {
       setSaving(true)
       setError(null)
 
-      const supabase = createClient()
+      // Using shared supabase instance
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session) {

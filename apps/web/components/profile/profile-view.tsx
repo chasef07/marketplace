@@ -83,7 +83,7 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
 
   const getProfileImageUrl = (filename?: string) => {
     if (!filename) return null
-    const supabase = createClient()
+    const supabase = createClient() // Using singleton pattern
     const { data } = supabase.storage.from('furniture-images').getPublicUrl(filename)
     return data.publicUrl
   }
@@ -95,7 +95,7 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
     
     if (!filename) return null
     
-    const supabase = createClient()
+    const supabase = createClient() // Using singleton pattern
     const { data } = supabase.storage.from('furniture-images').getPublicUrl(filename)
     return data.publicUrl
   }

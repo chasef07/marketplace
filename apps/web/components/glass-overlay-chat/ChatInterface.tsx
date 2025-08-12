@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Send, Loader2, Wifi, WifiOff } from 'lucide-react'
 import { useMarketplaceChat } from './hooks/useMarketplaceChat'
 import { MessageBubble } from './MessageBubble'
-import { QuickActions } from './QuickActions'
 import { StatusIndicator } from './StatusIndicator'
 
 interface ChatInterfaceProps {
@@ -29,7 +28,6 @@ export function ChatInterface({ isExpanded, onNotification, className = '' }: Ch
   } = useMarketplaceChat()
 
   const [inputMessage, setInputMessage] = useState('')
-  const [showQuickActions, setShowQuickActions] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -64,7 +62,6 @@ export function ChatInterface({ isExpanded, onNotification, className = '' }: Ch
 
     const message = inputMessage.trim()
     setInputMessage('')
-    setShowQuickActions(false)
     
     try {
       await sendMessage(message)
@@ -75,25 +72,9 @@ export function ChatInterface({ isExpanded, onNotification, className = '' }: Ch
     }
   }
 
-  // Handle quick action selection
-  const handleQuickAction = (action: string) => {
-    setInputMessage(action)
-    setShowQuickActions(false)
-    // Auto-send the quick action
-    setTimeout(() => {
-      sendMessage(action)
-    }, 100)
-  }
-
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputMessage(e.target.value)
-    // Show quick actions if input is empty
-    if (e.target.value.trim() === '' && messages.length <= 1) {
-      setShowQuickActions(true)
-    } else {
-      setShowQuickActions(false)
-    }
   }
 
   if (!isExpanded) {
@@ -227,22 +208,6 @@ export function ChatInterface({ isExpanded, onNotification, className = '' }: Ch
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick actions */}
-      <AnimatePresence>
-        {showQuickActions && messages.length <= 1 && !isLoading && (
-          <motion.div
-            className="px-4 py-2 border-t border-white/10"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-          >
-            <QuickActions 
-              onActionSelect={handleQuickAction}
-              isCompact={false}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Input area */}
       <div className="border-t border-white/10 p-3 bg-white/5" role="region" aria-label="Chat input">
@@ -304,15 +269,6 @@ export function ChatInterface({ isExpanded, onNotification, className = '' }: Ch
           )}
         </AnimatePresence>
 
-        {/* Quick actions compact view */}
-        {!showQuickActions && messages.length > 1 && (
-          <div className="mt-2">
-            <QuickActions 
-              onActionSelect={handleQuickAction}
-              isCompact={true}
-            />
-          </div>
-        )}
       </div>
     </div>
   )

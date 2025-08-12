@@ -9,11 +9,12 @@ import { createClient } from '@/lib/supabase'
 export default function MyProfilePage() {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const supabase = createClient()
 
   useEffect(() => {
     const redirectToProfile = async () => {
       try {
-        const supabase = createClient()
+        // Using shared supabase instance
         const { data: { session } } = await supabase.auth.getSession()
         
         if (!session) {

@@ -92,10 +92,9 @@ export function useMarketplaceChat() {
         })
 
         // Simple welcome message with basic marketplace info
-        let welcomeContent = "Hey there! 👋 I'm your AI marketplace assistant. Ready to help manage your offers and listings!"
+        let welcomeContent = "Hello! I'm your AI marketplace assistant. Ready to help manage your offers and listings."
         let welcomeButtons: any[] = [
-          { text: "💰 Show My Offers", action: "show_offers" },
-          { text: "⚡ Quick Actions", action: "quick_actions" }
+          { text: "Show My Offers", action: "show_offers" }
         ]
 
         // Optionally check if there are active offers without complex AI processing
@@ -107,9 +106,9 @@ export function useMarketplaceChat() {
             
             if (offerCount > 0) {
               if (recentCount > 0) {
-                welcomeContent = `Hey there! 👋 You have ${offerCount} active offer${offerCount > 1 ? 's' : ''}${recentCount > 0 ? ` (${recentCount} recent!)` : ''}. What would you like to do?`
+                welcomeContent = `Hello! You have ${offerCount} active offer${offerCount > 1 ? 's' : ''}${recentCount > 0 ? ` (${recentCount} recent!)` : ''}. What would you like to do?`
               } else {
-                welcomeContent = `Hey there! 👋 You have ${offerCount} active offer${offerCount > 1 ? 's' : ''} waiting for your response. What would you like to do?`
+                welcomeContent = `Hello! You have ${offerCount} active offer${offerCount > 1 ? 's' : ''} waiting for your response. What would you like to do?`
               }
             }
           } catch (error) {
