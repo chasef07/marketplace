@@ -45,32 +45,33 @@ export function SellerChat({ user, onBack }: SellerChatProps) {
     scrollToBottom()
   }, [messages])
 
-  // Real-time polling disabled for now to prevent UI issues
-  // useEffect(() => {
-  //   if (!conversationId || isLoading || isInitializing) return
+  // Real-time polling for new offer updates
+  useEffect(() => {
+    if (isLoading || isInitializing) return
 
-  //   const pollForMessages = setInterval(async () => {
-  //     try {
-  //       const history = await apiClient.getChatHistory(conversationId)
-  //       const newMessages = history.messages
+    const pollForOfferUpdates = setInterval(async () => {
+      try {
+        // Check for new offers and status updates
+        const statusResponse = await fetch('/api/seller/status', {
+          headers: await apiClient.getAuthHeaders(),
+          cache: 'no-cache'
+        })
         
-  //       // Only update if we have more messages and they're different
-  //       if (newMessages.length > messages.length) {
-  //         const lastKnownMessage = messages[messages.length - 1]
-  //         const lastNewMessage = newMessages[newMessages.length - 1]
+        if (statusResponse.ok) {
+          const status = await statusResponse.json()
+          // We don't automatically update messages, but we could show a notification
+          // about new offers or status changes
           
-  //         // Check if the last message is actually different
-  //         if (!lastKnownMessage || lastNewMessage.id !== lastKnownMessage.id) {
-  //           setMessages(newMessages)
-  //         }
-  //       }
-  //     } catch (error) {
-  //       console.error('Failed to poll for messages:', error)
-  //     }
-  //   }, 5000) // Poll every 5 seconds (less frequent)
+          // Optional: Add a subtle indicator for new activity
+          // This prevents the jarring effect of auto-updating chat content
+        }
+      } catch (error) {
+        console.error('Failed to poll for offer updates:', error)
+      }
+    }, 10000) // Poll every 10 seconds for status updates
 
-  //   return () => clearInterval(pollForMessages)
-  // }, [conversationId, messages.length, isLoading, isInitializing])
+    return () => clearInterval(pollForOfferUpdates)
+  }, [isLoading, isInitializing])
 
   const loadChatHistory = async () => {
     try {
@@ -217,13 +218,36 @@ What would you like to do today?`
     } catch (error: any) {
       console.error('Failed to send message:', error)
       
-      // Add error message
+      // Improved error handling with retry logic
+      let errorMessage = "I'm having trouble connecting right now. "
+      let retryButtons = []
+      
+      if (error.message?.includes('Authentication')) {
+        errorMessage = "Please log in again to continue using the AI assistant."
+        retryButtons = [
+          { text: "🔐 Log In", action: "login_required" }
+        ]
+      } else if (error.message?.includes('Network') || error.message?.includes('fetch')) {
+        errorMessage = "Network connection issue. Let me try to reconnect..."
+        retryButtons = [
+          { text: "🔄 Retry", action: "retry_message" },
+          { text: "📱 Refresh Page", action: "refresh_page" }
+        ]
+      } else {
+        errorMessage = "Something unexpected happened. Don't worry, your data is safe!"
+        retryButtons = [
+          { text: "🔄 Try Again", action: "retry_message" },
+          { text: "🏠 Start Over", action: "refresh" }
+        ]
+      }
+      
+      // Add error message with helpful recovery options
       const errorMessageObj: ChatMessage = {
         id: Date.now() + 2,
         conversation_id: conversationId || 0,
         role: 'assistant',
-        content: `Sorry, I encountered an error: ${error.message}. Please try again.`,
-        metadata: { error: true },
+        content: errorMessage,
+        metadata: { error: true, retryButtons },
         created_at: new Date().toISOString()
       }
       
@@ -316,9 +340,9 @@ What would you like to do today?`
   }
 
   return (
-    <div className="h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #F7F3E9 0%, #E8DDD4 50%, #DDD1C7 100%)' }}>
+    <div className="h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, rgba(247, 243, 233, 0.9) 0%, rgba(232, 221, 212, 0.9) 50%, rgba(221, 209, 199, 0.9) 100%)' }}>
       {/* Header */}
-      <header className="backdrop-blur-md border-b flex-shrink-0" style={{ background: 'rgba(247, 243, 233, 0.9)', borderColor: 'rgba(139, 69, 19, 0.1)' }}>
+      <header className="backdrop-blur-md border-b flex-shrink-0" style={{ background: 'rgba(255, 255, 255, 0.3)', borderColor: 'rgba(139, 69, 19, 0.2)' }}>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -327,19 +351,19 @@ What would you like to do today?`
                 size="sm" 
                 onClick={onBack}
                 className="hover:bg-opacity-10"
-                style={{ color: '#8B4513' }}
+                style={{ color: '#374151' }}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
               <div>
-                <h1 className="text-2xl font-bold" style={{ color: '#3C2415' }}>Seller Assistant</h1>
-                <p className="text-sm" style={{ color: '#6B5A47' }}>AI-powered help for managing your listings</p>
+                <h1 className="text-2xl font-bold" style={{ color: '#1F1F1F' }}>Seller Assistant</h1>
+                <p className="text-sm" style={{ color: '#374151' }}>AI-powered help for managing your listings</p>
               </div>
             </div>
             
             <div className="flex items-center gap-4">
-              <span className="text-sm" style={{ color: '#6B5A47' }}>
+              <span className="text-sm" style={{ color: '#374151' }}>
                 Welcome, {user.username}!
               </span>
             </div>
@@ -349,10 +373,10 @@ What would you like to do today?`
 
       {/* Chat Container */}
       <div className="flex-1 container mx-auto px-4 py-6 max-w-4xl flex flex-col">
-        <Card className="flex-1 flex flex-col min-h-0">
+        <Card className="flex-1 flex flex-col min-h-0" style={{ background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(8px)' }}>
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2" style={{ color: '#3C2415' }}>
-              <Bot className="w-5 h-5" style={{ color: '#8B4513' }} />
+            <CardTitle className="flex items-center gap-2" style={{ color: '#1F1F1F' }}>
+              <Bot className="w-5 h-5" style={{ color: '#374151' }} />
               Chat with your AI assistant
             </CardTitle>
           </CardHeader>
@@ -366,8 +390,8 @@ What would you like to do today?`
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-32 text-center">
-                  <Bot className="w-12 h-12 mb-4" style={{ color: '#8B4513' }} />
-                  <p style={{ color: '#6B5A47' }}>Your AI assistant is ready to help manage your listings!</p>
+                  <Bot className="w-12 h-12 mb-4" style={{ color: '#374151' }} />
+                  <p style={{ color: '#374151' }}>Your AI assistant is ready to help manage your listings!</p>
                 </div>
               ) : (
                 messages.map((message) => (
@@ -411,9 +435,10 @@ What would you like to do today?`
                   disabled={isLoading}
                   className="flex-1 px-4 py-3 border rounded-full focus:outline-none focus:ring-2 disabled:opacity-50"
                   style={{ 
-                    borderColor: 'rgba(139, 69, 19, 0.2)',
-                    backgroundColor: '#FAFAFA',
-                    '--tw-ring-color': 'rgba(139, 69, 19, 0.3)'
+                    borderColor: 'rgba(139, 69, 19, 0.3)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                    color: '#1F1F1F',
+                    '--tw-ring-color': 'rgba(139, 69, 19, 0.4)'
                   } as any}
                 />
                 <Button
@@ -426,27 +451,30 @@ What would you like to do today?`
                 </Button>
               </form>
               
-              {/* Quick Actions */}
-              <div className="flex flex-wrap gap-2 mt-3">
-                {[
-                  "Any new offers today?",
-                  "Show me my active listings",
-                  "What should I do about lowball offers?",
-                  "Help me price my items better"
-                ].map((suggestion) => (
+              {/* Show My Offers - Prominent Call to Action */}
+              <div className="mt-4 mb-2">
+                <div className="text-center text-sm mb-2 font-medium" style={{ color: '#374151' }}>👆 Start here to manage your offers</div>
+                <div className="flex justify-center">
                   <button
-                    key={suggestion}
-                    onClick={() => setInputMessage(suggestion)}
+                    onClick={() => setInputMessage("Show my offers")}
                     disabled={isLoading}
-                    className="px-3 py-1 text-xs rounded-full bg-white border hover:shadow-sm transition-shadow disabled:opacity-50"
+                    className="px-8 py-4 rounded-xl font-semibold text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:transform-none relative"
                     style={{ 
-                      borderColor: 'rgba(139, 69, 19, 0.2)',
-                      color: '#6B5A47'
+                      background: 'linear-gradient(135deg, #8B4513, #CD853F)',
+                      boxShadow: '0 8px 32px rgba(139, 69, 19, 0.3)'
                     }}
                   >
-                    {suggestion}
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">💰</span>
+                      <div className="text-left">
+                        <div className="text-lg">Show My Offers</div>
+                        <div className="text-sm opacity-90">View all active negotiations</div>
+                      </div>
+                    </div>
+                    {/* Pulsing indicator */}
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
                   </button>
-                ))}
+                </div>
               </div>
             </div>
           </CardContent>

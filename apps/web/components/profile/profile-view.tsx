@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase'
 import { colors, gradients, shadows } from '../home/design-system/colors'
 import { animations } from '../home/design-system/animations'
+import { FloatingSellerChat } from '../chat/FloatingSellerChat'
 
 interface ProfileData {
   id: string
@@ -428,6 +429,17 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
           }
         }
       `}</style>
+      
+      {/* Floating Chat - Only for own profile */}
+      {isOwnProfile && profile && (
+        <FloatingSellerChat 
+          user={{
+            id: profile.id,
+            username: profile.username,
+            email: profile.username + '@example.com' // Fallback since email isn't in ProfileData
+          }} 
+        />
+      )}
     </div>
   )
 }

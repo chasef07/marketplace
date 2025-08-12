@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Execute action by calling existing API endpoints
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3004'
       
       let body = {}
       if (action === 'counter') {

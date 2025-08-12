@@ -14,9 +14,7 @@ const ItemDetail = dynamic(() => import('../marketplace/item-detail').then(mod =
   loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
 })
 
-const SellerChat = dynamic(() => import('../chat/seller-chat').then(mod => ({ default: mod.SellerChat })), {
-  loading: () => <div className="h-96 bg-gray-100 animate-pulse rounded-lg" />
-})
+
 
 const ProfileView = dynamic(() => import('../profile/profile-view'), {
   loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
@@ -39,7 +37,7 @@ interface User {
 
 export function HomePage() {
   const [user, setUser] = useState<User | null>(null)
-  const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'item-detail' | 'listing-preview' | 'seller-chat' | 'profile-view' | 'profile-edit'>('home')
+  const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'item-detail' | 'listing-preview' | 'profile-view' | 'profile-edit'>('home')
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<{analysisData: AIAnalysisResult, uploadedImages: string[]} | null>(null)
@@ -333,7 +331,6 @@ export function HomePage() {
         onLogout={handleSignOut}
         onItemClick={handleItemClick}
         onSignInClick={() => { setAuthMode('signin'); setCurrentView('auth'); }}
-        onSellerChat={() => setCurrentView('seller-chat')}
         onViewProfile={handleViewProfile}
       />
     )
@@ -352,14 +349,6 @@ export function HomePage() {
 
 
 
-  if (currentView === 'seller-chat' && user) {
-    return (
-      <SellerChat
-        user={user}
-        onBack={handleBackToMarketplace}
-      />
-    )
-  }
 
   if (currentView === 'item-detail' && selectedItemId) {
     return (
@@ -386,6 +375,7 @@ export function HomePage() {
       />
     )
   }
+
 
   if (currentView === 'profile-view' && selectedUsername) {
     return (

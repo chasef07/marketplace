@@ -1,30 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase'
+import { requireAuth } from '@/lib/auth-helpers'
 
 const supabase = createSupabaseServerClient()
 
 export async function GET(request: NextRequest) {
   try {
-    // Get authenticated user from request headers
-    const authHeader = request.headers.get('Authorization')
-    let user
-    
-    if (!authHeader) {
-      // For GET requests, try to get session from cookie-based auth
-      const { data: userData, error: authError } = await supabase.auth.getUser()
-      if (authError || !userData.user) {
-        return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-      }
-      user = userData.user
-    } else {
-      // Use token from Authorization header
-      const token = authHeader.replace('Bearer ', '')
-      const { data: userData, error: authError } = await supabase.auth.getUser(token)
-      if (authError || !userData.user) {
-        return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-      }
-      user = userData.user
-    }
+    // Get authenticated user
+    const { user } = await requireAuth(request)
 
     console.log('Getting seller status for user:', user.id)
     

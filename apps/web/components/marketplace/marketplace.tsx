@@ -32,14 +32,13 @@ interface MarketplaceProps {
   onLogout: () => void
   onItemClick?: (itemId: number) => void
   onSignInClick?: () => void
-  onSellerChat?: () => void
   onViewProfile?: () => void
 }
 
 // Fetcher function for SWR
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
-export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSignInClick, onSellerChat, onViewProfile }: MarketplaceProps) {
+export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSignInClick, onViewProfile }: MarketplaceProps) {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchInput, setSearchInput] = useState("")
