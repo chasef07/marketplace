@@ -74,7 +74,7 @@ export const HomePage = React.memo(function HomePage() {
     let authStateTimeout: NodeJS.Timeout | null = null
 
     // Debounced auth state handler to prevent race conditions
-    const debouncedAuthStateChange = (session: any) => {
+    const debouncedAuthStateChange = (session: unknown) => {
       if (authStateTimeout) {
         clearTimeout(authStateTimeout)
       }

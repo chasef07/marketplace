@@ -93,7 +93,7 @@ export function useMarketplaceChat() {
 
         // Simple welcome message with basic marketplace info
         let welcomeContent = "Hello! I'm your AI marketplace assistant. Ready to help manage your offers and listings."
-        let welcomeButtons: any[] = [
+        const welcomeButtons: Array<{text: string, action: string}> = [
           { text: "Show My Offers", action: "show_offers" }
         ]
 

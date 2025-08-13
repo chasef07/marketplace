@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
       .from('items')
       .select('id, name, starting_price, created_at')
       .eq('seller_id', user.id)
-      .eq('is_available', true)
+      .eq('item_status', 'active')
 
     // Generate intelligent summary with recent offer insights
     const recentOffers = enrichedNegotiations?.filter(neg => neg.is_recent) || []
@@ -129,10 +129,11 @@ export async function GET(request: NextRequest) {
       has_recent_activity: recentOffers.length > 0
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Status API error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to get status'
     return NextResponse.json(
-      { error: error.message || 'Failed to get status' },
+      { error: errorMessage },
       { status: 500 }
     )
   }

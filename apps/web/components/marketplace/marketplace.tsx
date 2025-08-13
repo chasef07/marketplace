@@ -35,8 +35,32 @@ interface MarketplaceProps {
   onViewProfile?: () => void
 }
 
-// Fetcher function for SWR
-const fetcher = (url: string) => fetch(url).then(res => res.json())
+// Fetcher function for SWR with better error handling
+const fetcher = async (url: string) => {
+  console.log('Fetching URL:', url)
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-cache'
+    })
+    console.log('Fetch response status:', res.status, res.statusText)
+    
+    if (!res.ok) {
+      const errorData = await res.text()
+      console.error('Fetch error response:', errorData)
+      throw new Error(`Failed to fetch: ${res.status} ${res.statusText} - ${errorData}`)
+    }
+    
+    const data = await res.json()
+    console.log('Fetched data:', data)
+    return data
+  } catch (error) {
+    console.error('Fetch exception:', error)
+    throw error
+  }
+}
 
 export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSignInClick, onViewProfile }: MarketplaceProps) {
   const [error, setError] = useState<string | null>(null)
@@ -66,15 +90,25 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
   // Add a timestamp to force fresh data when needed
   const [refreshTimestamp, setRefreshTimestamp] = useState(Date.now())
   
+  // Construct SWR key
+  const swrKey = `/api/items?page=${currentPage}&limit=12&_t=${refreshTimestamp}`
+  
   // Use SWR for data fetching with caching
   const { data, error: swrError, mutate } = useSWR(
-    `/api/items?page=${currentPage}&limit=12&_t=${refreshTimestamp}`,
+    swrKey,
     fetcher,
     {
       revalidateOnFocus: false,
-      dedupingInterval: 30000, // Reduced dedupe interval
-      errorRetryCount: 3,
-      errorRetryInterval: 5000
+      revalidateOnReconnect: true,
+      dedupingInterval: 5000, // Reduced dedupe interval
+      errorRetryCount: 2,
+      errorRetryInterval: 1000,
+      onError: (error) => {
+        console.error('SWR Error:', error)
+      },
+      onSuccess: (data) => {
+        console.log('SWR Success:', data)
+      }
     }
   )
 
@@ -98,12 +132,21 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
 
   // Update error state from SWR
   useEffect(() => {
+    console.log('SWR Debug:', { 
+      swrKey, 
+      data: data ? 'loaded' : 'null', 
+      swrError: swrError ? swrError.message : 'null', 
+      loading,
+      itemsLength: data?.items?.length || 0
+    })
+    
     if (swrError) {
-      setError('Failed to load marketplace items')
-    } else {
+      console.error('SWR Error details:', swrError)
+      setError(`Failed to load marketplace items: ${swrError.message}`)
+    } else if (data) {
       setError(null)
     }
-  }, [swrError])
+  }, [swrError, data, loading, swrKey])
 
   // Function to refresh data (replaces fetchItems)
   const refreshItems = useCallback(() => {
@@ -147,7 +190,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
         }
       }
       
-      return matchesSearch && matchesPrice && item.is_available
+      return matchesSearch && matchesPrice && item.item_status === 'active'
     })
   }, [items, searchQuery, selectedPriceRange])
 

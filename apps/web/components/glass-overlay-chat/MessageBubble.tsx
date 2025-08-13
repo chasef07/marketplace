@@ -9,7 +9,7 @@ interface MessageBubbleProps {
   message: ChatUIMessage
   isCompact?: boolean
   className?: string
-  onButtonClick?: (action: string, data?: any) => void
+  onButtonClick?: (action: string, data?: unknown) => void
 }
 
 export function MessageBubble({ message, isCompact = false, className = '', onButtonClick }: MessageBubbleProps) {
@@ -124,7 +124,7 @@ export function MessageBubble({ message, isCompact = false, className = '', onBu
           {/* Interactive Buttons */}
           {!isUser && message.metadata?.buttons && message.metadata.buttons.length > 0 && !isCompact && (
             <div className="mt-3 flex gap-2 justify-start">
-              {message.metadata.buttons.map((button: any, index: number) => (
+              {message.metadata.buttons.map((button: unknown, index: number) => (
                 <button
                   key={index}
                   type="button"

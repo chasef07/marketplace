@@ -24,11 +24,12 @@ export type Database = {
           furniture_type: Database["public"]["Enums"]["furniture_type"]
           id: number
           images: Json | null
-          is_available: boolean
+          item_status: Database["public"]["Enums"]["item_status"]
           name: string
           seller_id: string
           sold_at: string | null
           starting_price: number
+          status_changed_at: string
           updated_at: string
           views_count: number
         }
@@ -41,11 +42,12 @@ export type Database = {
           furniture_type: Database["public"]["Enums"]["furniture_type"]
           id?: number
           images?: Json | null
-          is_available?: boolean
+          item_status?: Database["public"]["Enums"]["item_status"]
           name: string
           seller_id: string
           sold_at?: string | null
           starting_price: number
+          status_changed_at?: string
           updated_at?: string
           views_count?: number
         }
@@ -58,11 +60,12 @@ export type Database = {
           furniture_type?: Database["public"]["Enums"]["furniture_type"]
           id?: number
           images?: Json | null
-          is_available?: boolean
+          item_status?: Database["public"]["Enums"]["item_status"]
           name?: string
           seller_id?: string
           sold_at?: string | null
           starting_price?: number
+          status_changed_at?: string
           updated_at?: string
           views_count?: number
         }
@@ -323,6 +326,17 @@ export type Database = {
         | "nightstand"
         | "cabinet"
         | "other"
+      item_status:
+        | "draft"
+        | "pending_review"
+        | "active"
+        | "under_negotiation"
+        | "sold_pending"
+        | "sold"
+        | "paused"
+        | "archived"
+        | "flagged"
+        | "removed"
       negotiation_status:
         | "active"
         | "deal_pending"
@@ -469,6 +483,18 @@ export const Constants = {
         "nightstand",
         "cabinet",
         "other",
+      ],
+      item_status: [
+        "draft",
+        "pending_review",
+        "active",
+        "under_negotiation",
+        "sold_pending",
+        "sold",
+        "paused",
+        "archived",
+        "flagged",
+        "removed",
       ],
       negotiation_status: [
         "active",

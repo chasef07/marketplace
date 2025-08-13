@@ -61,7 +61,7 @@ export interface Item {
   condition: string
   image_filename?: string // Backward compatibility
   images?: ImageData[] // New multiple images support
-  is_available: boolean
+  item_status: 'draft' | 'pending_review' | 'active' | 'under_negotiation' | 'sold_pending' | 'sold' | 'paused' | 'archived' | 'flagged' | 'removed'
   views_count: number
   style?: string
   dimensions?: string
@@ -124,8 +124,8 @@ export interface ChatMessage {
   conversation_id: number
   role: 'user' | 'assistant' | 'system'
   content: string
-  function_calls?: any
-  function_results?: any
+  function_calls?: unknown
+  function_results?: unknown
   metadata: Record<string, any>
   created_at: string
 }
@@ -143,7 +143,7 @@ export interface ChatResponse {
   message: string
   conversation_id: number
   function_executed?: string
-  function_results?: any
+  function_results?: unknown
 }
 
 export interface ChatHistoryResponse {
@@ -274,7 +274,7 @@ export class SupabaseApiClient {
     description?: string;
     condition?: string;
     starting_price?: number;
-    is_available?: boolean;
+    item_status?: 'draft' | 'pending_review' | 'active' | 'under_negotiation' | 'sold_pending' | 'sold' | 'paused' | 'archived' | 'flagged' | 'removed';
   }) {
     const headers = await this.getAuthHeaders(true)
     
@@ -309,7 +309,7 @@ export class SupabaseApiClient {
   }
 
   private _lastUserFetch = 0
-  private _getUserCache: any = null
+  private _getUserCache: unknown = null
   private _consecutiveAuthErrors = 0
   private _authCircuitBreakerUntil = 0
   private readonly MAX_AUTH_ERRORS = 3
@@ -317,7 +317,7 @@ export class SupabaseApiClient {
   
   // Add caching for negotiations
   private _lastNegotiationsFetch = 0
-  private _negotiationsCache: any = null
+  private _negotiationsCache: unknown = null
   private readonly NEGOTIATIONS_CACHE_DURATION = 5000 // 5 seconds
   
   async getCurrentUser() {

@@ -189,10 +189,10 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
     return errors.length === 0
   }
 
-  const getErrorMessage = (error: any): string => {
+  const getErrorMessage = (error: unknown): string => {
     if (typeof error === 'string') return error
     
-    const message = error?.message || ''
+    const message = (error as Error)?.message || ''
     
     // Improved error messages for common Supabase auth errors
     if (message.includes('Invalid login credentials')) {
@@ -605,7 +605,7 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
               {mode === 'signin' && (
                 <div className="space-y-2">
                   <p className="text-sm" style={{ color: '#2C3E50' }}>
-                    Don't have an account?{' '}
+                    Don&apos;t have an account?{' '}
                     <button
                       type="button"
                       onClick={() => switchMode('register')}

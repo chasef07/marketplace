@@ -187,12 +187,43 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to parse AI analysis' }, { status: 500 })
     }
 
+    interface Analysis {
+      furniture_type: string;
+      style: string;
+      material: string;
+      brand: string;
+      color: string;
+      estimated_dimensions: string;
+      key_features: string[];
+    }
+
+    interface Pricing {
+      suggested_starting_price: number;
+      suggested_min_price: number;
+      quick_sale_price: number;
+      market_price: number;
+      premium_price: number;
+      pricing_explanation: string;
+    }
+
+    interface Listing {
+      title: string;
+      description: string;
+      furniture_type: string;
+    }
+
+    interface ImageData {
+      filename: string;
+      order: number;
+      is_primary: boolean;
+    }
+
     const responseData: {
       success: boolean;
-      analysis: any;
-      pricing: any;
-      listing: any;
-      images: any[];
+      analysis: Analysis;
+      pricing: Pricing;
+      listing: Listing;
+      images: ImageData[];
       image_filename?: string;
     } = {
       success: true,

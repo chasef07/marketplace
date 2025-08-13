@@ -28,10 +28,11 @@ export async function GET(request: NextRequest) {
       }
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Chat history API error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch chat history'
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch chat history' },
+      { error: errorMessage },
       { status: 500 }
     )
   }

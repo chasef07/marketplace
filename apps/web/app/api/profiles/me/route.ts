@@ -93,7 +93,7 @@ export async function PUT(request: NextRequest) {
         'zip_code'
       ]
 
-      const updateData: Record<string, any> = {}
+      const updateData: Record<string, unknown> = {}
       for (const field of allowedFields) {
         if (body[field] !== undefined) {
           updateData[field] = body[field]

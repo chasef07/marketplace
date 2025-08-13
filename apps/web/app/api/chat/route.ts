@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(data, { status: response.status })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Chat redirect error:', error)
     return NextResponse.json(
       { error: 'Chat service unavailable' },

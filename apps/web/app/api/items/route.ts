@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
           zip_code
         )
       `, { count: 'exact' })
-      .eq('is_available', true)
+      .eq('item_status', 'active')
       .order('created_at', { ascending: false })
       .range(validatedOffset, validatedOffset + validatedLimit - 1)
 

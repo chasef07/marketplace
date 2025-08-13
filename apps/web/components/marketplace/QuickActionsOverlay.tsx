@@ -102,7 +102,7 @@ export function QuickActionsOverlay({ trigger }: QuickActionsOverlayProps) {
     try {
       const headers = await apiClient.getAuthHeaders(true)
       
-      let body: any = {
+      const body: Record<string, unknown> = {
         action: actionType,
         negotiation_id: selectedNegotiation.id
       }
@@ -438,7 +438,7 @@ export function QuickActionsOverlay({ trigger }: QuickActionsOverlayProps) {
                     <div className="text-center py-4 text-gray-600">
                       <Package className="w-8 h-8 mx-auto mb-2 text-gray-400" />
                       <p className="font-medium text-gray-800">No active offers yet</p>
-                      <p className="text-sm mt-1">Here's what you can do:</p>
+                      <p className="text-sm mt-1">Here&apos;s what you can do:</p>
                     </div>
 
                     <div className="space-y-3">
@@ -599,7 +599,7 @@ export function QuickActionsOverlay({ trigger }: QuickActionsOverlayProps) {
                               {negotiation.recent_message && (
                                 <div className="flex items-center gap-2 text-sm text-gray-700 bg-gray-100 rounded-lg px-3 py-2 mt-2">
                                   <MessageCircle className="w-3 h-3 text-gray-500 flex-shrink-0" />
-                                  <span className="italic">"{negotiation.recent_message}"</span>
+                                  <span className="italic">&quot;{negotiation.recent_message}&quot;</span>
                                 </div>
                               )}
                             </div>

@@ -100,20 +100,9 @@ function LeafletMapComponent({ zipCode }: { zipCode: string }) {
     }
   }, [])
 
-  if (loading) {
-    return (
-      <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center border">
-        <div className="text-sm text-gray-500">Loading map...</div>
-      </div>
-    )
-  }
-
-  if (error || !coordinates) {
-    return <LocationFallback zipCode={zipCode} />
-  }
-
   // Create the map using vanilla Leaflet to avoid React SSR issues
   useEffect(() => {
+    if (!coordinates) return
     const initMap = async () => {
       if (typeof window === 'undefined') return
 
@@ -183,6 +172,18 @@ function LeafletMapComponent({ zipCode }: { zipCode: string }) {
       initMap()
     }
   }, [coordinates, zipCode])
+
+  if (loading) {
+    return (
+      <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center border">
+        <div className="text-sm text-gray-500">Loading map...</div>
+      </div>
+    )
+  }
+
+  if (error || !coordinates) {
+    return <LocationFallback zipCode={zipCode} />
+  }
 
   return (
     <div 

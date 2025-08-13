@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase'
 import { ratelimit, withRateLimit } from '@/lib/rate-limit'
 import { getAuthenticatedUser } from '@/src/lib/auth-helpers'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Simple marketplace assistant - no complex state management
 export async function POST(request: NextRequest) {
@@ -60,12 +61,14 @@ export async function POST(request: NextRequest) {
       // Default: show welcome
       return await handleWelcome(supabase, userId)
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Chat error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       return NextResponse.json(
         { 
           error: 'Chat service temporarily unavailable',
           message: "Sorry, I'm having trouble right now. Please try again.",
+          details: errorMessage,
           buttons: [{ text: "🔄 Try Again", action: "hello" }]
         }, 
         { status: 500 }
@@ -74,7 +77,7 @@ export async function POST(request: NextRequest) {
   })
 }
 
-async function handleWelcome(supabase: any, userId: string) {
+async function handleWelcome(supabase: SupabaseClient, userId: string) {
   try {
     // Get all active negotiations where user is the seller
     const { data: negotiations, error } = await supabase
@@ -107,7 +110,7 @@ async function handleWelcome(supabase: any, userId: string) {
 
     // Get latest offers and offer history for each negotiation
     const enrichedNegotiations = await Promise.all(
-      negotiations.map(async (neg: any) => {
+      negotiations.map(async (neg: Record<string, unknown>) => {
         // Get latest offer
         const { data: latestOffer } = await supabase
           .from('offers')
@@ -125,7 +128,7 @@ async function handleWelcome(supabase: any, userId: string) {
           .order('created_at', { ascending: true })
 
         // Get buyer's original offer (first buyer offer)
-        const buyerOriginalOffer = allOffers?.find(offer => offer.offer_type === 'buyer' && !offer.is_counter_offer)
+        const buyerOriginalOffer = allOffers?.find((offer: Database['public']['Tables']['offers']['Row']) => offer.offer_type === 'buyer' && !offer.is_counter_offer)
 
         return {
           ...neg,
@@ -141,7 +144,7 @@ async function handleWelcome(supabase: any, userId: string) {
     const offerCount = enrichedNegotiations.length
     let message = `💼 **Marketplace Assistant**\n\nYou have ${offerCount} active offer${offerCount > 1 ? 's' : ''}:\n\n`
 
-    const buttons: any[] = []
+    const buttons: Array<{text: string, action: string}> = []
 
     enrichedNegotiations.forEach((neg, index) => {
       const buyerName = neg.profiles?.username || 'Unknown Buyer'
@@ -215,7 +218,7 @@ async function handleWelcome(supabase: any, userId: string) {
   }
 }
 
-async function handleAccept(supabase: any, userId: string, negotiationId: number, authToken: string | null) {
+async function handleAccept(supabase: SupabaseClient, userId: string, negotiationId: number, authToken: string | null) {
   try {
     // Get negotiation details
     const { data: negotiation, error: negotiationError } = await supabase
@@ -280,7 +283,7 @@ async function handleAccept(supabase: any, userId: string, negotiationId: number
     const { error: itemUpdateError } = await supabase
       .from('items')
       .update({
-        is_available: false,
+        item_status: 'sold',
         sold_at: new Date().toISOString()
       })
       .eq('id', negotiation.item_id)
@@ -310,7 +313,7 @@ async function handleAccept(supabase: any, userId: string, negotiationId: number
   }
 }
 
-async function handleDecline(supabase: any, userId: string, negotiationId: number, authToken: string | null) {
+async function handleDecline(supabase: SupabaseClient, userId: string, negotiationId: number, authToken: string | null) {
   try {
     // Get negotiation details
     const { data: negotiation, error: negotiationError } = await supabase
@@ -407,7 +410,7 @@ async function handleDecline(supabase: any, userId: string, negotiationId: numbe
   }
 }
 
-async function showCounterInput(supabase: any, userId: string, negotiationId: number) {
+async function showCounterInput(supabase: SupabaseClient, userId: string, negotiationId: number) {
   try {
     // Get negotiation details for context
     const { data: negotiation } = await supabase
@@ -479,7 +482,7 @@ async function showCounterInput(supabase: any, userId: string, negotiationId: nu
   }
 }
 
-async function handleCounter(supabase: any, userId: string, negotiationId: number, price: number, authToken: string | null) {
+async function handleCounter(supabase: SupabaseClient, userId: string, negotiationId: number, price: number, authToken: string | null) {
   try {
     if (!price || price <= 0) {
       return NextResponse.json({
@@ -681,7 +684,7 @@ async function handleCounter(supabase: any, userId: string, negotiationId: numbe
   }
 }
 
-async function handleCounterForce(supabase: any, userId: string, negotiationId: number, price: number, authToken: string | null) {
+async function handleCounterForce(supabase: SupabaseClient, userId: string, negotiationId: number, price: number, authToken: string | null) {
   try {
     // Get negotiation details with minimal validation (this is "force" so we bypass some checks)
     const { data: negotiationDetails, error: negotiationError } = await supabase

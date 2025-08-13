@@ -44,7 +44,7 @@ export async function POST(
     // Get item details
     const { data: item, error: itemError } = await supabase
       .from('items')
-      .select('seller_id, is_available')
+      .select('seller_id, item_status')
       .eq('id', itemId)
       .single()
 
@@ -52,7 +52,7 @@ export async function POST(
       return NextResponse.json({ error: 'Item not found' }, { status: 404 })
     }
 
-    if (!item.is_available) {
+    if (item.item_status !== 'active') {
       return NextResponse.json({ error: 'Item is no longer available' }, { status: 400 })
     }
 

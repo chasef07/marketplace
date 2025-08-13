@@ -77,10 +77,11 @@ export async function POST(request: NextRequest) {
     const result = await response.json()
     return NextResponse.json(result)
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Action API error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Action failed'
     return NextResponse.json(
-      { error: error.message || 'Action failed' },
+      { error: errorMessage },
       { status: 500 }
     )
   }

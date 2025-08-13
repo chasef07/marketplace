@@ -36,7 +36,7 @@ interface FurnitureItem {
   seller?: SellerInfo
   created_at: string
   updated_at: string
-  is_available: boolean
+  item_status: 'draft' | 'pending_review' | 'active' | 'under_negotiation' | 'sold_pending' | 'sold' | 'paused' | 'archived' | 'flagged' | 'removed'
   style?: string
   dimensions?: string
   material?: string
@@ -101,10 +101,14 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
   const [showMessages, setShowMessages] = useState(false)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
-  const [editForm, setEditForm] = useState({
+  const [editForm, setEditForm] = useState<{
+    description: string;
+    starting_price: string;
+    item_status: 'draft' | 'pending_review' | 'active' | 'under_negotiation' | 'sold_pending' | 'sold' | 'paused' | 'archived' | 'flagged' | 'removed';
+  }>({
     description: '',
     starting_price: '',
-    is_available: true
+    item_status: 'active'
   })
   const [saveLoading, setSaveLoading] = useState(false)
 
@@ -215,7 +219,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
     setEditForm({
       description: item.description || '',
       starting_price: item.starting_price,
-      is_available: item.is_available
+      item_status: item.item_status
     })
     setIsEditing(true)
   }
@@ -225,7 +229,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
     setEditForm({
       description: '',
         starting_price: '',
-      is_available: true
+      item_status: 'active'
     })
   }
 
@@ -236,7 +240,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
       description: string;
       condition: string;
       starting_price: number;
-      is_available: boolean;
+      item_status: 'draft' | 'pending_review' | 'active' | 'under_negotiation' | 'sold_pending' | 'sold' | 'paused' | 'archived' | 'flagged' | 'removed';
     }> = {}
     
     if (editForm.description !== item.description) {
@@ -245,8 +249,8 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
     if (parseFloat(editForm.starting_price) !== parseFloat(item.starting_price)) {
       updates.starting_price = parseFloat(editForm.starting_price)
     }
-    if (editForm.is_available !== item.is_available) {
-      updates.is_available = editForm.is_available
+    if (editForm.item_status !== item.item_status) {
+      updates.item_status = editForm.item_status
     }
 
     if (Object.keys(updates).length === 0) {
@@ -468,13 +472,16 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
                       
                       {isEditing && (
                         <label className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={editForm.is_available}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, is_available: e.target.checked }))}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="ml-2 text-sm" style={{ color: '#6B7280' }}>Item is available for sale</span>
+                          <select
+                            value={editForm.item_status}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, item_status: e.target.value as any }))}
+                            className="rounded border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="active">Active (Available for sale)</option>
+                            <option value="paused">Paused (Temporarily unavailable)</option>
+                            <option value="sold">Sold</option>
+                            <option value="archived">Archived</option>
+                          </select>
                         </label>
                       )}
                     </div>

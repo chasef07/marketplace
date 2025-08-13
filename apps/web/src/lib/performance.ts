@@ -9,8 +9,8 @@ export const trackWebVitals = () => {
     for (const entry of list.getEntries()) {
       const metric = {
         name: entry.name,
-        value: (entry as any).value || 0,
-        rating: getRating(entry.name, (entry as any).value || 0),
+        value: (entry as {value?: number}).value || 0,
+        rating: getRating(entry.name, (entry as {value?: number}).value || 0),
         url: window.location.pathname,
         timestamp: Date.now(),
       };
@@ -112,7 +112,7 @@ export const trackMemoryUsage = () => {
   
   // Check if performance.memory is available (Chrome only)
   if ('memory' in performance) {
-    const memory = (performance as any).memory;
+    const memory = (performance as {memory?: {usedJSHeapSize?: number, totalJSHeapSize?: number, jsHeapSizeLimit?: number}}).memory;
     const metric = {
       type: 'memory-usage',
       usedJSHeapSize: memory.usedJSHeapSize,

@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         .eq('status', 'active')
 
       const negotiation = negotiations?.find(neg => 
-        (neg.profiles as any)?.[0]?.username?.toLowerCase().includes(buyer_name.toLowerCase())
+        (neg.profiles as unknown as Array<{username: string}>)?.[0]?.username?.toLowerCase().includes(buyer_name.toLowerCase())
       )
 
       if (!negotiation) {
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: offerError.message }, { status: 500 })
     }
 
-    const buyerName = (negotiation.profiles as any)?.username || 'buyer'
+    const buyerName = (negotiation.profiles as {username?: string})?.username || 'buyer'
     
     return NextResponse.json({ 
       success: true, 
@@ -110,10 +110,11 @@ export async function POST(request: NextRequest) {
       buyer_name: buyerName
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Message API error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to send message'
     return NextResponse.json(
-      { error: error.message || 'Failed to send message' },
+      { error: errorMessage },
       { status: 500 }
     )
   }

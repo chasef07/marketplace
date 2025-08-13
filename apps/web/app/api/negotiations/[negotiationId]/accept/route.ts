@@ -105,7 +105,7 @@ export async function POST(
     const { error: itemUpdateError } = await supabase
       .from('items')
       .update({
-        is_available: false,
+        item_status: 'sold',
         sold_at: new Date().toISOString()
       })
       .eq('id', negotiation.item_id)

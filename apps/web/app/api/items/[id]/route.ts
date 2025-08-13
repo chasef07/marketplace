@@ -106,12 +106,12 @@ export async function PUT(
       description: string;
       condition: string;
       starting_price: number;
-      is_available: boolean;
+      item_status: 'draft' | 'pending_review' | 'active' | 'under_negotiation' | 'sold_pending' | 'sold' | 'paused' | 'archived' | 'flagged' | 'removed';
     }> = {}
     if (body.description !== undefined) allowedUpdates.description = body.description
     if (body.condition !== undefined) allowedUpdates.condition = body.condition
     if (body.starting_price !== undefined) allowedUpdates.starting_price = body.starting_price
-    if (body.is_available !== undefined) allowedUpdates.is_available = body.is_available
+    if (body.item_status !== undefined) allowedUpdates.item_status = body.item_status
 
     const { data: item, error } = await supabase
       .from('items')
@@ -174,7 +174,7 @@ export async function DELETE(
     // Check if user owns the item and get item details
     const { data: existingItem } = await supabase
       .from('items')
-      .select('seller_id, is_available')
+      .select('seller_id, item_status')
       .eq('id', id)
       .single()
 

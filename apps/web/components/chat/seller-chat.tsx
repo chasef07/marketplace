@@ -122,13 +122,13 @@ export function SellerChat({ user, onBack }: SellerChatProps) {
         const negotiations = await negotiationsResponse.json()
         
         // Use the my-negotiations endpoint for accurate active negotiations count
-        const activeNegotiations = negotiations.filter((neg: any) => neg.status === 'active')
+        const activeNegotiations = negotiations.filter((neg: unknown) => neg.status === 'active')
         
         if (status.items && status.items.length > 0) {
           welcomeContent = `Good ${timeOfDay}! ${status.items.length} active listing${status.items.length > 1 ? 's' : ''}, ${activeNegotiations.length} active offer${activeNegotiations.length !== 1 ? 's' : ''}.
 
-${status.items.slice(0, 2).map((item: any) => {
-  const itemNegotiations = activeNegotiations.filter((neg: any) => neg.item_id === item.id)
+${status.items.slice(0, 2).map((item: unknown) => {
+  const itemNegotiations = activeNegotiations.filter((neg: unknown) => neg.item_id === item.id)
   return `📦 "${item.name}" - $${item.starting_price} (${itemNegotiations.length} active offer${itemNegotiations.length !== 1 ? 's' : ''})`
 }).join('\n')}
 
@@ -215,7 +215,7 @@ What would you like to do today?`
 
       setMessages(prev => [...prev, assistantMessageObj])
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to send message:', error)
       
       // Improved error handling with retry logic
@@ -439,7 +439,7 @@ What would you like to do today?`
                     backgroundColor: 'rgba(255, 255, 255, 0.6)',
                     color: '#1F1F1F',
                     '--tw-ring-color': 'rgba(139, 69, 19, 0.4)'
-                  } as any}
+                  } as React.CSSProperties}
                 />
                 <Button
                   type="submit"

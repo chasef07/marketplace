@@ -61,15 +61,15 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
         role: 'assistant',
         content: response.message,
         metadata: { 
-          buttons: (response as any).buttons,
-          inputField: (response as any).inputField
+          buttons: (response as {buttons?: unknown[]}).buttons || [],
+          inputField: (response as {inputField?: unknown}).inputField
         },
         created_at: new Date().toISOString()
       }
 
       setMessages([welcomeMessageObj])
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to load welcome message:', error)
       
       // Fallback welcome message
@@ -122,15 +122,15 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
         role: 'assistant',
         content: response.message,
         metadata: { 
-          buttons: (response as any).buttons,
-          inputField: (response as any).inputField
+          buttons: (response as {buttons?: unknown[]}).buttons || [],
+          inputField: (response as {inputField?: unknown}).inputField
         },
         created_at: new Date().toISOString()
       }
 
       setMessages(prev => [...prev, assistantMessageObj])
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to send message:', error)
       
       // Add error message
@@ -189,8 +189,8 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
         role: 'assistant',
         content: response.message,
         metadata: { 
-          buttons: (response as any).buttons,
-          inputField: (response as any).inputField
+          buttons: (response as {buttons?: unknown[]}).buttons || [],
+          inputField: (response as {inputField?: unknown}).inputField
         },
         created_at: new Date().toISOString()
       }
@@ -200,7 +200,7 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
       // Clear input after successful submission
       setInputValue('')
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to send input:', error)
       
       // Add error message
@@ -349,7 +349,7 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
                         {/* Buttons */}
                         {message.role === 'assistant' && message.metadata?.buttons && (
                           <div className="flex flex-wrap gap-1 mt-2">
-                            {message.metadata.buttons.map((button: any, index: number) => (
+                            {message.metadata.buttons.map((button: {text: string, action: string}, index: number) => (
                               <button
                                 key={index}
                                 onClick={() => handleButtonClick(button.action || button.text)}

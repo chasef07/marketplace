@@ -47,7 +47,7 @@ export async function GET(
           created_at
         `)
         .eq('seller_id', profile.id)
-        .eq('is_available', true)
+        .eq('item_status', 'active')
         .order('created_at', { ascending: false })
         .limit(12)
 

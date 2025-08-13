@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     // Get all items regardless of seller
     const { data: allItems, error: allItemsError } = await supabase
       .from('items')
-      .select('id, name, seller_id, is_available')
+      .select('id, name, seller_id, item_status')
       .limit(10)
 
     // Get items for this specific user
@@ -59,10 +59,11 @@ export async function GET(request: NextRequest) {
       my_items_error: myItemsError
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Debug API error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Debug failed'
     return NextResponse.json(
-      { error: error.message || 'Debug failed' },
+      { error: errorMessage },
       { status: 500 }
     )
   }

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq('seller_id', user.id)
-      .eq('is_available', true)
+      .eq('item_status', 'active')
 
     console.log('Items query result:', { items, error: itemsError })
 
@@ -60,10 +60,11 @@ export async function GET(request: NextRequest) {
       total_active_negotiations: items?.reduce((acc, item) => acc + item.negotiations.length, 0) || 0
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Seller status API error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch seller status'
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch seller status' },
+      { error: errorMessage },
       { status: 500 }
     )
   }
