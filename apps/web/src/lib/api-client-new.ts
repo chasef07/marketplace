@@ -126,7 +126,7 @@ export interface ChatMessage {
   content: string
   function_calls?: unknown
   function_results?: unknown
-  metadata: Record<string, any>
+  metadata: Record<string, unknown>
   created_at: string
 }
 

@@ -474,7 +474,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
                         <label className="flex items-center">
                           <select
                             value={editForm.item_status}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, item_status: e.target.value as any }))}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, item_status: e.target.value as 'active' | 'paused' | 'sold' | 'archived' }))}
                             className="rounded border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500"
                           >
                             <option value="active">Active (Available for sale)</option>

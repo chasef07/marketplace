@@ -62,7 +62,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
   const handleInputChange = (field: string, value: string | number, nested?: string) => {
     setEditedData(prev => {
       if (nested) {
-        const nestedObj = prev[nested as keyof AIAnalysisResult] as any
+        const nestedObj = prev[nested as keyof AIAnalysisResult] as Record<string, unknown>
         return {
           ...prev,
           [nested]: {

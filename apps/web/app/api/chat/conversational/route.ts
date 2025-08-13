@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase'
 import { ratelimit, withRateLimit } from '@/lib/rate-limit'
 import { getAuthenticatedUser } from '@/src/lib/auth-helpers'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/lib/database.types'
 
 // Simple marketplace assistant - no complex state management
 export async function POST(request: NextRequest) {
@@ -128,7 +129,7 @@ async function handleWelcome(supabase: SupabaseClient, userId: string) {
           .order('created_at', { ascending: true })
 
         // Get buyer's original offer (first buyer offer)
-        const buyerOriginalOffer = allOffers?.find((offer: Database['public']['Tables']['offers']['Row']) => offer.offer_type === 'buyer' && !offer.is_counter_offer)
+        const buyerOriginalOffer = allOffers?.find((offer) => offer.offer_type === 'buyer' && !offer.is_counter_offer)
 
         return {
           ...neg,

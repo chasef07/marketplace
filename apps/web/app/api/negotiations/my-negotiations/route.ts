@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
           id,
           name,
           starting_price,
-          image_filename
+          images
         ),
         seller:seller_id (
           id,
@@ -56,7 +56,6 @@ export async function GET(request: NextRequest) {
           price,
           message,
           offer_type,
-          round_number,
           created_at
         )
       `)

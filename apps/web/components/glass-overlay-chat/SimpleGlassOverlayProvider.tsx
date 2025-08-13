@@ -15,7 +15,7 @@ interface SimpleGlassOverlayProviderProps {
 }
 
 export function SimpleGlassOverlayProvider({ children }: SimpleGlassOverlayProviderProps) {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{id: string, username: string, email: string} | null>(null)
 
   // Check authentication and user permissions
   useEffect(() => {

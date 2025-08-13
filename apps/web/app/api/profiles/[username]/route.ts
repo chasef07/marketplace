@@ -40,8 +40,6 @@ export async function GET(
           description,
           furniture_type,
           starting_price,
-          condition,
-          image_filename,
           images,
           views_count,
           created_at

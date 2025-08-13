@@ -25,7 +25,7 @@ const loadLeaflet = async () => {
   const L = await import('leaflet')
   
   // Fix default icons issue in Leaflet
-  delete (L.Icon.Default.prototype as any)._getIconUrl
+  delete (L.Icon.Default.prototype as Record<string, unknown>)._getIconUrl
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
@@ -37,7 +37,7 @@ const loadLeaflet = async () => {
 
 const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: string }) {
   const mapRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<any>(null)
+  const mapInstanceRef = useRef<unknown>(null)
   const isInitializingRef = useRef(false)
   const currentZipCodeRef = useRef<string>('')
   const mapId = `map-${zipCode.replace(/\D/g, '')}`

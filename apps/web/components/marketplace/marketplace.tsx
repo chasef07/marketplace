@@ -386,7 +386,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                         let imageUrl = null
                         if (item.images && item.images.length > 0) {
                           // Find primary image or use first image
-                          const primaryImage = item.images.find((img: any) => img.is_primary) || item.images[0]
+                          const primaryImage = item.images.find((img: {is_primary?: boolean, filename: string}) => img.is_primary) || item.images[0]
                           imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${primaryImage.filename}`
                         } else if (item.image_filename) {
                           imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${item.image_filename}`

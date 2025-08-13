@@ -21,7 +21,7 @@ interface GlassOverlayProviderProps {
 
 export function GlassOverlayProvider({ children, autoShow = false }: GlassOverlayProviderProps) {
   const [isVisible, setIsVisible] = useState(autoShow)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{id: string, username: string, email: string} | null>(null)
 
   // Check authentication and user permissions
   useEffect(() => {

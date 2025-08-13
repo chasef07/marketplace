@@ -82,7 +82,7 @@ export function QuickActionsOverlay({ trigger }: QuickActionsOverlayProps) {
       // Load basic stats if available
       if (itemsResponse?.ok) {
         const itemsData = await itemsResponse.json()
-        const totalViews = itemsData.reduce((sum: number, item: any) => sum + (item.views_count || 0), 0)
+        const totalViews = itemsData.reduce((sum: number, item: {views_count?: number}) => sum + (item.views_count || 0), 0)
         setDashboardStats({
           totalItems: itemsData.length || 0,
           totalViews: totalViews || 0

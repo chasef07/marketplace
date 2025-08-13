@@ -19,9 +19,9 @@ export interface ChatUIMessage {
   role: 'user' | 'assistant'
   content: string
   timestamp: string
-  functionCalls?: any
-  functionResults?: any
-  metadata: Record<string, any>
+  functionCalls?: Record<string, unknown>
+  functionResults?: Record<string, unknown>
+  metadata: Record<string, unknown>
 }
 
 export interface QuickActionItem {

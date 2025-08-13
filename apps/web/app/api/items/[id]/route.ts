@@ -104,12 +104,10 @@ export async function PUT(
     // Only allow editing specific fields - exclude created_at, sold_at, views_count, etc.
     const allowedUpdates: Partial<{
       description: string;
-      condition: string;
       starting_price: number;
       item_status: 'draft' | 'pending_review' | 'active' | 'under_negotiation' | 'sold_pending' | 'sold' | 'paused' | 'archived' | 'flagged' | 'removed';
     }> = {}
     if (body.description !== undefined) allowedUpdates.description = body.description
-    if (body.condition !== undefined) allowedUpdates.condition = body.condition
     if (body.starting_price !== undefined) allowedUpdates.starting_price = body.starting_price
     if (body.item_status !== undefined) allowedUpdates.item_status = body.item_status
 

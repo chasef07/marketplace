@@ -59,7 +59,7 @@ export function useMarketplaceChat() {
   }, [switchToDirectChat])
 
   // Handle chat actions (like accepting offers)
-  const handleChatAction = useCallback(async (action: string, data?: any) => {
+  const handleChatAction = useCallback(async (action: string, data?: unknown) => {
     if (action === 'accept_offer') {
       // This would be triggered from the conversational API
       // The API handles the actual offer acceptance
@@ -102,7 +102,7 @@ export function useMarketplaceChat() {
           try {
             const status = await statusResponse.json()
             const offerCount = status.negotiations?.length || 0
-            const recentCount = status.negotiations?.filter((neg: any) => neg.is_recent)?.length || 0
+            const recentCount = status.negotiations?.filter((neg: unknown) => (neg as {is_recent?: boolean}).is_recent)?.length || 0
             
             if (offerCount > 0) {
               if (recentCount > 0) {
@@ -136,7 +136,7 @@ export function useMarketplaceChat() {
         setConnectionStatus('online')
         setIsInitialized(true)
         setError(null)
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Failed to initialize chat:', error)
         setConnectionStatus('offline')
         setError('Failed to initialize chat')
@@ -186,7 +186,7 @@ export function useMarketplaceChat() {
         throw new Error('Currently offline. Message queued.')
       }
 
-      let response: any
+      let response: unknown
       
       if (chatMode === 'direct' && directChatBuyer) {
         // Direct buyer messaging
@@ -257,7 +257,7 @@ export function useMarketplaceChat() {
         setConnectionStatus('online')
       }
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to send message:', error)
       setConnectionStatus('offline')
       
@@ -277,7 +277,7 @@ export function useMarketplaceChat() {
   }, [conversationId, connectionStatus, chatMode, directChatBuyer])
 
   // Handle button clicks from chat messages
-  const handleButtonClick = useCallback(async (action: string, data?: any) => {
+  const handleButtonClick = useCallback(async (action: string, data?: unknown) => {
     console.log('Button clicked:', action, data) // Debug log
     try {
       // Send the button action as a message to the conversational API

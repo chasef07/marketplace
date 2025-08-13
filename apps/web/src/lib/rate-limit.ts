@@ -69,7 +69,7 @@ export function getClientIP(request: Request): string {
 // Middleware wrapper for rate limiting
 export async function withRateLimit(
   request: Request,
-  limiter: any,
+  limiter: unknown,
   handler: () => Promise<Response>
 ): Promise<Response> {
   // If no Redis config available, skip rate limiting in development

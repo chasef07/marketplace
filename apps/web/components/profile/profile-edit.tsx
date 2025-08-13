@@ -165,7 +165,7 @@ export default function ProfileEdit({ initialProfile }: ProfileEditProps) {
         return
       }
 
-      const updateData: Record<string, any> = { ...formData }
+      const updateData: Record<string, unknown> = { ...formData }
 
       // Upload new profile image if selected
       if (profileImage) {

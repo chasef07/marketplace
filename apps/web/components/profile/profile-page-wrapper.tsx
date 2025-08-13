@@ -11,7 +11,7 @@ interface ProfilePageWrapperProps {
 
 export default function ProfilePageWrapper({ username }: ProfilePageWrapperProps) {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<{id: string, username: string} | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {

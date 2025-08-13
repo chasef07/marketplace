@@ -44,7 +44,6 @@ export async function GET(request: NextRequest) {
           created_at,
           updated_at,
           completed_at,
-          max_rounds,
           final_price,
           item_id,
           seller_id,
@@ -54,8 +53,6 @@ export async function GET(request: NextRequest) {
             description,
             furniture_type,
             starting_price,
-            condition,
-            image_filename,
             images
           ),
           profiles!negotiations_seller_id_fkey(

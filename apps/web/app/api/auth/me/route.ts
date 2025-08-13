@@ -48,10 +48,10 @@ export async function GET(request: NextRequest) {
         id: profile.id,
         email: profile.email,
         username: profile.username,
-        seller_personality: profile.seller_personality,
-        buyer_personality: profile.buyer_personality,
+        is_active: profile.is_active,
         created_at: profile.created_at,
-        last_login: profile.last_login
+        last_login: profile.last_login,
+        zip_code: profile.zip_code
       }
     })
     // No caching to ensure fresh user data

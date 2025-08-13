@@ -226,7 +226,7 @@ export function ChatInterface({ isExpanded, onNotification, className = '' }: Ch
             className="flex-1 px-3 py-2 text-sm rounded-full border border-white/20 bg-white/80 focus:bg-white focus:outline-none focus:ring-2 focus:ring-opacity-20 disabled:opacity-50 placeholder-gray-500"
             style={{ 
               '--tw-ring-color': 'rgba(139, 69, 19, 0.3)'
-            } as any}
+            } as React.CSSProperties}
             aria-label="Type your message"
             aria-describedby={error ? "chat-error" : undefined}
             autoComplete="off"

@@ -553,7 +553,7 @@ function BuyerNotificationsSection({ userId: _userId }: BuyerNotificationsSectio
       </div>
 
       <div className="space-y-4">
-        {myOffers.negotiations.map((negotiation: any) => (
+        {myOffers.negotiations.map((negotiation: unknown) => (
           <div key={negotiation.id} className="p-6 border rounded-lg hover:shadow-md transition-all">
             <div className="flex items-start gap-4">
               {/* Item Image */}
