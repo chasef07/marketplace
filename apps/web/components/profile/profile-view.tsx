@@ -488,92 +488,213 @@ interface Negotiation {
 }
 
 function BuyerNotificationsSection({ userId }: BuyerNotificationsSectionProps) {
-  const [processingNegotiation, setProcessingNegotiation] = useState<number | null>(null)
-  
-  const { data: negotiationsData, error, mutate } = useSWR(
-    `/api/buyer/negotiations`,
-    async (url) => {
+  const [processing, setProcessing] = useState<string>('')
+  const [counterOffer, setCounterOffer] = useState<{negotiationId: number | null, isOpen: boolean, price: string}>({
+    negotiationId: null,
+    isOpen: false,
+    price: ''
+  })
+
+  // Simple, direct data fetching - no complex status detection
+  const { data: myOffers, error, mutate } = useSWR(
+    'buyer-offers',
+    async () => {
       const headers = await apiClient.getAuthHeaders()
-      const response = await fetch(url, { headers })
-      if (!response.ok) throw new Error('Failed to fetch')
+      const response = await fetch('/api/buyer/negotiations', { headers })
+      if (!response.ok) throw new Error('Failed to fetch offers')
       return response.json()
     },
-    { refreshInterval: 30000 } // Refresh every 30 seconds
+    { refreshInterval: 10000 } // Refresh every 10 seconds for real-time updates
   )
 
-  const handleAcceptCounter = async (negotiationId: number) => {
-    setProcessingNegotiation(negotiationId)
-    try {
-      await apiClient.acceptNegotiation(negotiationId)
-      await mutate() // Refresh the data
-    } catch (error) {
-      console.error('Failed to accept counter offer:', error)
-      alert('Failed to accept counter offer. Please try again.')
-    } finally {
-      setProcessingNegotiation(null)
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 mt-8">
+        <Card className="p-8 text-center">
+          <p className="text-red-600">Error loading offers. Please refresh the page.</p>
+        </Card>
+      </div>
+    )
+  }
+
+  if (!myOffers?.negotiations || myOffers.negotiations.length === 0) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 mt-8">
+        <div className="flex items-center gap-3 mb-6">
+          <ShoppingBag className="h-6 w-6 text-gray-700" />
+          <h2 className="text-xl font-semibold text-gray-900">My Offers & Negotiations</h2>
+        </div>
+        
+        <Card className="p-8 text-center">
+          <ShoppingBag className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No offers yet</h3>
+          <p className="text-gray-500 mb-4">
+            Start browsing the marketplace to make your first offer!
+          </p>
+          <Link href="/marketplace">
+            <Button>Browse Marketplace</Button>
+          </Link>
+        </Card>
+      </div>
+    )
+  }
+
+  // Improved status determination with full context
+  const getDetailedStatus = (negotiation: any) => {
+    // Handle completed/cancelled negotiations
+    if (negotiation.status === 'completed') return { status: 'accepted', context: 'Deal completed' }
+    if (negotiation.status === 'cancelled') return { status: 'declined', context: 'Offer was declined' }
+    
+    const latestOffer = negotiation.latest_offer
+    if (!latestOffer) {
+      return { status: 'error', context: 'No offers found - system error' }
+    }
+
+    // Determine current state based on latest offer and negotiation flow
+    if (latestOffer.offer_type === 'seller') {
+      // Seller made the last move
+      if (latestOffer.is_counter_offer) {
+        return { 
+          status: 'counter_received', 
+          context: `Seller countered with $${latestOffer.price}`,
+          needsAction: true
+        }
+      } else {
+        // Shouldn't happen in normal flow, but handle gracefully
+        return { 
+          status: 'pending', 
+          context: 'Unusual seller offer - check manually',
+          needsAction: false
+        }
+      }
+    } else {
+      // Buyer (you) made the last move
+      if (latestOffer.is_counter_offer) {
+        return { 
+          status: 'pending', 
+          context: `You countered with $${latestOffer.price} - waiting for response`,
+          needsAction: false
+        }
+      } else {
+        return { 
+          status: 'pending', 
+          context: `You offered $${latestOffer.price} - waiting for response`,
+          needsAction: false
+        }
+      }
     }
   }
 
-  const handleMakeNewOffer = (itemId: number) => {
-    // Navigate to the item page where they can make a new offer
-    window.location.href = `/marketplace/${itemId}`
+  const getStatusDisplay = (status: string, needsAction = false) => {
+    switch (status) {
+      case 'accepted': return { icon: '✅', text: 'Accepted', color: 'text-green-600', bgColor: 'bg-green-50' }
+      case 'declined': return { icon: '❌', text: 'Declined', color: 'text-red-600', bgColor: 'bg-red-50' }
+      case 'counter_received': return { 
+        icon: '💰', 
+        text: needsAction ? 'Action Required' : 'Counter Received', 
+        color: 'text-orange-600', 
+        bgColor: 'bg-orange-50' 
+      }
+      case 'error': return { icon: '⚠️', text: 'System Error', color: 'text-red-600', bgColor: 'bg-red-50' }
+      default: return { icon: '⏳', text: 'Pending Response', color: 'text-blue-600', bgColor: 'bg-blue-50' }
+    }
   }
 
-  const handleUpdateOffer = (itemId: number) => {
-    // Navigate to the item page where they can update their offer
-    window.location.href = `/marketplace/${itemId}`
+  const handleAcceptCounter = async (negotiationId: number) => {
+    setProcessing(`accept-${negotiationId}`)
+    try {
+      await apiClient.acceptNegotiation(negotiationId)
+      await mutate()
+      alert('Counter offer accepted! The seller has been notified.')
+    } catch (error) {
+      console.error('Failed to accept:', error)
+      alert('Failed to accept counter offer. Please try again.')
+    } finally {
+      setProcessing('')
+    }
   }
 
-  const handleArrangePickup = (negotiationId: number) => {
-    // For now, just show an alert - this could be enhanced later
-    alert('Pickup arrangement feature coming soon! Please contact the seller directly.')
+  const handleOpenCounterForm = (negotiationId: number, currentPrice: number) => {
+    setCounterOffer({
+      negotiationId,
+      isOpen: true,
+      price: Math.floor(currentPrice * 0.9).toString() // Suggest 10% lower
+    })
   }
 
-  const getNegotiationItemImageUrl = (filename?: string) => {
+  const handleSubmitCounter = async () => {
+    if (!counterOffer.negotiationId || !counterOffer.price) return
+
+    setProcessing(`counter-${counterOffer.negotiationId}`)
+    try {
+      const headers = await apiClient.getAuthHeaders()
+      const response = await fetch(`/api/negotiations/${counterOffer.negotiationId}/counter`, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          price: parseFloat(counterOffer.price),
+          message: `Counter offer: $${counterOffer.price}`
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to submit counter offer')
+      }
+
+      await mutate()
+      setCounterOffer({ negotiationId: null, isOpen: false, price: '' })
+      alert('Counter offer submitted! The seller has been notified.')
+    } catch (error: any) {
+      console.error('Failed to submit counter:', error)
+      alert(error.message || 'Failed to submit counter offer. Please try again.')
+    } finally {
+      setProcessing('')
+    }
+  }
+
+  const handleCloseCounterForm = () => {
+    setCounterOffer({ negotiationId: null, isOpen: false, price: '' })
+  }
+
+  const handleDeclineCounter = async (negotiationId: number) => {
+    setProcessing(`decline-${negotiationId}`)
+    try {
+      const headers = await apiClient.getAuthHeaders()
+      const response = await fetch(`/api/negotiations/${negotiationId}/decline`, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          reason: 'Counter offer declined by buyer'
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to decline counter offer')
+      }
+
+      await mutate()
+      alert('Counter offer declined. The negotiation has ended.')
+    } catch (error: any) {
+      console.error('Failed to decline:', error)
+      alert(error.message || 'Failed to decline counter offer. Please try again.')
+    } finally {
+      setProcessing('')
+    }
+  }
+
+  const getItemImageUrl = (filename?: string) => {
     if (!filename) return null
     const supabase = createClient()
     const { data } = supabase.storage.from('furniture-images').getPublicUrl(filename)
     return data.publicUrl
-  }
-
-  const negotiations: Negotiation[] = negotiationsData?.negotiations || []
-  const pendingCount = negotiations.filter(n => n.needs_attention).length
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'counter_received':
-        return <AlertCircle className="h-5 w-5 text-orange-500" />
-      case 'awaiting_response':
-        return <Clock className="h-5 w-5 text-blue-500" />
-      case 'accepted':
-        return <CheckCircle className="h-5 w-5 text-green-500" />
-      case 'declined':
-        return <XCircle className="h-5 w-5 text-red-500" />
-      default:
-        return <Bell className="h-5 w-5 text-gray-500" />
-    }
-  }
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'counter_received':
-        return 'Counter Offer Received'
-      case 'awaiting_response':
-        return 'Awaiting Seller Response'
-      case 'accepted':
-        return 'Offer Accepted'
-      case 'declined':
-        return 'Offer Declined'
-      default:
-        return 'Unknown Status'
-    }
-  }
-
-  const formatTimeAgo = (hours: number) => {
-    if (hours < 1) return 'Just now'
-    if (hours < 24) return `${hours}h ago`
-    const days = Math.floor(hours / 24)
-    return `${days}d ago`
   }
 
   const formatPrice = (price: number) => {
@@ -585,26 +706,11 @@ function BuyerNotificationsSection({ userId }: BuyerNotificationsSectionProps) {
     }).format(price)
   }
 
-  if (negotiations.length === 0) {
-    return (
-      <div className="max-w-4xl mx-auto p-6 mt-8">
-        <div className="flex items-center gap-3 mb-6">
-          <ShoppingBag className="h-6 w-6 text-gray-700" />
-          <h2 className="text-xl font-semibold text-gray-900">My Offers & Negotiations</h2>
-        </div>
-        
-        <Card className="p-8 text-center">
-          <ShoppingBag className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No active offers</h3>
-          <p className="text-gray-500">
-            You haven't made any offers yet. Browse the marketplace to start negotiating!
-          </p>
-          <Link href="/marketplace" className="inline-block mt-4">
-            <Button>Browse Marketplace</Button>
-          </Link>
-        </Card>
-      </div>
-    )
+  const getTimeAgo = (dateString: string) => {
+    const hours = Math.floor((new Date().getTime() - new Date(dateString).getTime()) / (1000 * 60 * 60))
+    if (hours < 1) return 'Just now'
+    if (hours < 24) return `${hours}h ago`
+    return `${Math.floor(hours / 24)}d ago`
   }
 
   return (
@@ -612,140 +718,213 @@ function BuyerNotificationsSection({ userId }: BuyerNotificationsSectionProps) {
       <div className="flex items-center gap-3 mb-6">
         <ShoppingBag className="h-6 w-6 text-gray-700" />
         <h2 className="text-xl font-semibold text-gray-900">My Offers & Negotiations</h2>
-        {pendingCount > 0 && (
-          <span className="bg-orange-100 text-orange-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-            {pendingCount} need{pendingCount === 1 ? 's' : ''} attention
-          </span>
-        )}
+        <span className="text-sm text-gray-500">
+          ({myOffers.negotiations.length} total)
+        </span>
       </div>
 
-      <div className="space-y-3">
-        {negotiations.map((negotiation) => (
-          <Card key={negotiation.id} className={`p-4 transition-all hover:shadow-lg border-l-4 ${
-            negotiation.needs_attention 
-              ? 'border-l-orange-400 bg-orange-50/30' 
-              : 'border-l-gray-200'
-          }`}>
-            <div className="flex items-start gap-4">
-              {/* Item Image */}
-              <div className="w-20 h-20 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 shadow-sm">
-                {negotiation.items.image_filename ? (
-                  <Image
-                    src={getNegotiationItemImageUrl(negotiation.items.image_filename) || '/placeholder-image.jpg'}
-                    alt={negotiation.items.name}
-                    width={80}
-                    height={80}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Package className="h-8 w-8 text-gray-400" />
-                  </div>
-                )}
-              </div>
+      <div className="space-y-4">
+        {myOffers.negotiations.map((negotiation: any) => {
+          const statusInfo = getDetailedStatus(negotiation)
+          const statusDisplay = getStatusDisplay(statusInfo.status, statusInfo.needsAction)
+          const latestOffer = negotiation.latest_offer
+          const lastUpdate = latestOffer?.created_at || negotiation.created_at
 
-              {/* Negotiation Details */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold text-gray-900 truncate text-lg">
-                      {negotiation.items.name}
-                    </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Seller: <span className="font-medium">@{negotiation.profiles.username}</span>
-                    </p>
-                    <div className="flex items-center gap-2 mt-2">
-                      {getStatusIcon(negotiation.display_status)}
-                      <span className={`text-sm font-medium ${
-                        negotiation.needs_attention ? 'text-orange-700' : 'text-gray-700'
-                      }`}>
-                        {getStatusText(negotiation.display_status)}
-                      </span>
-                      {negotiation.needs_attention && (
-                        <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full font-medium">
-                          Action needed
-                        </span>
-                      )}
+          return (
+            <Card key={negotiation.id} className="p-6 hover:shadow-md transition-all">
+              <div className="flex items-start gap-4">
+                {/* Item Image */}
+                <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                  {negotiation.items.image_filename ? (
+                    <Image
+                      src={getItemImageUrl(negotiation.items.image_filename) || '/placeholder.jpg'}
+                      alt={negotiation.items.name}
+                      width={80}
+                      height={80}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Package className="h-8 w-8 text-gray-400" />
                     </div>
-                  </div>
-                  
-                  <div className="text-right ml-4">
-                    <p className="text-sm text-gray-500">
-                      {formatTimeAgo(negotiation.time_since_last_update)}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {negotiation.offer_count} offer{negotiation.offer_count !== 1 ? 's' : ''}
-                    </p>
-                  </div>
+                  )}
                 </div>
 
-                {/* Latest Offer Info */}
-                {negotiation.latest_offer && (
-                  <div className="mt-3 p-3 bg-white border border-gray-200 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-700">Latest offer:</span>
-                      <span className="text-lg font-bold text-gray-900">
-                        {formatPrice(negotiation.latest_offer.price)}
-                        {negotiation.latest_offer.is_counter_offer && (
-                          <span className="text-sm font-normal text-orange-600 ml-2">(Counter)</span>
-                        )}
-                      </span>
+                {/* Offer Details */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold text-gray-900 text-lg mb-1">
+                        {negotiation.items.name}
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-2">
+                        Seller: @{negotiation.profiles.username} | Listed: ${negotiation.items.starting_price}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {statusInfo.context}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${statusDisplay.bgColor}`}>
+                        <span className="text-lg">{statusDisplay.icon}</span>
+                        <span className={`text-sm font-medium ${statusDisplay.color}`}>
+                          {statusDisplay.text}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {getTimeAgo(lastUpdate)}
+                      </p>
                     </div>
                   </div>
-                )}
 
-                {/* Action Buttons */}
-                <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-gray-100">
-                  {negotiation.display_status === 'counter_received' && (
-                    <>
+                  {/* Current Offer Info */}
+                  {latestOffer && (
+                    <div className="mt-3 p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">
+                          {latestOffer.is_counter_offer && latestOffer.offer_type === 'seller' 
+                            ? 'Seller\'s Counter Offer:' 
+                            : 'Your Offer:'}
+                        </span>
+                        <span className="text-xl font-bold text-gray-900">
+                          {formatPrice(latestOffer.price)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 mt-4">
+                    {statusInfo.status === 'counter_received' && (
+                      <>
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          onClick={() => handleAcceptCounter(negotiation.id)}
+                          disabled={processing === `accept-${negotiation.id}`}
+                        >
+                          {processing === `accept-${negotiation.id}` ? 'Accepting...' : '✅ Accept Counter'}
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleOpenCounterForm(negotiation.id, latestOffer?.price || 0)}
+                          disabled={processing.startsWith('counter-')}
+                        >
+                          💰 Counter Offer
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="text-red-600 border-red-600 hover:bg-red-50"
+                          onClick={() => handleDeclineCounter(negotiation.id)}
+                          disabled={processing === `decline-${negotiation.id}`}
+                        >
+                          {processing === `decline-${negotiation.id}` ? 'Declining...' : '❌ Decline'}
+                        </Button>
+                      </>
+                    )}
+                    
+                    {statusInfo.status === 'pending' && !statusInfo.needsAction && (
+                      <Link href={`/marketplace/${negotiation.items.id}`}>
+                        <Button size="sm" variant="outline">✏️ Update Offer</Button>
+                      </Link>
+                    )}
+                    
+                    {statusInfo.status === 'accepted' && (
                       <Button 
                         size="sm" 
-                        className="bg-green-600 hover:bg-green-700 text-white font-medium"
-                        onClick={() => handleAcceptCounter(negotiation.id)}
-                        disabled={processingNegotiation === negotiation.id}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={() => alert('Pickup coordination feature coming soon! Please contact the seller directly.')}
                       >
-                        {processingNegotiation === negotiation.id ? 'Accepting...' : '✓ Accept Counter'}
+                        📅 Arrange Pickup
                       </Button>
+                    )}
+
+                    {statusInfo.status === 'error' && (
                       <Button 
                         size="sm" 
                         variant="outline"
-                        className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                        onClick={() => handleMakeNewOffer(negotiation.items.id)}
+                        className="text-red-600 border-red-600"
+                        onClick={() => alert('This negotiation has a data error. Please contact support or try making a new offer.')}
                       >
-                        💰 Make New Offer
+                        ⚠️ Report Issue
                       </Button>
-                    </>
-                  )}
-                  {negotiation.display_status === 'awaiting_response' && (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                      onClick={() => handleUpdateOffer(negotiation.items.id)}
-                    >
-                      ✏️ Update Offer
-                    </Button>
-                  )}
-                  {negotiation.display_status === 'accepted' && (
-                    <Button 
-                      size="sm" 
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                      onClick={() => handleArrangePickup(negotiation.id)}
-                    >
-                      📅 Arrange Pickup
-                    </Button>
-                  )}
-                  <Link href={`/marketplace/${negotiation.items.id}`}>
-                    <Button size="sm" variant="ghost" className="text-gray-600 hover:text-gray-800">
-                      👁️ View Item
-                    </Button>
-                  </Link>
+                    )}
+
+                    <Link href={`/marketplace/${negotiation.items.id}`}>
+                      <Button size="sm" variant="ghost">👁️ View Item</Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          )
+        })}
       </div>
+
+      {/* Counter Offer Modal */}
+      {counterOffer.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Submit Counter Offer</h3>
+            
+            {/* Show context */}
+            {(() => {
+              const currentNegotiation = myOffers?.negotiations?.find((neg: any) => neg.id === counterOffer.negotiationId)
+              if (!currentNegotiation) return null
+              
+              return (
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">
+                    <strong>{currentNegotiation.items.name}</strong>
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Seller's offer: <strong>${currentNegotiation.latest_offer?.price}</strong>
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Listed price: ${currentNegotiation.items.starting_price}
+                  </p>
+                </div>
+              )
+            })()}
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Your Counter Price
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                <input
+                  type="number"
+                  value={counterOffer.price}
+                  onChange={(e) => setCounterOffer(prev => ({ ...prev, price: e.target.value }))}
+                  className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter your counter offer"
+                  min="1"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={handleSubmitCounter}
+                disabled={!counterOffer.price || processing.startsWith('counter-')}
+                className="flex-1"
+              >
+                {processing.startsWith('counter-') ? 'Submitting...' : 'Submit Counter'}
+              </Button>
+              <Button
+                onClick={handleCloseCounterForm}
+                variant="outline"
+                disabled={processing.startsWith('counter-')}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

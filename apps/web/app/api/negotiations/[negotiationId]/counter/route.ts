@@ -41,10 +41,13 @@ export async function POST(
       user = sessionUser
     }
 
-    // Get negotiation details
+    // Get negotiation details with item info
     const { data: negotiation, error: negotiationError } = await supabase
       .from('negotiations')
-      .select('*')
+      .select(`
+        *,
+        items!inner(starting_price)
+      `)
       .eq('id', negotiationId)
       .single()
 
@@ -61,6 +64,11 @@ export async function POST(
       return NextResponse.json({ error: 'Negotiation is not active' }, { status: 400 })
     }
 
+    // Check if negotiation has expired
+    if (negotiation.expires_at && new Date(negotiation.expires_at) < new Date()) {
+      return NextResponse.json({ error: 'Negotiation has expired' }, { status: 400 })
+    }
+
     // Get current round number and check limits
     const { data: currentRound } = await supabase
       .rpc('get_round_count', { neg_id: negotiationId })
@@ -71,8 +79,52 @@ export async function POST(
       return NextResponse.json({ error: 'Maximum rounds reached' }, { status: 400 })
     }
 
-    const newRoundNumber = roundNumber + 1
+    // Check turn-based logic - get latest offer to see whose turn it is
+    const { data: latestOffer } = await supabase
+      .from('offers')
+      .select('*')
+      .eq('negotiation_id', negotiationId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
     const offerType = negotiation.seller_id === user.id ? 'seller' : 'buyer'
+
+    // Validate it's this user's turn to make an offer
+    if (latestOffer) {
+      if (latestOffer.offer_type === offerType) {
+        return NextResponse.json({ 
+          error: 'Not your turn - the other party needs to respond to your last offer first' 
+        }, { status: 400 })
+      }
+    }
+
+    // Business rules validation
+    const startingPrice = negotiation.items?.starting_price || 0
+    
+    if (offerType === 'seller') {
+      // Seller validation rules
+      if (body.price > startingPrice * 1.25) {
+        return NextResponse.json({ 
+          error: `Counter offer too high - cannot exceed 25% above starting price ($${startingPrice})` 
+        }, { status: 400 })
+      }
+      
+      if (body.price < startingPrice * 0.3) {
+        return NextResponse.json({ 
+          error: `Counter offer too low - seems unreasonable for this item` 
+        }, { status: 400 })
+      }
+    } else {
+      // Buyer validation rules
+      if (body.price > startingPrice * 1.1) {
+        return NextResponse.json({ 
+          error: `Counter offer above asking price - consider accepting the listed price instead` 
+        }, { status: 400 })
+      }
+    }
+
+    const newRoundNumber = roundNumber + 1
 
     // No need to update negotiation table - the helper functions handle current offer calculation
 
@@ -95,6 +147,18 @@ export async function POST(
       console.error('Error creating counter offer:', offerError)
       return NextResponse.json({ error: 'Failed to create counter offer' }, { status: 500 })
     }
+
+    // Update negotiation expiration (72 hours from now)
+    const expirationTime = new Date()
+    expirationTime.setHours(expirationTime.getHours() + 72)
+    
+    await supabase
+      .from('negotiations')
+      .update({ 
+        expires_at: expirationTime.toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', negotiationId)
 
     return NextResponse.json({
       message: 'Counter offer created successfully',

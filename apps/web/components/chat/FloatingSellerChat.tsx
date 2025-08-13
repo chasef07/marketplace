@@ -154,6 +154,13 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
     
     setIsLoading(true)
 
+    // For counter offers, format the message properly
+    let messageToSend = inputValue.trim()
+    if (inputFieldAction.startsWith('counter_')) {
+      // inputFieldAction is like "counter_182", we need to append the price
+      messageToSend = `${inputFieldAction}_${inputValue.trim()}`
+    }
+
     // Add user message showing the input value
     const userMessageObj: ChatMessage = {
       id: Date.now(),
@@ -167,8 +174,8 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
     setMessages(prev => [...prev, userMessageObj])
 
     try {
-      console.log('Sending input value:', inputValue.trim(), 'to conversation:', conversationId)
-      const response: ChatResponse = await apiClient.sendChatMessage(inputValue.trim(), conversationId || undefined)
+      console.log('Sending message:', messageToSend, 'to conversation:', conversationId)
+      const response: ChatResponse = await apiClient.sendChatMessage(messageToSend, conversationId || undefined)
       console.log('Received response:', response)
       
       if (!conversationId) {

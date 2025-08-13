@@ -3,537 +3,11 @@ import { createSupabaseServerClient } from '@/lib/supabase'
 import { ratelimit, withRateLimit } from '@/lib/rate-limit'
 import { getAuthenticatedUser } from '@/src/lib/auth-helpers'
 
-const supabase = createSupabaseServerClient()
-
-// Conversation state management
-enum ConversationState {
-  VIEWING_OFFERS = 'viewing_offers',
-  COUNTERING = 'countering', 
-  ACCEPTING = 'accepting',
-  DEAL_COMPLETED = 'deal_completed',
-  ARRANGING_MEETUP = 'arranging_meetup',
-  ERROR_STATE = 'error_state'
-}
-
-interface ConversationContext {
-  state: ConversationState
-  userId: string
-  activeNegotiations: any[]
-  selectedNegotiation?: number
-  selectedItem?: number
-  lastAction?: string
-  errorMessage?: string
-}
-
-// State-driven conversation manager
-class ConversationManager {
-  private context: ConversationContext
-  private authToken: string | null
-
-  constructor(userId: string, authToken: string | null = null) {
-    this.context = {
-      state: ConversationState.VIEWING_OFFERS,
-      userId,
-      activeNegotiations: []
-    }
-    this.authToken = authToken
-  }
-
-  async processMessage(message: string): Promise<{ message: string; buttons: any[]; inputField?: any }> {
-    // Load fresh negotiations data
-    await this.loadNegotiations()
-    
-    // Determine new state based on message and current context
-    const newState = this.determineNewState(message)
-    this.context.state = newState
-    
-    // Generate response based on current state
-    return await this.generateStateResponse(message)
-  }
-
-  private async loadNegotiations(): Promise<void> {
-    try {
-      console.log('Loading negotiations for user:', this.context.userId)
-      
-      const { data: directNegotiations, error } = await supabase
-        .from('negotiations')
-        .select(`
-          id,
-          status,
-          created_at,
-          item_id,
-          buyer_id,
-          items!inner(name, starting_price, is_available)
-        `)
-        .eq('seller_id', this.context.userId)
-        .eq('status', 'active')
-        .eq('items.is_available', true)
-        
-      if (error) {
-        console.error('Database error:', error)
-        this.context.state = ConversationState.ERROR_STATE
-        this.context.errorMessage = 'Failed to load your offers'
-        return
-      }
-
-      // Enrich with current offer data
-      const enrichedNegotiations = await Promise.all(
-        (directNegotiations || []).map(async (neg) => {
-          const { data: latestOffer } = await supabase
-            .from('offers')
-            .select('price, offer_type, created_at, message')
-            .eq('negotiation_id', neg.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single()
-
-          return {
-            ...neg,
-            current_offer: latestOffer?.price || 0,
-            latest_offer_type: latestOffer?.offer_type,
-            latest_message: latestOffer?.message,
-            offer_time: latestOffer?.created_at
-          }
-        })
-      )
-
-      this.context.activeNegotiations = enrichedNegotiations
-      console.log(`Loaded ${enrichedNegotiations.length} active negotiations`)
-      
-    } catch (error) {
-      console.error('Error loading negotiations:', error)
-      this.context.state = ConversationState.ERROR_STATE
-      this.context.errorMessage = 'System error loading data'
-    }
-  }
-
-  private determineNewState(message: string): ConversationState {
-    const msg = message.toLowerCase().trim()
-    
-    // State transitions based on message
-    if (msg === 'hello' || msg === 'hi' || msg === 'hey' || msg.startsWith('hello')) {
-      return ConversationState.VIEWING_OFFERS
-    }
-    
-    if (msg === 'show_offers' || msg.includes('show') && msg.includes('offer')) {
-      return ConversationState.VIEWING_OFFERS
-    }
-    
-    if (msg === 'counter_all_offers' || msg.startsWith('counter_price_') || msg === 'custom_counter_input') {
-      return ConversationState.COUNTERING
-    }
-    
-    if (msg === 'accept_best_offers' || msg.startsWith('accept_')) {
-      return ConversationState.ACCEPTING
-    }
-    
-    if (msg.includes('deal_completed') || msg.includes('arrange')) {
-      return ConversationState.ARRANGING_MEETUP
-    }
-    
-    // Stay in current state for unrecognized messages
-    return this.context.state
-  }
-
-  private async generateStateResponse(message: string): Promise<{ message: string; buttons: any[]; inputField?: any }> {
-    switch (this.context.state) {
-      case ConversationState.ERROR_STATE:
-        return this.handleErrorState()
-        
-      case ConversationState.VIEWING_OFFERS:
-        return this.handleViewingOffers(message)
-        
-      case ConversationState.COUNTERING:
-        return await this.handleCountering(message)
-        
-      case ConversationState.ACCEPTING:
-        return await this.handleAccepting(message)
-        
-      case ConversationState.ARRANGING_MEETUP:
-        return this.handleArrangingMeetup(message)
-        
-      default:
-        return this.handleViewingOffers(message)
-    }
-  }
-
-  private handleErrorState(): { message: string; buttons: any[] } {
-    return {
-      message: `⚠️ ${this.context.errorMessage || 'Something went wrong'}. Let me try to reload your data.`,
-      buttons: [
-        { text: "🔄 Reload", action: "show_offers" },
-        { text: "📞 Get Help", action: "get_help" }
-      ]
-    }
-  }
-
-  private handleViewingOffers(message: string): { message: string; buttons: any[] } {
-    if (this.context.activeNegotiations.length === 0) {
-      return {
-        message: "🏠 No active offers at the moment! Your items are live on the marketplace. I'll notify you as soon as buyers start making offers.",
-        buttons: []
-      }
-    }
-
-    // Create clear offer summary
-    const totalOffers = this.context.activeNegotiations.length
-    
-    let offerText = `💰 ${totalOffers} Active Offer${totalOffers > 1 ? 's' : ''}\n\n`
-    
-    // Group by item for clarity
-    const offersByItem = this.groupOffersByItem()
-    Object.values(offersByItem).forEach((item: any) => {
-      offerText += `📦 ${item.itemName}\n`
-      offerText += `   💵 ${item.offerCount} offer${item.offerCount > 1 ? 's' : ''} • High: $${item.highestOffer}\n`
-      if (item.hasRecentActivity) {
-        offerText += `   🔥 Recent activity!\n`
-      }
-      offerText += `\n`
-    })
-
-    return {
-      message: offerText + "What would you like to do?",
-      buttons: [
-        { text: "💰 Counter All Offers", action: "counter_all_offers" },
-        { text: "✅ Accept Best Offers", action: "accept_best_offers" },
-        { text: "🔄 Refresh", action: "show_offers" }
-      ]
-    }
-  }
-
-  private groupOffersByItem(): any {
-    return this.context.activeNegotiations.reduce((acc: any, neg: any) => {
-      const itemId = neg.item_id
-      const itemName = neg.items?.name || 'Unknown Item'
-      
-      if (!acc[itemId]) {
-        acc[itemId] = {
-          itemId,
-          itemName,
-          negotiations: [],
-          offerCount: 0,
-          highestOffer: 0,
-          hasRecentActivity: false
-        }
-      }
-      
-      acc[itemId].negotiations.push(neg)
-      acc[itemId].offerCount++
-      
-      const offerPrice = parseFloat(neg.current_offer)
-      if (offerPrice > acc[itemId].highestOffer) {
-        acc[itemId].highestOffer = offerPrice
-      }
-      
-      return acc
-    }, {})
-  }
-
-  private async handleCountering(message: string): Promise<{ message: string; buttons: any[]; inputField?: any }> {
-    if (message === 'counter_all_offers') {
-      const avgOffer = this.context.activeNegotiations.reduce((sum, neg) => sum + parseFloat(neg.current_offer), 0) / this.context.activeNegotiations.length
-      const minSuggested = Math.round(avgOffer * 1.05)
-      const maxSuggested = Math.round(avgOffer * 1.25)
-      
-      return {
-        message: `💰 Counter Offer\n\nCurrent average offer: $${Math.round(avgOffer)}\nSuggested range: $${minSuggested} - $${maxSuggested}\n\nEnter your counter price:`,
-        buttons: [
-          { text: "⬅️ Back", action: "show_offers" }
-        ],
-        inputField: {
-          type: 'number',
-          placeholder: 'Enter price amount',
-          submitText: 'Submit Counter Offer',
-          submitAction: 'counter_price_input',
-          prefix: '$'
-        }
-      }
-    }
-    
-    if (message === 'custom_counter_input') {
-      const avgOffer = this.context.activeNegotiations.reduce((sum, neg) => sum + parseFloat(neg.current_offer), 0) / this.context.activeNegotiations.length
-      const minSuggested = Math.round(avgOffer * 1.05)
-      const maxSuggested = Math.round(avgOffer * 1.25)
-      
-      return {
-        message: `✏️ Enter Custom Counter Price\n\nCurrent average offer: $${Math.round(avgOffer)}\nSuggested range: $${minSuggested} - $${maxSuggested}`,
-        buttons: [
-          { text: "⬅️ Back", action: "counter_all_offers" }
-        ],
-        inputField: {
-          type: 'number',
-          placeholder: 'Enter price amount',
-          submitText: 'Submit Counter Offer',
-          submitAction: 'counter_price_input',
-          prefix: '$'
-        }
-      }
-    }
-    
-    if (message.startsWith('counter_price_')) {
-      const price = parseInt(message.split('_')[2])
-      return await this.executeCounterOffers(price)
-    }
-    
-    if (message === 'counter_price_input') {
-      // This will be handled by the input field submission
-      return {
-        message: "Please enter a price amount in the input field above.",
-        buttons: [
-          { text: "⬅️ Back", action: "counter_all_offers" }
-        ]
-      }
-    }
-    
-    // Handle direct numeric input for custom prices
-    if (/^\d+$/.test(message.trim())) {
-      const price = parseInt(message.trim())
-      const avgOffer = this.context.activeNegotiations.reduce((sum, neg) => sum + parseFloat(neg.current_offer), 0) / this.context.activeNegotiations.length
-      
-      if (price < avgOffer) {
-        return {
-          message: `⚠️ Price too low!\n\nYour price ($${price}) is below the current average offer ($${Math.round(avgOffer)}). Counter offers should be higher than current offers.\n\nPlease enter a higher amount:`,
-          buttons: [
-            { text: `$${Math.round(avgOffer * 1.05)}`, action: `counter_price_${Math.round(avgOffer * 1.05)}` },
-            { text: `$${Math.round(avgOffer * 1.15)}`, action: `counter_price_${Math.round(avgOffer * 1.15)}` },
-            { text: "⬅️ Back", action: "counter_all_offers" }
-          ]
-        }
-      }
-      
-      if (price > avgOffer * 3) {
-        return {
-          message: `🤔 Very high price!\n\nYour price ($${price}) is much higher than current offers ($${Math.round(avgOffer)}). This might discourage buyers.\n\nProceed anyway?`,
-          buttons: [
-            { text: `✅ Yes, counter $${price}`, action: `counter_price_${price}` },
-            { text: "📉 Lower amount", action: "custom_counter_input" },
-            { text: "⬅️ Back", action: "counter_all_offers" }
-          ]
-        }
-      }
-      
-      return await this.executeCounterOffers(price)
-    }
-    
-    return this.handleViewingOffers(message)
-  }
-
-  private async executeCounterOffers(price: number): Promise<{ message: string; buttons: any[] }> {
-    try {
-      console.log(`🚀 Starting executeCounterOffers with price: $${price}`)
-      console.log(`🔑 Auth token exists: ${!!this.authToken}`)
-      console.log(`📊 Active negotiations count: ${this.context.activeNegotiations.length}`)
-      
-      if (!this.authToken) {
-        console.error(`❌ No auth token available`)
-        return {
-          message: "⚠️ Authentication error. Please refresh and try again.",
-          buttons: [{ text: "🔄 Refresh", action: "show_offers" }]
-        }
-      }
-
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-      let successCount = 0
-
-      console.log(`🌐 Using base URL: ${baseUrl}`)
-      console.log(`📋 Negotiations to counter:`, this.context.activeNegotiations.map(n => ({ id: n.id, item: n.items?.name })))
-      
-      for (const neg of this.context.activeNegotiations) {
-        try {
-          const url = `${baseUrl}/api/negotiations/${neg.id}/counter`
-          const payload = {
-            price: price,
-            message: `Counter offer: $${price}`
-          }
-          
-          console.log(`📤 Sending counter offer for negotiation ${neg.id}:`)
-          console.log(`   URL: ${url}`)
-          console.log(`   Payload:`, payload)
-          console.log(`   Auth header: Bearer ${this.authToken?.substring(0, 20)}...`)
-          
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.authToken}`
-            },
-            body: JSON.stringify(payload)
-          })
-
-          console.log(`📥 Response for negotiation ${neg.id}: ${response.status} ${response.statusText}`)
-
-          if (response.ok) {
-            const responseData = await response.json()
-            console.log(`✅ Counter offer successful for negotiation ${neg.id}:`, responseData)
-            successCount++
-          } else {
-            const errorText = await response.text()
-            console.error(`❌ Counter offer failed for negotiation ${neg.id}: ${response.status} - ${errorText}`)
-            console.error(`❌ Response headers:`, Object.fromEntries(response.headers.entries()))
-          }
-        } catch (error) {
-          console.error(`💥 Exception during counter offer for negotiation ${neg.id}:`, error)
-        }
-      }
-
-      if (successCount > 0) {
-        return {
-          message: `✅ Counter offers sent!\n\nOffered $${price} to ${successCount} buyer${successCount > 1 ? 's' : ''}. They'll be notified and can respond.`,
-          buttons: [
-            { text: "💰 View My Offers", action: "show_offers" },
-            { text: "📱 Check Status", action: "show_offers" }
-          ]
-        }
-      } else {
-        return {
-          message: "❌ Counter offers failed\n\nTechnical error occurred. Please try again.",
-          buttons: [
-            { text: "🔄 Try Again", action: "counter_all_offers" },
-            { text: "💰 View Offers", action: "show_offers" }
-          ]
-        }
-      }
-    } catch (error) {
-      console.error('Counter offer execution error:', error)
-      return {
-        message: "❌ Counter offers failed due to technical error.",
-        buttons: [
-          { text: "🔄 Try Again", action: "counter_all_offers" },
-          { text: "💰 View Offers", action: "show_offers" }
-        ]
-      }
-    }
-  }
-
-  private async handleAccepting(message: string): Promise<{ message: string; buttons: any[] }> {
-    if (message === 'accept_best_offers') {
-      try {
-        let successCount = 0
-        let totalValue = 0
-
-        for (const neg of this.context.activeNegotiations) {
-          try {
-            const { error: updateError } = await supabase
-              .from('negotiations')
-              .update({
-                status: 'completed',
-                final_price: neg.current_offer,
-                completed_at: new Date().toISOString()
-              })
-              .eq('id', neg.id)
-              .eq('seller_id', this.context.userId)
-
-            if (!updateError) {
-              successCount++
-              totalValue += parseFloat(neg.current_offer)
-            }
-          } catch (error) {
-            console.error('Accept error for negotiation:', neg.id, error)
-          }
-        }
-
-        if (successCount > 0) {
-          this.context.state = ConversationState.DEAL_COMPLETED
-          
-          return {
-            message: `🎉 Deals accepted!\n\nAccepted ${successCount} offer${successCount > 1 ? 's' : ''} worth $${totalValue.toFixed(0)} total.\n\n📱 Buyers have been notified!`,
-            buttons: [
-              { text: "💬 Chat with Buyers", action: "start_buyer_chat" },
-              { text: "📅 Arrange Pickup", action: "arrange_pickup" },
-              { text: "📊 View All Deals", action: "view_deals" }
-            ]
-          }
-        } else {
-          return {
-            message: "❌ Accept failed - Unable to accept offers. Please try again.",
-            buttons: [
-              { text: "🔄 Try Again", action: "accept_best_offers" },
-              { text: "💰 View Offers", action: "show_offers" }
-            ]
-          }
-        }
-      } catch (error) {
-        console.error('Accept error:', error)
-        return {
-          message: "❌ Technical error while accepting offers.",
-          buttons: [
-            { text: "🔄 Try Again", action: "accept_best_offers" },
-            { text: "💰 View Offers", action: "show_offers" }
-          ]
-        }
-      }
-    }
-    
-    return this.handleViewingOffers(message)
-  }
-
-  private handleArrangingMeetup(message: string): { message: string; buttons: any[] } {
-    if (message === 'start_buyer_chat' || message === 'message_buyers') {
-      return {
-        message: "💬 Buyer Communication\n\nChoose how you'd like to connect with your buyers:",
-        buttons: [
-          { text: "📱 View All Conversations", action: "view_conversations" },
-          { text: "📋 Send Meeting Templates", action: "send_templates" },
-          { text: "📍 Share Pickup Location", action: "share_location" },
-          { text: "⬅️ Back to Deals", action: "view_deals" }
-        ]
-      }
-    }
-
-    if (message === 'schedule_pickup' || message === 'arrange_pickup') {
-      return {
-        message: "📅 Schedule Pickup\n\nLet's help you coordinate with buyers:",
-        buttons: [
-          { text: "📅 This Weekend", action: "suggest_weekend" },
-          { text: "🕐 Weekday Evening", action: "suggest_evening" },
-          { text: "🏠 My Location", action: "share_my_location" },
-          { text: "🤝 Buyer's Choice", action: "ask_buyer_preference" },
-          { text: "⬅️ Back", action: "view_deals" }
-        ]
-      }
-    }
-
-    if (message === 'view_completed_deals' || message === 'view_deals') {
-      return this.getCompletedDealsView()
-    }
-
-    return {
-      message: "🤝 Deal Management\n\nYour deals are accepted! Next steps:\n\n1. Communicate with buyers\n2. Arrange pickup time/location\n3. Complete the exchange\n\nWhat would you like to do?",
-      buttons: [
-        { text: "💬 Message Buyers", action: "start_buyer_chat" },
-        { text: "📅 Schedule Pickup", action: "schedule_pickup" },
-        { text: "📊 View Deal Details", action: "view_completed_deals" },
-        { text: "💰 View All Offers", action: "show_offers" }
-      ]
-    }
-  }
-
-  private getCompletedDealsView(): { message: string; buttons: any[] } {
-    // This would typically load actual completed deals from the database
-    return {
-      message: "📊 Your Completed Deals\n\nHere are your recently accepted deals. Click on any deal to start messaging the buyer or update the status.\n\n*Note: Deal details will be loaded from your actual negotiations.*",
-      buttons: [
-        { text: "🔄 Refresh Deals", action: "view_deals" },
-        { text: "💬 Open Chat", action: "start_buyer_chat" },
-        { text: "📅 Schedule Meetings", action: "schedule_pickup" },
-        { text: "✅ Mark as Completed", action: "mark_completed" },
-        { text: "💰 Back to Offers", action: "show_offers" }
-      ]
-    }
-  }
-}
-
-// New clean function to replace the old massive one
-async function generateConversationalResponse(message: string, userId: string, authToken: string | null = null) {
-  const manager = new ConversationManager(userId, authToken)
-  return await manager.processMessage(message)
-}
-
-// Main API route handler
+// Simple marketplace assistant - no complex state management
 export async function POST(request: NextRequest) {
   return withRateLimit(request, ratelimit.chat, async () => {
     try {
-      const { message, conversation_id } = await request.json()
+      const { message } = await request.json()
 
       if (!message || typeof message !== 'string') {
         return NextResponse.json({ error: 'Message is required' }, { status: 400 })
@@ -541,33 +15,522 @@ export async function POST(request: NextRequest) {
 
       // Get authenticated user
       const authResult = await getAuthenticatedUser(request)
-      console.log('Auth result:', { user: !!authResult.user, userId: authResult.user?.id, error: authResult.error })
       
       if (!authResult.user) {
         return NextResponse.json({ error: authResult.error || 'Authentication required' }, { status: 401 })
       }
 
-      // Generate response using new conversation manager
-      const response = await generateConversationalResponse(message, authResult.user.id, authResult.token)
+      const supabase = createSupabaseServerClient()
+      const userId = authResult.user.id
 
-      return NextResponse.json({
-        message: response.message,
-        buttons: response.buttons,
-        inputField: response.inputField,
-        action: null,
-        conversation_id: conversation_id || 1
-      })
+      // Handle different actions
+      if (message === 'hello' || message === 'hi' || message.startsWith('hello')) {
+        return await handleWelcome(supabase, userId)
+      }
+
+      if (message.startsWith('accept_')) {
+        const negotiationId = parseInt(message.replace('accept_', ''))
+        return await handleAccept(supabase, userId, negotiationId, authResult.token)
+      }
+
+      if (message.startsWith('decline_')) {
+        const negotiationId = parseInt(message.replace('decline_', ''))
+        return await handleDecline(supabase, userId, negotiationId, authResult.token)
+      }
+
+      if (message.startsWith('counter_')) {
+        const parts = message.split('_')
+        const negotiationId = parseInt(parts[1])
+        const price = parseFloat(parts[2])
+        return await handleCounter(supabase, userId, negotiationId, price, authResult.token)
+      }
+
+      if (message.startsWith('force_counter_')) {
+        const parts = message.split('_')
+        const negotiationId = parseInt(parts[2])
+        const price = parseFloat(parts[3])
+        return await handleCounterForce(supabase, userId, negotiationId, price, authResult.token)
+      }
+
+      if (message.startsWith('show_counter_')) {
+        const negotiationId = parseInt(message.replace('show_counter_', ''))
+        return await showCounterInput(supabase, userId, negotiationId)
+      }
+
+      // Default: show welcome
+      return await handleWelcome(supabase, userId)
 
     } catch (error: any) {
       console.error('Chat error:', error)
       return NextResponse.json(
         { 
           error: 'Chat service temporarily unavailable',
-          message: "Sorry, I'm having trouble right now. Please try again in a moment.",
-          buttons: [{ text: "🔄 Try Again", action: "show_offers" }]
+          message: "Sorry, I'm having trouble right now. Please try again.",
+          buttons: [{ text: "🔄 Try Again", action: "hello" }]
         }, 
         { status: 500 }
       )
     }
   })
+}
+
+async function handleWelcome(supabase: any, userId: string) {
+  try {
+    // Get all active negotiations where user is the seller
+    const { data: negotiations, error } = await supabase
+      .from('negotiations')
+      .select(`
+        id,
+        status,
+        created_at,
+        items!inner(id, name, starting_price),
+        profiles!negotiations_buyer_id_fkey(username)
+      `)
+      .eq('seller_id', userId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching negotiations:', error)
+      return NextResponse.json({
+        message: "Unable to load your offers right now. Please try again.",
+        buttons: [{ text: "🔄 Retry", action: "hello" }]
+      })
+    }
+
+    if (!negotiations || negotiations.length === 0) {
+      return NextResponse.json({
+        message: "💼 **Marketplace Assistant**\n\nYou have no active offers at the moment. Your items are live on the marketplace waiting for buyers!",
+        buttons: []
+      })
+    }
+
+    // Get latest offers and offer history for each negotiation
+    const enrichedNegotiations = await Promise.all(
+      negotiations.map(async (neg: any) => {
+        // Get latest offer
+        const { data: latestOffer } = await supabase
+          .from('offers')
+          .select('*')
+          .eq('negotiation_id', neg.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        // Get offer count and history
+        const { data: allOffers } = await supabase
+          .from('offers')
+          .select('*')
+          .eq('negotiation_id', neg.id)
+          .order('created_at', { ascending: true })
+
+        // Get buyer's original offer (first buyer offer)
+        const buyerOriginalOffer = allOffers?.find(offer => offer.offer_type === 'buyer' && !offer.is_counter_offer)
+
+        return {
+          ...neg,
+          latest_offer: latestOffer,
+          offer_count: allOffers?.length || 0,
+          buyer_original_offer: buyerOriginalOffer,
+          offer_history: allOffers || []
+        }
+      })
+    )
+
+    // Build simple offer list message
+    const offerCount = enrichedNegotiations.length
+    let message = `💼 **Marketplace Assistant**\n\nYou have ${offerCount} active offer${offerCount > 1 ? 's' : ''}:\n\n`
+
+    const buttons: any[] = []
+
+    enrichedNegotiations.forEach((neg, index) => {
+      const buyerName = neg.profiles?.username || 'Unknown Buyer'
+      const itemName = neg.items?.name || 'Unknown Item'
+      const startingPrice = neg.items?.starting_price || 0
+      const latestOffer = neg.latest_offer
+      const buyerOriginalOffer = neg.buyer_original_offer
+      const offerCount = neg.offer_count
+
+      message += `**${index + 1}. ${itemName}**\n`
+      message += `Buyer: @${buyerName} | Starting Price: $${startingPrice}\n`
+
+      // Determine negotiation state and show appropriate context
+      if (offerCount === 0) {
+        // Edge case: negotiation exists but no offers
+        message += `⚠️ **No offers yet** - This may be an error\n`
+        message += `Time: ${getTimeAgo(neg.created_at)}\n\n`
+        // Don't add action buttons for broken negotiations
+        return
+      }
+
+      const timeAgo = getTimeAgo(latestOffer?.created_at || neg.created_at)
+
+      if (buyerOriginalOffer && latestOffer) {
+        if (latestOffer.offer_type === 'buyer') {
+          // Latest move was by buyer
+          if (latestOffer.is_counter_offer) {
+            message += `💰 **Buyer countered: $${latestOffer.price}** (originally $${buyerOriginalOffer.price})\n`
+          } else {
+            message += `📥 **Buyer offered: $${latestOffer.price}**\n`
+          }
+          message += `⏳ **Your turn to respond**\n`
+        } else {
+          // Latest move was by seller (you)
+          message += `📤 **You countered: $${latestOffer.price}** (buyer offered $${buyerOriginalOffer.price})\n`
+          message += `⏳ **Waiting for buyer response**\n`
+        }
+      }
+
+      message += `Time: ${timeAgo} | Round ${offerCount}\n\n`
+
+      // Add action buttons based on who made the last move
+      if (latestOffer?.offer_type === 'buyer') {
+        // Buyer made last move - seller can respond
+        buttons.push(
+          { text: `✅ Accept $${latestOffer.price}`, action: `accept_${neg.id}` },
+          { text: `❌ Decline #${index + 1}`, action: `decline_${neg.id}` },
+          { text: `💰 Counter #${index + 1}`, action: `show_counter_${neg.id}` }
+        )
+      } else {
+        // Seller made last move - waiting for buyer
+        buttons.push(
+          { text: `👁️ View #${index + 1}`, action: `hello` } // Just refresh to see any updates
+        )
+      }
+    })
+
+    message += "Choose an action for any offer:"
+
+    return NextResponse.json({
+      message,
+      buttons
+    })
+
+  } catch (error) {
+    console.error('Welcome handler error:', error)
+    return NextResponse.json({
+      message: "Error loading offers. Please try again.",
+      buttons: [{ text: "🔄 Retry", action: "hello" }]
+    })
+  }
+}
+
+async function handleAccept(_supabase: any, _userId: string, negotiationId: number, authToken: string | null) {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3002'
+    
+    const response = await fetch(`${baseUrl}/api/negotiations/${negotiationId}/accept`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      }
+    })
+
+    if (response.ok) {
+      const result = await response.json()
+      return NextResponse.json({
+        message: `🎉 **Offer Accepted!**\n\nYou've accepted the offer for $${result.final_price}.\n\nThe buyer has been notified and the item is now sold. You can arrange pickup details with the buyer.`,
+        buttons: [
+          { text: "📱 View All Offers", action: "hello" }
+        ]
+      })
+    } else {
+      const error = await response.json()
+      return NextResponse.json({
+        message: `❌ **Unable to Accept**\n\n${error.error || 'Something went wrong'}`,
+        buttons: [
+          { text: "🔄 Try Again", action: "hello" }
+        ]
+      })
+    }
+  } catch (error) {
+    console.error('Accept handler error:', error)
+    return NextResponse.json({
+      message: "❌ Error accepting offer. Please try again.",
+      buttons: [{ text: "🔄 Retry", action: "hello" }]
+    })
+  }
+}
+
+async function handleDecline(_supabase: any, _userId: string, negotiationId: number, authToken: string | null) {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3002'
+    
+    const response = await fetch(`${baseUrl}/api/negotiations/${negotiationId}/decline`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ reason: 'Offer declined by seller' })
+    })
+
+    if (response.ok) {
+      return NextResponse.json({
+        message: `❌ **Offer Declined**\n\nThe offer has been declined and the buyer has been notified.`,
+        buttons: [
+          { text: "📱 View Remaining Offers", action: "hello" }
+        ]
+      })
+    } else {
+      const error = await response.json()
+      return NextResponse.json({
+        message: `❌ **Unable to Decline**\n\n${error.error || 'Something went wrong'}`,
+        buttons: [
+          { text: "🔄 Try Again", action: "hello" }
+        ]
+      })
+    }
+  } catch (error) {
+    console.error('Decline handler error:', error)
+    return NextResponse.json({
+      message: "❌ Error declining offer. Please try again.",
+      buttons: [{ text: "🔄 Retry", action: "hello" }]
+    })
+  }
+}
+
+async function showCounterInput(supabase: any, userId: string, negotiationId: number) {
+  try {
+    // Get negotiation details for context
+    const { data: negotiation } = await supabase
+      .from('negotiations')
+      .select(`
+        id,
+        items!inner(name, starting_price),
+        profiles!negotiations_buyer_id_fkey(username)
+      `)
+      .eq('id', negotiationId)
+      .eq('seller_id', userId)
+      .single()
+
+    if (!negotiation) {
+      return NextResponse.json({
+        message: "❌ Negotiation not found.",
+        buttons: [{ text: "📱 Back to Offers", action: "hello" }]
+      })
+    }
+
+    // Get latest offer and buyer's original offer
+    const { data: latestOffer } = await supabase
+      .from('offers')
+      .select('*')
+      .eq('negotiation_id', negotiationId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    const { data: buyerOriginalOffer } = await supabase
+      .from('offers')
+      .select('price')
+      .eq('negotiation_id', negotiationId)
+      .eq('offer_type', 'buyer')
+      .eq('is_counter_offer', false)
+      .limit(1)
+      .single()
+
+    const currentOffer = latestOffer?.price || 0
+    const buyerOriginal = buyerOriginalOffer?.price || 0
+    const startingPrice = negotiation.items?.starting_price || 0
+    const itemName = negotiation.items?.name || 'Item'
+    const buyerName = negotiation.profiles?.username || 'Unknown'
+    
+    // Suggest reasonable counter range
+    const suggestedMin = Math.max(buyerOriginal, Math.floor(startingPrice * 0.8))
+    const suggestedMax = Math.min(startingPrice, Math.floor(currentOffer * 1.15))
+    
+    return NextResponse.json({
+      message: `💰 **Counter Offer**\n\n**Item:** ${itemName} (Listed: $${startingPrice})\n**Buyer:** @${buyerName}\n**Their Offer:** $${currentOffer}\n**Original Offer:** $${buyerOriginal}\n\n💡 **Suggested range:** $${suggestedMin} - $${suggestedMax}\n\nEnter your counter price:`,
+      buttons: [
+        { text: "⬅️ Back to Offers", action: "hello" }
+      ],
+      inputField: {
+        type: 'number',
+        placeholder: `e.g. ${Math.floor((suggestedMin + suggestedMax) / 2)}`,
+        submitText: 'Send Counter Offer',
+        submitAction: `counter_${negotiationId}`,
+        min: 1
+      }
+    })
+
+  } catch (error) {
+    console.error('Show counter input error:', error)
+    return NextResponse.json({
+      message: "❌ Error loading counter form.",
+      buttons: [{ text: "📱 Back to Offers", action: "hello" }]
+    })
+  }
+}
+
+async function handleCounter(supabase: any, userId: string, negotiationId: number, price: number, authToken: string | null) {
+  try {
+    if (!price || price <= 0) {
+      return NextResponse.json({
+        message: "❌ Please enter a valid price.",
+        buttons: [
+          { text: "🔄 Try Again", action: `show_counter_${negotiationId}` },
+          { text: "⬅️ Back", action: "hello" }
+        ]
+      })
+    }
+
+    // Get negotiation and item details for validation
+    const { data: negotiation } = await supabase
+      .from('negotiations')
+      .select(`
+        id,
+        items!inner(starting_price),
+        profiles!negotiations_buyer_id_fkey(username)
+      `)
+      .eq('id', negotiationId)
+      .eq('seller_id', userId)
+      .single()
+
+    if (!negotiation) {
+      return NextResponse.json({
+        message: "❌ Negotiation not found.",
+        buttons: [{ text: "📱 Back to Offers", action: "hello" }]
+      })
+    }
+
+    const startingPrice = negotiation.items?.starting_price || 0
+    
+    // Business logic validation
+    if (price > startingPrice * 1.2) {
+      return NextResponse.json({
+        message: `❌ **Counter too high!**\n\nYour counter of $${price} is more than 20% above your starting price ($${startingPrice}).\n\nConsider a more reasonable counter offer.`,
+        buttons: [
+          { text: "🔄 Try Again", action: `show_counter_${negotiationId}` },
+          { text: "⬅️ Back", action: "hello" }
+        ]
+      })
+    }
+
+    if (price < startingPrice * 0.5) {
+      return NextResponse.json({
+        message: `❌ **Counter too low!**\n\nYour counter of $${price} seems unusually low for this item (listed at $${startingPrice}).\n\nAre you sure you want to proceed?`,
+        buttons: [
+          { text: `✅ Yes, counter $${price}`, action: `force_counter_${negotiationId}_${price}` },
+          { text: "🔄 Try Different Price", action: `show_counter_${negotiationId}` },
+          { text: "⬅️ Back", action: "hello" }
+        ]
+      })
+    }
+
+    console.log('Counter offer - negotiationId:', negotiationId, 'price:', price, 'authToken:', authToken ? 'present' : 'missing')
+
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3002'
+    
+    const response = await fetch(`${baseUrl}/api/negotiations/${negotiationId}/counter`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ 
+        price: price,
+        message: `Counter offer: $${price}`
+      })
+    })
+
+    console.log('Counter API response status:', response.status)
+    
+    if (response.ok) {
+      const result = await response.json()
+      console.log('Counter API success:', result)
+      return NextResponse.json({
+        message: `💰 **Counter Offer Sent!**\n\nYou've sent a counter offer of $${price}.\n\nThe buyer has been notified and can now accept, decline, or counter your offer.`,
+        buttons: [
+          { text: "📱 View All Offers", action: "hello" }
+        ]
+      })
+    } else {
+      const error = await response.json()
+      console.log('Counter API error:', error)
+      return NextResponse.json({
+        message: `❌ **Counter Offer Failed**\n\n${error.error || 'Something went wrong'}`,
+        buttons: [
+          { text: "🔄 Try Again", action: `show_counter_${negotiationId}` },
+          { text: "⬅️ Back", action: "hello" }
+        ]
+      })
+    }
+  } catch (error) {
+    console.error('Counter handler error:', error)
+    return NextResponse.json({
+      message: "❌ Error sending counter offer. Please try again.",
+      buttons: [
+        { text: "🔄 Retry", action: `show_counter_${negotiationId}` },
+        { text: "⬅️ Back", action: "hello" }
+      ]
+    })
+  }
+}
+
+async function handleCounterForce(_supabase: any, _userId: string, negotiationId: number, price: number, authToken: string | null) {
+  try {
+    console.log('Force counter offer - negotiationId:', negotiationId, 'price:', price)
+
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3002'
+    
+    const response = await fetch(`${baseUrl}/api/negotiations/${negotiationId}/counter`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ 
+        price: price,
+        message: `Counter offer: $${price}`
+      })
+    })
+
+    console.log('Force counter API response status:', response.status)
+    
+    if (response.ok) {
+      const result = await response.json()
+      console.log('Force counter API success:', result)
+      return NextResponse.json({
+        message: `💰 **Counter Offer Sent!**\n\nYou've sent a counter offer of $${price}.\n\nThe buyer has been notified and can now accept, decline, or counter your offer.`,
+        buttons: [
+          { text: "📱 View All Offers", action: "hello" }
+        ]
+      })
+    } else {
+      const error = await response.json()
+      console.log('Force counter API error:', error)
+      return NextResponse.json({
+        message: `❌ **Counter Offer Failed**\n\n${error.error || 'Something went wrong'}`,
+        buttons: [
+          { text: "🔄 Try Again", action: `show_counter_${negotiationId}` },
+          { text: "⬅️ Back", action: "hello" }
+        ]
+      })
+    }
+  } catch (error) {
+    console.error('Force counter handler error:', error)
+    return NextResponse.json({
+      message: "❌ Error sending counter offer. Please try again.",
+      buttons: [
+        { text: "🔄 Retry", action: `show_counter_${negotiationId}` },
+        { text: "⬅️ Back", action: "hello" }
+      ]
+    })
+  }
+}
+
+function getTimeAgo(dateString: string): string {
+  const now = new Date()
+  const date = new Date(dateString)
+  const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+  
+  if (diffInMinutes < 1) return 'Just now'
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+  
+  const diffInHours = Math.floor(diffInMinutes / 60)
+  if (diffInHours < 24) return `${diffInHours}h ago`
+  
+  const diffInDays = Math.floor(diffInHours / 24)
+  return `${diffInDays}d ago`
 }
