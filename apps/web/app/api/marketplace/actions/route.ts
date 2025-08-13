@@ -50,8 +50,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No auth token' }, { status: 401 })
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'
-    
     let body = {}
     if (action === 'counter') {
       if (!price) {
@@ -62,7 +60,7 @@ export async function POST(request: NextRequest) {
       body = { reason: message || 'Offer declined' }
     }
     
-    const response = await fetch(`${baseUrl}/api/negotiations/${negotiation_id}/${action}`, {
+    const response = await fetch(`/api/negotiations/${negotiation_id}/${action}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

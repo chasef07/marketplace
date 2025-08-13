@@ -217,9 +217,7 @@ async function handleWelcome(supabase: any, userId: string) {
 
 async function handleAccept(_supabase: any, _userId: string, negotiationId: number, authToken: string | null) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3002'
-    
-    const response = await fetch(`${baseUrl}/api/negotiations/${negotiationId}/accept`, {
+    const response = await fetch(`/api/negotiations/${negotiationId}/accept`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -255,9 +253,7 @@ async function handleAccept(_supabase: any, _userId: string, negotiationId: numb
 
 async function handleDecline(_supabase: any, _userId: string, negotiationId: number, authToken: string | null) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3002'
-    
-    const response = await fetch(`${baseUrl}/api/negotiations/${negotiationId}/decline`, {
+    const response = await fetch(`/api/negotiations/${negotiationId}/decline`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -420,9 +416,7 @@ async function handleCounter(supabase: any, userId: string, negotiationId: numbe
 
     console.log('Counter offer - negotiationId:', negotiationId, 'price:', price, 'authToken:', authToken ? 'present' : 'missing')
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3002'
-    
-    const response = await fetch(`${baseUrl}/api/negotiations/${negotiationId}/counter`, {
+    const response = await fetch(`/api/negotiations/${negotiationId}/counter`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -472,9 +466,7 @@ async function handleCounterForce(_supabase: any, _userId: string, negotiationId
   try {
     console.log('Force counter offer - negotiationId:', negotiationId, 'price:', price)
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3002'
-    
-    const response = await fetch(`${baseUrl}/api/negotiations/${negotiationId}/counter`, {
+    const response = await fetch(`/api/negotiations/${negotiationId}/counter`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

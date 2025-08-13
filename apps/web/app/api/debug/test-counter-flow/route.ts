@@ -27,12 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Test making the same API call that executeCounterOffers makes
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
-                   (process.env.NODE_ENV === 'development' ? 
-                    'http://localhost:3001' : 
-                    '')
-
-    const url = `${baseUrl}/api/negotiations/${negotiationId}/counter`
+    const url = `/api/negotiations/${negotiationId}/counter`
     const payload = {
       price: price,
       message: `Test counter offer: $${price}`

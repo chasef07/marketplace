@@ -8,10 +8,13 @@ export async function POST(
 ) {
   return withRateLimit(request, ratelimit.api, async () => {
     try {
+    console.log('🔧 Counter API started - negotiationId from params')
     const supabase = createSupabaseServerClient()
     const { negotiationId: negotiationIdStr } = await params
     const negotiationId = parseInt(negotiationIdStr)
     const body = await request.json()
+    
+    console.log('🔧 Counter API - Parsed data:', { negotiationId, body })
 
     if (isNaN(negotiationId)) {
       return NextResponse.json({ error: 'Invalid negotiation ID' }, { status: 400 })
@@ -19,26 +22,34 @@ export async function POST(
 
     // Get user from Authorization header
     const authHeader = request.headers.get('authorization')
+    console.log('🔧 Counter API - Auth header present:', !!authHeader)
     let user = null
     
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1]
+      console.log('🔧 Counter API - Token length:', token.length)
       const { data: { user: tokenUser }, error: tokenError } = await supabase.auth.getUser(token)
       
       if (!tokenError && tokenUser) {
         user = tokenUser
+        console.log('🔧 Counter API - User from token:', user.id)
+      } else {
+        console.log('🔧 Counter API - Token auth error:', tokenError)
       }
     }
     
     if (!user) {
+      console.log('🔧 Counter API - Falling back to session auth')
       // Fall back to session-based authentication  
       const { data: { user: sessionUser }, error: authError } = await supabase.auth.getUser()
       
       if (authError || !sessionUser) {
+        console.log('🔧 Counter API - Session auth failed:', authError)
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
       
       user = sessionUser
+      console.log('🔧 Counter API - User from session:', user.id)
     }
 
     // Get negotiation details with item info
@@ -52,15 +63,26 @@ export async function POST(
       .single()
 
     if (negotiationError || !negotiation) {
+      console.log('🔧 Counter API - Negotiation not found:', negotiationError)
       return NextResponse.json({ error: 'Negotiation not found' }, { status: 404 })
     }
 
+    console.log('🔧 Counter API - Found negotiation:', { 
+      id: negotiation.id, 
+      seller_id: negotiation.seller_id, 
+      buyer_id: negotiation.buyer_id,
+      status: negotiation.status,
+      current_user: user.id
+    })
+
     // Check if user is part of the negotiation
     if (negotiation.seller_id !== user.id && negotiation.buyer_id !== user.id) {
+      console.log('🔧 Counter API - User not authorized for negotiation')
       return NextResponse.json({ error: 'Not authorized for this negotiation' }, { status: 403 })
     }
 
     if (negotiation.status !== 'active') {
+      console.log('🔧 Counter API - Negotiation not active:', negotiation.status)
       return NextResponse.json({ error: 'Negotiation is not active' }, { status: 400 })
     }
 
@@ -129,6 +151,15 @@ export async function POST(
     // No need to update negotiation table - the helper functions handle current offer calculation
 
 
+    console.log('🔧 Counter API - Creating offer with data:', {
+      negotiation_id: negotiationId,
+      offer_type: offerType,
+      price: body.price,
+      message: body.message || '',
+      round_number: newRoundNumber,
+      is_counter_offer: true
+    })
+
     // Create counter offer
     const { data: offer, error: offerError } = await supabase
       .from('offers')
@@ -144,9 +175,11 @@ export async function POST(
       .single()
 
     if (offerError) {
-      console.error('Error creating counter offer:', offerError)
+      console.error('🔧 Counter API - Error creating counter offer:', offerError)
       return NextResponse.json({ error: 'Failed to create counter offer' }, { status: 500 })
     }
+    
+    console.log('🔧 Counter API - Counter offer created successfully:', offer.id)
 
     // Update negotiation expiration (72 hours from now)
     const expirationTime = new Date()
