@@ -215,33 +215,92 @@ async function handleWelcome(supabase: any, userId: string) {
   }
 }
 
-async function handleAccept(_supabase: any, _userId: string, negotiationId: number, authToken: string | null) {
+async function handleAccept(supabase: any, userId: string, negotiationId: number, authToken: string | null) {
   try {
-    const response = await fetch(`/api/negotiations/${negotiationId}/accept`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
-      }
-    })
+    // Get negotiation details
+    const { data: negotiation, error: negotiationError } = await supabase
+      .from('negotiations')
+      .select('*, items:item_id(*)')
+      .eq('id', negotiationId)
+      .single()
 
-    if (response.ok) {
-      const result = await response.json()
+    if (negotiationError || !negotiation) {
       return NextResponse.json({
-        message: `🎉 **Offer Accepted!**\n\nYou've accepted the offer for $${result.final_price}.\n\nThe buyer has been notified and the item is now sold. You can arrange pickup details with the buyer.`,
-        buttons: [
-          { text: "📱 View All Offers", action: "hello" }
-        ]
-      })
-    } else {
-      const error = await response.json()
-      return NextResponse.json({
-        message: `❌ **Unable to Accept**\n\n${error.error || 'Something went wrong'}`,
+        message: `❌ **Unable to Accept**\n\nNegotiation not found.`,
         buttons: [
           { text: "🔄 Try Again", action: "hello" }
         ]
       })
     }
+
+    // Only seller can accept offers
+    if (negotiation.seller_id !== userId) {
+      return NextResponse.json({
+        message: `❌ **Unable to Accept**\n\nOnly seller can accept offers.`,
+        buttons: [
+          { text: "🔄 Try Again", action: "hello" }
+        ]
+      })
+    }
+
+    if (negotiation.status !== 'active') {
+      return NextResponse.json({
+        message: `❌ **Unable to Accept**\n\nNegotiation is not active.`,
+        buttons: [
+          { text: "🔄 Try Again", action: "hello" }
+        ]
+      })
+    }
+
+    // Get current offer using helper function
+    const { data: currentOffer } = await supabase
+      .rpc('get_current_offer', { neg_id: negotiationId })
+
+    // Update negotiation status
+    const { error: updateError } = await supabase
+      .from('negotiations')
+      .update({
+        status: 'completed',
+        final_price: currentOffer || 0,
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', negotiationId)
+
+    if (updateError) {
+      console.error('Error updating negotiation:', updateError)
+      return NextResponse.json({
+        message: `❌ **Unable to Accept**\n\nFailed to accept offer. Please try again.`,
+        buttons: [
+          { text: "🔄 Try Again", action: "hello" }
+        ]
+      })
+    }
+
+    // Mark item as sold
+    const { error: itemUpdateError } = await supabase
+      .from('items')
+      .update({
+        is_available: false,
+        sold_at: new Date().toISOString()
+      })
+      .eq('id', negotiation.item_id)
+
+    if (itemUpdateError) {
+      console.error('Error updating item:', itemUpdateError)
+      return NextResponse.json({
+        message: `❌ **Unable to Accept**\n\nFailed to mark item as sold. Please try again.`,
+        buttons: [
+          { text: "🔄 Try Again", action: "hello" }
+        ]
+      })
+    }
+
+    return NextResponse.json({
+      message: `🎉 **Offer Accepted!**\n\nYou've accepted the offer for $${currentOffer || 0}.\n\nThe buyer has been notified and the item is now sold. You can arrange pickup details with the buyer.`,
+      buttons: [
+        { text: "📱 View All Offers", action: "hello" }
+      ]
+    })
   } catch (error) {
     console.error('Accept handler error:', error)
     return NextResponse.json({
@@ -251,33 +310,94 @@ async function handleAccept(_supabase: any, _userId: string, negotiationId: numb
   }
 }
 
-async function handleDecline(_supabase: any, _userId: string, negotiationId: number, authToken: string | null) {
+async function handleDecline(supabase: any, userId: string, negotiationId: number, authToken: string | null) {
   try {
-    const response = await fetch(`/api/negotiations/${negotiationId}/decline`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
-      },
-      body: JSON.stringify({ reason: 'Offer declined by seller' })
-    })
+    // Get negotiation details
+    const { data: negotiation, error: negotiationError } = await supabase
+      .from('negotiations')
+      .select('*')
+      .eq('id', negotiationId)
+      .single()
 
-    if (response.ok) {
+    if (negotiationError || !negotiation) {
       return NextResponse.json({
-        message: `❌ **Offer Declined**\n\nThe offer has been declined and the buyer has been notified.`,
-        buttons: [
-          { text: "📱 View Remaining Offers", action: "hello" }
-        ]
-      })
-    } else {
-      const error = await response.json()
-      return NextResponse.json({
-        message: `❌ **Unable to Decline**\n\n${error.error || 'Something went wrong'}`,
+        message: `❌ **Unable to Decline**\n\nNegotiation not found.`,
         buttons: [
           { text: "🔄 Try Again", action: "hello" }
         ]
       })
     }
+
+    // Check if user is part of the negotiation (seller can decline buyer offers)
+    if (negotiation.seller_id !== userId && negotiation.buyer_id !== userId) {
+      return NextResponse.json({
+        message: `❌ **Unable to Decline**\n\nNot authorized for this negotiation.`,
+        buttons: [
+          { text: "🔄 Try Again", action: "hello" }
+        ]
+      })
+    }
+
+    if (negotiation.status !== 'active') {
+      return NextResponse.json({
+        message: `❌ **Unable to Decline**\n\nNegotiation is not active.`,
+        buttons: [
+          { text: "🔄 Try Again", action: "hello" }
+        ]
+      })
+    }
+
+    // Update negotiation status to cancelled
+    const { error: updateError } = await supabase
+      .from('negotiations')
+      .update({
+        status: 'cancelled',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', negotiationId)
+
+    if (updateError) {
+      console.error('Error updating negotiation:', updateError)
+      return NextResponse.json({
+        message: `❌ **Unable to Decline**\n\nFailed to decline offer. Please try again.`,
+        buttons: [
+          { text: "🔄 Try Again", action: "hello" }
+        ]
+      })
+    }
+
+    // Add decline message to offers table for conversation history
+    const offerType = negotiation.seller_id === userId ? 'seller' : 'buyer'
+    const declineMessage = 'Offer declined by seller'
+
+    // Get current offer and round number using helper functions
+    const { data: currentOffer } = await supabase
+      .rpc('get_current_offer', { neg_id: negotiationId })
+    const { data: currentRound } = await supabase
+      .rpc('get_round_count', { neg_id: negotiationId })
+
+    const { error: offerError } = await supabase
+      .from('offers')
+      .insert({
+        negotiation_id: negotiationId,
+        offer_type: offerType,
+        price: currentOffer || 0,
+        message: declineMessage,
+        round_number: ((currentRound as number) || 0) + 1,
+        is_counter_offer: false
+      })
+
+    if (offerError) {
+      console.warn('Failed to add decline message to offers table:', offerError)
+      // Don't fail the entire operation if we can't add the message
+    }
+
+    return NextResponse.json({
+      message: `❌ **Offer Declined**\n\nThe offer has been declined and the buyer has been notified.`,
+      buttons: [
+        { text: "📱 View Remaining Offers", action: "hello" }
+      ]
+    })
   } catch (error) {
     console.error('Decline handler error:', error)
     return NextResponse.json({
@@ -414,42 +534,141 @@ async function handleCounter(supabase: any, userId: string, negotiationId: numbe
       })
     }
 
-    console.log('Counter offer - negotiationId:', negotiationId, 'price:', price, 'authToken:', authToken ? 'present' : 'missing')
+    // Get negotiation details with item info to continue validation
+    const { data: negotiationDetails, error: negotiationError } = await supabase
+      .from('negotiations')
+      .select(`
+        *,
+        items!inner(starting_price)
+      `)
+      .eq('id', negotiationId)
+      .single()
 
-    const response = await fetch(`/api/negotiations/${negotiationId}/counter`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
-      },
-      body: JSON.stringify({ 
-        price: price,
-        message: `Counter offer: $${price}`
-      })
-    })
-
-    console.log('Counter API response status:', response.status)
-    
-    if (response.ok) {
-      const result = await response.json()
-      console.log('Counter API success:', result)
+    if (negotiationError || !negotiationDetails) {
       return NextResponse.json({
-        message: `💰 **Counter Offer Sent!**\n\nYou've sent a counter offer of $${price}.\n\nThe buyer has been notified and can now accept, decline, or counter your offer.`,
-        buttons: [
-          { text: "📱 View All Offers", action: "hello" }
-        ]
-      })
-    } else {
-      const error = await response.json()
-      console.log('Counter API error:', error)
-      return NextResponse.json({
-        message: `❌ **Counter Offer Failed**\n\n${error.error || 'Something went wrong'}`,
+        message: "❌ **Counter Offer Failed**\n\nNegotiation not found.",
         buttons: [
           { text: "🔄 Try Again", action: `show_counter_${negotiationId}` },
           { text: "⬅️ Back", action: "hello" }
         ]
       })
     }
+
+    // Check if user is part of the negotiation
+    if (negotiationDetails.seller_id !== userId && negotiationDetails.buyer_id !== userId) {
+      return NextResponse.json({
+        message: "❌ **Counter Offer Failed**\n\nNot authorized for this negotiation.",
+        buttons: [
+          { text: "🔄 Try Again", action: `show_counter_${negotiationId}` },
+          { text: "⬅️ Back", action: "hello" }
+        ]
+      })
+    }
+
+    if (negotiationDetails.status !== 'active') {
+      return NextResponse.json({
+        message: "❌ **Counter Offer Failed**\n\nNegotiation is not active.",
+        buttons: [
+          { text: "🔄 Try Again", action: `show_counter_${negotiationId}` },
+          { text: "⬅️ Back", action: "hello" }
+        ]
+      })
+    }
+
+    // Check if negotiation has expired
+    if (negotiationDetails.expires_at && new Date(negotiationDetails.expires_at) < new Date()) {
+      return NextResponse.json({
+        message: "❌ **Counter Offer Failed**\n\nNegotiation has expired.",
+        buttons: [
+          { text: "⬅️ Back", action: "hello" }
+        ]
+      })
+    }
+
+    // Get current round number and check limits
+    const { data: currentRound } = await supabase
+      .rpc('get_round_count', { neg_id: negotiationId })
+    
+    const roundNumber = (currentRound as number) || 0
+    
+    if (roundNumber >= (negotiationDetails.max_rounds || 10)) {
+      return NextResponse.json({
+        message: "❌ **Counter Offer Failed**\n\nMaximum rounds reached.",
+        buttons: [
+          { text: "⬅️ Back", action: "hello" }
+        ]
+      })
+    }
+
+    // Check turn-based logic - get latest offer to see whose turn it is
+    const { data: latestOffer } = await supabase
+      .from('offers')
+      .select('*')
+      .eq('negotiation_id', negotiationId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    const offerType = negotiationDetails.seller_id === userId ? 'seller' : 'buyer'
+
+    // Validate it's this user's turn to make an offer
+    if (latestOffer) {
+      if (latestOffer.offer_type === offerType) {
+        return NextResponse.json({
+          message: "❌ **Counter Offer Failed**\n\nNot your turn - the other party needs to respond to your last offer first.",
+          buttons: [
+            { text: "🔄 Try Again", action: `show_counter_${negotiationId}` },
+            { text: "⬅️ Back", action: "hello" }
+          ]
+        })
+      }
+    }
+
+    const newRoundNumber = roundNumber + 1
+
+    // Create counter offer
+    const { data: offer, error: offerError } = await supabase
+      .from('offers')
+      .insert({
+        negotiation_id: negotiationId,
+        offer_type: offerType,
+        price: price,
+        message: `Counter offer: $${price}`,
+        round_number: newRoundNumber,
+        is_counter_offer: true
+      })
+      .select()
+      .single()
+
+    if (offerError) {
+      console.error('Error creating counter offer:', offerError)
+      return NextResponse.json({
+        message: "❌ **Counter Offer Failed**\n\nFailed to create counter offer. Please try again.",
+        buttons: [
+          { text: "🔄 Try Again", action: `show_counter_${negotiationId}` },
+          { text: "⬅️ Back", action: "hello" }
+        ]
+      })
+    }
+
+    // Update negotiation expiration (72 hours from now)
+    const expirationTime = new Date()
+    expirationTime.setHours(expirationTime.getHours() + 72)
+    
+    await supabase
+      .from('negotiations')
+      .update({ 
+        expires_at: expirationTime.toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', negotiationId)
+
+    return NextResponse.json({
+      message: `💰 **Counter Offer Sent!**\n\nYou've sent a counter offer of $${price}.\n\nThe buyer has been notified and can now accept, decline, or counter your offer.`,
+      buttons: [
+        { text: "📱 View All Offers", action: "hello" }
+      ]
+    })
   } catch (error) {
     console.error('Counter handler error:', error)
     return NextResponse.json({
@@ -462,44 +681,98 @@ async function handleCounter(supabase: any, userId: string, negotiationId: numbe
   }
 }
 
-async function handleCounterForce(_supabase: any, _userId: string, negotiationId: number, price: number, authToken: string | null) {
+async function handleCounterForce(supabase: any, userId: string, negotiationId: number, price: number, authToken: string | null) {
   try {
-    console.log('Force counter offer - negotiationId:', negotiationId, 'price:', price)
+    // Get negotiation details with minimal validation (this is "force" so we bypass some checks)
+    const { data: negotiationDetails, error: negotiationError } = await supabase
+      .from('negotiations')
+      .select(`
+        *,
+        items!inner(starting_price)
+      `)
+      .eq('id', negotiationId)
+      .single()
 
-    const response = await fetch(`/api/negotiations/${negotiationId}/counter`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
-      },
-      body: JSON.stringify({ 
-        price: price,
-        message: `Counter offer: $${price}`
-      })
-    })
-
-    console.log('Force counter API response status:', response.status)
-    
-    if (response.ok) {
-      const result = await response.json()
-      console.log('Force counter API success:', result)
+    if (negotiationError || !negotiationDetails) {
       return NextResponse.json({
-        message: `💰 **Counter Offer Sent!**\n\nYou've sent a counter offer of $${price}.\n\nThe buyer has been notified and can now accept, decline, or counter your offer.`,
-        buttons: [
-          { text: "📱 View All Offers", action: "hello" }
-        ]
-      })
-    } else {
-      const error = await response.json()
-      console.log('Force counter API error:', error)
-      return NextResponse.json({
-        message: `❌ **Counter Offer Failed**\n\n${error.error || 'Something went wrong'}`,
+        message: "❌ **Counter Offer Failed**\n\nNegotiation not found.",
         buttons: [
           { text: "🔄 Try Again", action: `show_counter_${negotiationId}` },
           { text: "⬅️ Back", action: "hello" }
         ]
       })
     }
+
+    // Check if user is part of the negotiation
+    if (negotiationDetails.seller_id !== userId && negotiationDetails.buyer_id !== userId) {
+      return NextResponse.json({
+        message: "❌ **Counter Offer Failed**\n\nNot authorized for this negotiation.",
+        buttons: [
+          { text: "⬅️ Back", action: "hello" }
+        ]
+      })
+    }
+
+    if (negotiationDetails.status !== 'active') {
+      return NextResponse.json({
+        message: "❌ **Counter Offer Failed**\n\nNegotiation is not active.",
+        buttons: [
+          { text: "⬅️ Back", action: "hello" }
+        ]
+      })
+    }
+
+    // Force counter bypasses most validation but still needs basic round count
+    const { data: currentRound } = await supabase
+      .rpc('get_round_count', { neg_id: negotiationId })
+    
+    const roundNumber = (currentRound as number) || 0
+    const offerType = negotiationDetails.seller_id === userId ? 'seller' : 'buyer'
+    const newRoundNumber = roundNumber + 1
+
+    // Create counter offer (force bypasses turn validation and most business rules)
+    const { data: offer, error: offerError } = await supabase
+      .from('offers')
+      .insert({
+        negotiation_id: negotiationId,
+        offer_type: offerType,
+        price: price,
+        message: `Counter offer: $${price}`,
+        round_number: newRoundNumber,
+        is_counter_offer: true
+      })
+      .select()
+      .single()
+
+    if (offerError) {
+      console.error('Error creating force counter offer:', offerError)
+      return NextResponse.json({
+        message: "❌ **Counter Offer Failed**\n\nFailed to create counter offer. Please try again.",
+        buttons: [
+          { text: "🔄 Try Again", action: `show_counter_${negotiationId}` },
+          { text: "⬅️ Back", action: "hello" }
+        ]
+      })
+    }
+
+    // Update negotiation expiration (72 hours from now)
+    const expirationTime = new Date()
+    expirationTime.setHours(expirationTime.getHours() + 72)
+    
+    await supabase
+      .from('negotiations')
+      .update({ 
+        expires_at: expirationTime.toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', negotiationId)
+
+    return NextResponse.json({
+      message: `💰 **Counter Offer Sent!**\n\nYou've sent a counter offer of $${price}.\n\nThe buyer has been notified and can now accept, decline, or counter your offer.`,
+      buttons: [
+        { text: "📱 View All Offers", action: "hello" }
+      ]
+    })
   } catch (error) {
     console.error('Force counter handler error:', error)
     return NextResponse.json({

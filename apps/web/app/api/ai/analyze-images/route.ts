@@ -115,16 +115,20 @@ export async function POST(request: NextRequest) {
 
     // Analyze images with OpenAI GPT-4 Vision
     const imageDescriptions = images.length > 1 
-      ? `Here are ${images.length} images of the same furniture piece from different angles.` 
-      : 'Here is an image of a furniture piece.'
+      ? `Here are ${images.length} images of the same home goods item from different angles.` 
+      : 'Here is an image of a home goods item.'
     
-    const prompt = `You are an expert furniture appraiser and interior designer. ${imageDescriptions} Analyze these furniture images and provide detailed information in the following JSON format:
+    const prompt = `You are an expert home goods appraiser and interior designer. ${imageDescriptions} Analyze these home goods images and provide detailed information in the following JSON format:
 
-    IMPORTANT: For furniture_type, use ONLY one of these exact values: couch, dining_table, bookshelf, chair, desk, bed, dresser, coffee_table, nightstand, cabinet, other
+    IMPORTANT: For furniture_type, categorize any home goods item using one of these values. Use the most appropriate category, or 'other' for items that don't fit standard categories:
+    
+    Furniture: couch, dining_table, bookshelf, chair, desk, bed, dresser, coffee_table, nightstand, cabinet
+    Home Goods: musical_instrument, home_decor, appliance, electronics, artwork, lighting, textiles, storage_container, other
+
+    Accept and analyze ANY home goods item including but not limited to: furniture, musical instruments (drums, guitars, pianos, etc.), home decor, appliances, electronics, artwork, lighting, rugs, containers, and household items.
 
     {
-      "furniture_type": "MUST be one of: couch, dining_table, bookshelf, chair, desk, bed, dresser, coffee_table, nightstand, cabinet, other",
-      "color": "primary color or pattern",
+      "furniture_type": "Choose the most appropriate category from: couch, dining_table, bookshelf, chair, desk, bed, dresser, coffee_table, nightstand, cabinet, musical_instrument, home_decor, appliance, electronics, artwork, lighting, textiles, storage_container, other",
       "estimated_dimensions": "approximate size description",
       "key_features": ["list", "of", "notable", "features", "from", "all", "angles"],
       "suggested_starting_price": "reasonable starting price in USD",
@@ -137,7 +141,7 @@ export async function POST(request: NextRequest) {
       "description": "detailed, appealing description for buyers highlighting features visible across the images"
     }
 
-    Base pricing on apparent quality and current furniture market trends. Consider all angles and details visible across the provided images.`
+    Base pricing on apparent quality and current market trends for this type of home goods item. Consider all angles and details visible across the provided images. Be inclusive and helpful - analyze any home goods item that someone might want to buy or sell.`
 
     let response
     try {
@@ -194,7 +198,6 @@ export async function POST(request: NextRequest) {
       success: true,
       analysis: {
         furniture_type: analysis.furniture_type,
-        color: analysis.color,
         estimated_dimensions: analysis.estimated_dimensions,
         key_features: analysis.key_features,
       },

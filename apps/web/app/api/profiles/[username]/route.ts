@@ -18,8 +18,6 @@ export async function GET(
           id,
           username,
           email,
-          seller_personality,
-          buyer_personality,
           zip_code,
           created_at,
           last_login,
@@ -61,8 +59,8 @@ export async function GET(
       const profileResponse = {
         id: profile.id,
         username: profile.username,
-        display_name: profile.username, // Use username as display name for now
-        bio: `${profile.seller_personality} seller, ${profile.buyer_personality} buyer`, // Create basic bio from personalities
+        display_name: profile.username, // Use username as display name
+        bio: null, // No bio available - personality fields removed
         profile_picture_filename: null,
         location: {
           city: null,

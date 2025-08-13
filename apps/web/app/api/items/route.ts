@@ -101,8 +101,9 @@ export async function POST(request: NextRequest) {
     // Map and validate furniture type
     let furnitureType = body.furniture_type?.toLowerCase()
     
-    // Handle common mappings
+    // Handle common mappings - map all home goods to appropriate furniture categories
     const furnitureTypeMap: Record<string, string> = {
+      // Furniture mappings
       'sofa': 'couch',
       'sectional': 'couch',
       'loveseat': 'couch',
@@ -117,10 +118,39 @@ export async function POST(request: NextRequest) {
       'storage': 'cabinet',
       'entertainment_center': 'cabinet',
       'tv_stand': 'cabinet',
+      
+      // Musical instruments
       'musical_instrument': 'other',
       'instrument': 'other',
       'piano': 'other',
-      'guitar': 'other'
+      'guitar': 'other',
+      'drums': 'other',
+      'drum_set': 'other',
+      'drum': 'other',
+      'percussion': 'other',
+      'bass': 'other',
+      'violin': 'other',
+      'keyboard': 'other',
+      'synthesizer': 'other',
+      
+      // Home goods
+      'home_decor': 'other',
+      'appliance': 'other',
+      'electronics': 'other',
+      'artwork': 'other',
+      'lighting': 'other',
+      'textiles': 'other',
+      'storage_container': 'other',
+      'decor': 'other',
+      'art': 'other',
+      'lamp': 'other',
+      'mirror': 'other',
+      'rug': 'other',
+      'curtains': 'other',
+      'tv': 'other',
+      'speaker': 'other',
+      'microwave': 'other',
+      'refrigerator': 'other'
     }
 
     // Apply mapping if exists
@@ -155,13 +185,7 @@ export async function POST(request: NextRequest) {
       furniture_type: furnitureType,
       original_furniture_type: body.furniture_type,
       starting_price: body.starting_price,
-      condition: body.condition,
-      image_filename: body.image_filename, // Keep for backward compatibility
-      images: imagesData, // New multiple images support
-      style: body.style,
-      material: body.material,
-      brand: body.brand,
-      color: body.color,
+      images: imagesData, // JSONB images support
       dimensions: body.dimensions
     })
 
@@ -173,13 +197,7 @@ export async function POST(request: NextRequest) {
         description: body.description,
         furniture_type: furnitureType,
         starting_price: body.starting_price,
-        condition: body.condition,
-        image_filename: body.image_filename || (imagesData[0]?.filename), // Backward compatibility
-        images: imagesData, // New multiple images support
-        style: body.style,
-        material: body.material,
-        brand: body.brand,
-        color: body.color,
+        images: imagesData, // JSONB images support
         dimensions: body.dimensions
       })
       .select()

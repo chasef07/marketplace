@@ -31,24 +31,19 @@ export default function ProfilePageWrapper({ username }: ProfilePageWrapperProps
   }, [])
 
   const handleCreateListing = () => {
-    console.log('🔄 Sell button clicked - navigating to home page')
     router.push('/')
   }
 
   const handleNavigateMarketplace = () => {
-    console.log('🛒 Browse button clicked - navigating to marketplace')
     router.push('/marketplace')
   }
 
   const handleSignOut = async () => {
-    console.log('🚪 Sign Out button clicked - starting sign out process')
     try {
       await apiClient.signOut()
-      console.log('✅ Sign out successful - redirecting to home')
       router.push('/')
     } catch (error) {
-      console.error('❌ Error signing out:', error)
-      // Still redirect even if error occurs
+      console.error('Error signing out:', error)
       router.push('/')
     }
   }
