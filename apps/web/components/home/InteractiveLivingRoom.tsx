@@ -13,35 +13,48 @@ export function InteractiveLivingRoom({ onUploadClick }: InteractiveLivingRoomPr
   const [isLoading, setIsLoading] = useState(false)
   const [loadingText, setLoadingText] = useState('Preparing upload...')
 
-  // Handle upload click with loading state
+  // Handle upload click with enhanced loading state and feedback
   const handleUploadClick = async () => {
     setIsLoading(true)
     setLoadingText('Opening camera...')
     
-    // Small delay to show the loading state
+    // Provide immediate visual feedback
     setTimeout(() => {
-      setLoadingText('Select your photos')
+      setLoadingText('📸 Select your photos')
       onUploadClick()
       
-      // Listen for file input changes to show analysis loading
+      // Enhanced file selection monitoring
+      let analysisStarted = false
       const checkForAnalysis = setInterval(() => {
         const hiddenInput = document.querySelector('#hidden-file-input') as HTMLInputElement
         if (hiddenInput && hiddenInput.files && hiddenInput.files.length > 0) {
-          setLoadingText('Analyzing images...')
-          clearInterval(checkForAnalysis)
-          // Don't reset loading state - let it persist until navigation
+          if (!analysisStarted) {
+            analysisStarted = true
+            setLoadingText('🧠 AI is analyzing your furniture...')
+            clearInterval(checkForAnalysis)
+            
+            // Monitor for when analysis completes (when navigation happens)
+            const checkForCompletion = setInterval(() => {
+              // If the user is still on the same page after 30 seconds, reset
+              if (window.location.pathname === '/') {
+                setIsLoading(false)
+                clearInterval(checkForCompletion)
+              }
+            }, 30000)
+          }
         }
       }, 100)
       
-      // Only reset if no files selected after 10 seconds (user cancelled)
+      // Reset if no files selected after 15 seconds (user cancelled)
       setTimeout(() => {
         const hiddenInput = document.querySelector('#hidden-file-input') as HTMLInputElement
         if (!hiddenInput || !hiddenInput.files || hiddenInput.files.length === 0) {
-          setIsLoading(false)
+          setLoadingText('Upload cancelled')
+          setTimeout(() => setIsLoading(false), 1000)
         }
         clearInterval(checkForAnalysis)
-      }, 10000)
-    }, 300)
+      }, 15000)
+    }, 400)
   }
 
   // Animated SOLD tags that appear and disappear
@@ -186,7 +199,19 @@ export function InteractiveLivingRoom({ onUploadClick }: InteractiveLivingRoomPr
         )}
       </div>
 
-
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className="loading-overlay">
+          <div className="loading-content">
+            <div className="loading-spinner">
+              <div className="spinner-ring"></div>
+              <div className="camera-icon">📸</div>
+            </div>
+            <div className="loading-message">{loadingText}</div>
+            <div className="loading-hint">Click to capture furniture photos</div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .living-room-container {
@@ -506,6 +531,81 @@ export function InteractiveLivingRoom({ onUploadClick }: InteractiveLivingRoomPr
           }
         }
 
+        /* Loading Overlay */
+        .loading-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(8px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 100;
+          border-radius: 20px;
+          animation: fadeIn 0.3s ease;
+        }
+
+        .loading-content {
+          text-align: center;
+          padding: 2rem;
+        }
+
+        .loading-spinner {
+          position: relative;
+          margin: 0 auto 1.5rem auto;
+          width: 80px;
+          height: 80px;
+        }
+
+        .spinner-ring {
+          position: absolute;
+          width: 80px;
+          height: 80px;
+          border: 4px solid ${colors.primary}20;
+          border-top: 4px solid ${colors.primary};
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        .camera-icon {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          font-size: 2rem;
+          animation: pulse 2s ease-in-out infinite;
+        }
+
+        .loading-message {
+          font-size: 1.2rem;
+          font-weight: 600;
+          color: ${colors.primary};
+          margin-bottom: 0.5rem;
+        }
+
+        .loading-hint {
+          font-size: 0.9rem;
+          color: ${colors.neutralDark};
+          opacity: 0.7;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+          0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+          50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
+        }
 
         /* Responsive Design */
         @media (max-width: 768px) {

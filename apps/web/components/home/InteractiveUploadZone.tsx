@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { colors, gradients, shadows } from './design-system/colors'
 import { animations, animationClasses } from './design-system/animations'
+import { AIAnalysisLoading } from '../ui/ai-analysis-loading'
 import { type AIAnalysisResult } from "@/lib/api-client-new"
 
 interface InteractiveUploadZoneProps {
@@ -52,16 +53,32 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
     setUploadProgress(0)
 
     try {
-      // Simulate upload progress
+      // Simulate realistic AI analysis progress
+      let currentProgress = 0
+      const progressSteps = [
+        { target: 20, duration: 800, message: "Uploading image..." },
+        { target: 35, duration: 1200, message: "Processing image..." },
+        { target: 60, duration: 1500, message: "Identifying furniture..." },
+        { target: 80, duration: 1000, message: "Analyzing style & material..." },
+        { target: 95, duration: 800, message: "Calculating price..." }
+      ]
+      
+      let stepIndex = 0
       const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval)
-            return 90
+        if (stepIndex < progressSteps.length) {
+          const step = progressSteps[stepIndex]
+          currentProgress += Math.random() * 3 + 1
+          
+          if (currentProgress >= step.target) {
+            currentProgress = step.target
+            stepIndex++
           }
-          return prev + Math.random() * 20
-        })
-      }, 200)
+          
+          setUploadProgress(currentProgress)
+        } else {
+          clearInterval(progressInterval)
+        }
+      }, 150)
 
       // Create FormData for the API call
       const formData = new FormData()
@@ -140,24 +157,10 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
         />
 
         {isAnalyzing ? (
-          <div className="analyzing-state">
-            <div className="ai-icon">AI</div>
-            <div className="analyzing-text">Analyzing your image...</div>
-            <div className="progress-container">
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
-              <div className="progress-text">{Math.round(uploadProgress)}%</div>
-            </div>
-            <div className="analyzing-steps">
-              <div className="step">Processing image</div>
-              <div className="step">Identifying furniture</div>
-              <div className="step">Calculating price</div>
-            </div>
-          </div>
+          <AIAnalysisLoading 
+            progress={uploadProgress}
+            message="AI is analyzing your furniture..."
+          />
         ) : (
           <div className="upload-content">
             <div className="camera-icon">
@@ -213,6 +216,14 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
           justify-content: center;
         }
 
+        .upload-zone.analyzing {
+          border-color: ${colors.primary};
+          background: ${colors.primary}05;
+          min-height: auto;
+          padding: 1rem;
+          cursor: default;
+        }
+
         .upload-zone::before {
           content: '';
           position: absolute;
@@ -241,10 +252,6 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
           transform: scale(1.02);
         }
 
-        .upload-zone.analyzing {
-          border-color: ${colors.primary};
-          background: ${colors.primary}05;
-        }
 
         .file-input {
           display: none;
@@ -310,84 +317,6 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
           pointer-events: none;
         }
 
-        .analyzing-state {
-          position: relative;
-          z-index: 2;
-          width: 100%;
-        }
-
-        .ai-icon {
-          background: ${gradients.primary};
-          color: white;
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: bold;
-          font-size: 0.9rem;
-          margin: 0 auto 1rem auto;
-        }
-
-        .analyzing-text {
-          font-size: 1.1rem;
-          font-weight: 600;
-          color: ${colors.primary};
-          margin-bottom: 1.5rem;
-        }
-
-        .progress-container {
-          margin-bottom: 2rem;
-        }
-
-        .progress-bar {
-          width: 100%;
-          height: 8px;
-          background: ${colors.primary}20;
-          border-radius: 4px;
-          overflow: hidden;
-          margin-bottom: 0.5rem;
-        }
-
-        .progress-fill {
-          height: 100%;
-          background: ${gradients.primary};
-          transition: width 300ms ${animations.easing.smooth};
-          border-radius: 4px;
-        }
-
-        .progress-text {
-          font-size: 0.8rem;
-          color: ${colors.primary};
-          font-weight: 600;
-          font-family: 'Monaco', 'Menlo', monospace;
-        }
-
-        .analyzing-steps {
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-        }
-
-        .step {
-          font-size: 0.8rem;
-          color: ${colors.neutralDark};
-          opacity: 0.7;
-          ${animationClasses.fadeIn}
-        }
-
-        .step:nth-child(1) {
-          animation-delay: 0ms;
-        }
-
-        .step:nth-child(2) {
-          animation-delay: 200ms;
-        }
-
-        .step:nth-child(3) {
-          animation-delay: 400ms;
-        }
 
         ${animations.keyframes.fadeIn}
 

@@ -12,6 +12,7 @@ import { animations } from '../home/design-system/animations'
 import { FloatingSellerChat } from '../chat/FloatingSellerChat'
 import useSWR from 'swr'
 import { apiClient } from '@/src/lib/api-client-new'
+import { getRotatingGreeting } from '@/lib/greetings'
 
 interface ProfileData {
   id: string
@@ -52,9 +53,11 @@ interface ProfileViewProps {
   isOwnProfile?: boolean
   onNavigateHome?: () => void
   onNavigateMarketplace?: () => void
+  onCreateListing?: () => void
+  onSignOut?: () => void
 }
 
-export default function ProfileView({ username, isOwnProfile = false, onNavigateHome, onNavigateMarketplace }: ProfileViewProps) {
+export default function ProfileView({ username, isOwnProfile = false, onNavigateHome, onNavigateMarketplace, onCreateListing, onSignOut }: ProfileViewProps) {
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -166,21 +169,51 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
             </div>
             
             <div className="nav-buttons">
-              <Button 
-                variant="ghost"
-                onClick={onNavigateHome}
-                className="nav-button nav-button-ghost"
-              >
-                <Home className="h-4 w-4 mr-2" />
-                Home
-              </Button>
+              {isOwnProfile && profile && (
+                <span className="welcome-text">{getRotatingGreeting(profile.id)}, {profile.display_name || profile.username}!</span>
+              )}
               <Button 
                 variant="ghost"
                 onClick={onNavigateMarketplace}
                 className="nav-button nav-button-ghost"
               >
-                <Store className="h-4 w-4 mr-2" />
-                Marketplace
+                Browse
+              </Button>
+              <Button 
+                variant="ghost"
+                onClick={() => {
+                  console.log('👆 Sell button onClick triggered', { onCreateListing })
+                  console.log('🔄 Attempting to navigate to home page for Sell')
+                  if (onCreateListing) {
+                    onCreateListing()
+                  } else {
+                    console.error('❌ onCreateListing is undefined!')
+                    // Fallback navigation
+                    window.location.href = '/'
+                  }
+                }}
+                className="nav-button nav-button-ghost"
+                style={{ zIndex: 999, position: 'relative' }}
+              >
+                Sell
+              </Button>
+              <Button 
+                variant="ghost"
+                onClick={() => {
+                  console.log('👆 Sign Out button onClick triggered', { onSignOut })
+                  console.log('🚪 Attempting to sign out')
+                  if (onSignOut) {
+                    onSignOut()
+                  } else {
+                    console.error('❌ onSignOut is undefined!')
+                    // Fallback navigation
+                    window.location.href = '/'
+                  }
+                }}
+                className="nav-button nav-button-ghost"
+                style={{ zIndex: 999, position: 'relative' }}
+              >
+                Sign Out
               </Button>
             </div>
           </div>
@@ -393,7 +426,7 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
         .logo-text {
           font-size: 1.5rem;
           font-weight: 800;
-          color: black;
+          color: ${colors.neutralDark};
           letter-spacing: -0.025em;
           font-family: 'Inter', -apple-system, sans-serif;
         }
@@ -402,6 +435,12 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
           display: flex;
           align-items: center;
           gap: 1rem;
+        }
+        
+        .welcome-text {
+          color: ${colors.primary};
+          font-size: 0.9rem;
+          font-weight: 500;
         }
 
         .nav-button {
@@ -434,6 +473,10 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
 
           .logo-text {
             font-size: 1.25rem;
+          }
+          
+          .welcome-text {
+            display: none;
           }
         }
       `}</style>

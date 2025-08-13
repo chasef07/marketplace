@@ -500,7 +500,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
         .logo-text {
           font-size: 1.5rem;
           font-weight: 800;
-          color: black;
+          color: ${colors.neutralDark};
           letter-spacing: -0.025em;
           font-family: 'Inter', -apple-system, sans-serif;
         }

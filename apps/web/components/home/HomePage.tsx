@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { HeroSection } from './HeroSection'
 import { ListingPreview } from './ListingPreview'
 import { Marketplace } from '../marketplace/marketplace'
 import { EnhancedAuth } from '../auth/enhanced-auth'
+import { ThemedLoading } from '../ui/themed-loading'
 import { type AIAnalysisResult, apiClient } from "@/lib/api-client-new"
 
 // Lazy load heavy components
@@ -35,7 +36,7 @@ interface User {
   last_login?: string
 }
 
-export function HomePage() {
+export const HomePage = React.memo(function HomePage() {
   const [user, setUser] = useState<User | null>(null)
   const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'item-detail' | 'listing-preview' | 'profile-view' | 'profile-edit'>('home')
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
@@ -67,81 +68,96 @@ export function HomePage() {
     }
   }, [user])
 
-  // Initialize auth state and listen for changes
+  // Initialize auth state with proper Supabase listener
   useEffect(() => {
     let mounted = true
-    let lastAuthCheck = 0 // Throttle auth checks to prevent infinite loops
-    const AUTH_CHECK_THROTTLE = 2000 // Only allow auth checks every 2 seconds
+    let authStateTimeout: NodeJS.Timeout | null = null
 
-    // Check current session
+    // Debounced auth state handler to prevent race conditions
+    const debouncedAuthStateChange = (session: any) => {
+      if (authStateTimeout) {
+        clearTimeout(authStateTimeout)
+      }
+      
+      authStateTimeout = setTimeout(async () => {
+        if (!mounted) return
+        
+        if (session?.user) {
+          // User signed in - get their profile data
+          try {
+            const userData = await apiClient.getCurrentUser()
+            if (mounted && userData) {
+              setUser(userData)
+            }
+          } catch (error) {
+            // Profile might not exist yet for new users, or auth error
+            console.warn('Auth state change error:', error)
+            if (mounted) setUser(null)
+          }
+        } else {
+          // User signed out
+          if (mounted) {
+            setUser(null)
+            setCurrentView('home')
+          }
+        }
+      }, 200) // 200ms debounce
+    }
+
+    // Initialize auth state immediately (non-blocking)
     const initializeAuth = async () => {
       try {
         const session = await apiClient.getSession()
-        if (mounted && session?.user) {
-          const userData = await apiClient.getCurrentUser()
-          if (mounted && userData) {
-            setUser(userData)
+        if (mounted) {
+          if (session?.user) {
+            // Try to get user data, but don't block the UI
+            apiClient.getCurrentUser().then(userData => {
+              if (mounted && userData) {
+                setUser(userData)
+              }
+            }).catch((error) => {
+              // Auth errors during init, clear state
+              console.warn('Init auth error:', error)
+              if (mounted) setUser(null)
+            })
+          } else {
+            setUser(null)
           }
+          setIsLoading(false) // Always stop loading after initial check
         }
       } catch (error) {
-        // Don't retry on auth errors during initialization
+        console.warn('Initialize auth error:', error)
         if (mounted) {
           setUser(null)
-        }
-      } finally {
-        if (mounted) {
           setIsLoading(false)
         }
       }
     }
 
-    // Use periodic session check instead of reactive auth state listener
-    // This prevents infinite loops while still maintaining auth state sync
-    const sessionCheckInterval = setInterval(async () => {
-      if (!mounted) return
-      
-      try {
-        const session = await apiClient.getSession()
-        
-        // If there's a session but no user, try to get user data
-        if (session?.user && !user) {
-          const now = Date.now()
-          if (now - lastAuthCheck > AUTH_CHECK_THROTTLE) {
-            lastAuthCheck = now
-            const userData = await apiClient.getCurrentUser()
-            if (mounted && userData) {
-              setUser(userData)
-            }
-          }
-        }
-        // If there's no session but we have a user, clear it
-        else if (!session?.user && user) {
-          setUser(null)
-          setCurrentView('home')
-        }
-      } catch (error) {
-        // Ignore errors from periodic check to prevent logging noise
-      }
-    }, 2000) // Check every 2 seconds for responsive auth state updates
+    // Set up Supabase auth state listener for real-time updates
+    const { data: { subscription } } = apiClient.onAuthStateChange(debouncedAuthStateChange)
 
     initializeAuth()
 
     return () => {
       mounted = false
-      if (sessionCheckInterval) {
-        clearInterval(sessionCheckInterval)
+      if (authStateTimeout) {
+        clearTimeout(authStateTimeout)
+      }
+      if (subscription) {
+        subscription.unsubscribe()
       }
     }
-  }, [])
+  }, []) // Empty dependency array - only run once on mount
 
-  const createListingAndNavigate = async (analysisData: AIAnalysisResult) => {
+  const createListingAndNavigate = useCallback(async (analysisData: AIAnalysisResult) => {
     try {
-
       const listingData = {
         name: analysisData.listing.title,
         description: analysisData.listing.description,
         furniture_type: analysisData.listing.furniture_type,
         starting_price: parseFloat(analysisData.pricing.suggested_starting_price.toString()),
+        condition: 'good', // Default condition
         image_filename: analysisData.image_filename, // Backward compatibility
         images: analysisData.images, // New multiple images support
         // Include AI analysis details
@@ -166,7 +182,7 @@ export function HomePage() {
       // Still navigate to marketplace on error
       setCurrentView('marketplace')
     }
-  }
+  }, [])
 
   const handleAuthSuccess = async (userData: User) => {
     setUser(userData)
@@ -202,11 +218,11 @@ export function HomePage() {
     setCurrentView('marketplace')
   }
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     try {
       await apiClient.signOut()
       
-      // Clear local state immediately (periodic check will also handle this)
+      // Clear local state immediately (auth listener will also handle this)
       setUser(null)
       setCurrentView('home')
       
@@ -221,29 +237,29 @@ export function HomePage() {
       setUser(null)
       setCurrentView('home')
     }
-  }
+  }, [])
 
-  const handleGetStarted = () => {
+  const handleGetStarted = useCallback(() => {
     if (user) {
       setCurrentView('marketplace')
     } else {
       setAuthMode('signin')
       setCurrentView('auth')
     }
-  }
+  }, [user])
 
-  const handleCreateListing = () => {
+  const handleCreateListing = useCallback(() => {
     // Always go to home page for listing creation
     // User will be prompted to sign in when they submit the listing
     setCurrentView('home')
-  }
+  }, [])
 
-  const handleItemClick = (itemId: number) => {
+  const handleItemClick = useCallback((itemId: number) => {
     setSelectedItemId(itemId)
     setCurrentView('item-detail')
-  }
+  }, [])
 
-  const handleMakeOffer = async (itemId: number, price: number, message?: string) => {
+  const handleMakeOffer = useCallback(async (itemId: number, price: number, message?: string) => {
     try {
       await apiClient.createOffer(itemId, price, message || '')
       
@@ -255,7 +271,7 @@ export function HomePage() {
       console.error('Failed to create offer:', error)
       throw error
     }
-  }
+  }, [])
 
   const handleBackToHome = () => {
     setCurrentView('home')
@@ -310,16 +326,9 @@ export function HomePage() {
     setCurrentView('auth')
   }
 
-  // Show loading spinner while initializing auth
+  // Show themed loading screen while initializing auth
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
-          <p className="text-amber-700 font-medium">Loading...</p>
-        </div>
-      </div>
-    )
+    return <ThemedLoading message="Preparing your marketplace experience..." />
   }
 
   if (currentView === 'marketplace') {
@@ -408,4 +417,4 @@ export function HomePage() {
       />
     </div>
   )
-}
+})

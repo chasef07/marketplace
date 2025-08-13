@@ -162,7 +162,7 @@ export class SupabaseApiClient {
 
   // Helper method to get authenticated headers
   async getAuthHeaders(includeContentType: boolean = false): Promise<Record<string, string>> {
-    const { data: { session } } = await this._supabase.auth.getSession()
+    const session = await this.getSession() // Use our protected getSession method
     
     const headers: Record<string, string> = {}
     
@@ -555,9 +555,58 @@ export class SupabaseApiClient {
   }
 
   async getSession() {
-    const { data: { session }, error } = await this._supabase.auth.getSession()
-    if (error) throw error
-    return session
+    try {
+      const { data: { session }, error } = await this._supabase.auth.getSession()
+      if (error) {
+        // If it's a refresh token error, clear the session and storage completely
+        if (error.message.includes('Invalid Refresh Token') || error.message.includes('Refresh Token Not Found')) {
+          await this.clearAuthState()
+          return null
+        }
+        throw error
+      }
+      return session
+    } catch (error) {
+      // Handle any other auth errors by clearing the session completely
+      console.warn('Auth error, clearing session:', error)
+      await this.clearAuthState()
+      return null
+    }
+  }
+
+  // Helper method to completely clear auth state
+  private async clearAuthState() {
+    try {
+      // Sign out from Supabase
+      await this._supabase.auth.signOut()
+      
+      // Clear all auth-related localStorage items
+      if (typeof window !== 'undefined') {
+        const keysToRemove = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && (key.startsWith('supabase.auth.') || key.startsWith('sb-'))) {
+            keysToRemove.push(key)
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key))
+        
+        // Also clear any session-related items
+        localStorage.removeItem('supabase.auth.token')
+        sessionStorage.clear()
+      }
+    } catch (error) {
+      console.warn('Error clearing auth state:', error)
+    }
+  }
+
+  // Public method to force clear all auth data (for debugging/testing)
+  async forceResetAuth() {
+    await this.clearAuthState()
+    // Also reset client instances
+    if (typeof window !== 'undefined') {
+      window.location.reload()
+    }
   }
 
   onAuthStateChange(callback: (session: Session | null) => void) {

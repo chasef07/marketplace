@@ -1,6 +1,6 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import ProfileView from '@/components/profile/profile-view'
+import ProfilePageWrapper from '@/components/profile/profile-page-wrapper'
 import { createSupabaseServerClient } from '@/lib/supabase'
 
 interface ProfilePageProps {
@@ -55,5 +55,5 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     notFound()
   }
 
-  return <ProfileView username={username} />
+  return <ProfilePageWrapper username={username} />
 }
