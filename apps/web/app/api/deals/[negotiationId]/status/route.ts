@@ -136,7 +136,7 @@ export async function GET(
       }
 
       // Status history not implemented yet - return empty array
-      const statusHistory: any[] = []
+      const statusHistory: { status?: string }[] = []
 
       // Get current status
       const currentStatus = statusHistory?.[0]?.status || 'accepted'

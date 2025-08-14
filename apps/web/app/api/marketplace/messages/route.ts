@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase'
 
+interface OfferData {
+  price: number;
+}
+
 const supabase = createSupabaseServerClient()
 
 export async function POST(request: NextRequest) {
@@ -89,9 +93,8 @@ export async function POST(request: NextRequest) {
       .insert({
         negotiation_id: targetNegotiationId,
         offer_type: 'seller',
-        price: currentOffer || 0,
+        price: (currentOffer as unknown as OfferData)?.price || 0,
         message: message,
-        round_number: (currentRound || 0) + 1,
         is_counter_offer: false
       })
       .select()

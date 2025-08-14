@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
         success: true,
         apiResponse: responseData,
         databaseVerification: {
-          found: verifyOffers?.length > 0,
+          found: (verifyOffers?.length ?? 0) > 0,
           offers: verifyOffers,
           error: verifyError
         }
