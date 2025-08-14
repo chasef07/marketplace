@@ -104,7 +104,7 @@ export async function POST(
         return NextResponse.json({ error: 'Invalid negotiation ID' }, { status: 400 })
       }
 
-      const { content, message_type = 'text', metadata = {} } = body
+      const { content } = body
 
       if (!content) {
         return NextResponse.json({ error: 'Message content is required' }, { status: 400 })
@@ -146,7 +146,6 @@ export async function POST(
       }
 
       // Determine receiver
-      const receiverId = negotiation.seller_id === user.id ? negotiation.buyer_id : negotiation.seller_id
 
       // Create message as an offer with no price (message only)
       const { data: message, error: messageError } = await supabase

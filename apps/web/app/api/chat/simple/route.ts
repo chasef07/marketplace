@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase'
 import { ratelimit, withRateLimit } from '@/lib/rate-limit'
 
 // AI chat functionality replaced with Quick Actions overlay for better UX
 
-const supabase = createSupabaseServerClient()
 
 // Legacy functions removed - now using Quick Actions overlay with direct API calls
 
@@ -17,7 +15,7 @@ export async function POST(request: NextRequest) {
         conversation_id: null 
       })
 
-    } catch (error: unknown) {
+    } catch {
       return NextResponse.json(
         { message: "Please use the Quick Actions button (✨) for marketplace actions!" },
         { status: 200 }

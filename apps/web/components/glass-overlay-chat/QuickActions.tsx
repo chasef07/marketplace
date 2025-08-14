@@ -1,11 +1,11 @@
 'use client'
 
 import React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { 
   DollarSign
 } from 'lucide-react'
-import type { QuickActionItem } from './types'
+// import type { QuickActionItem } from './types'
 
 interface QuickActionsProps {
   onActionSelect: (action: string) => void

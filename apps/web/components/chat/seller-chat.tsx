@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Send, Bot, User, Sparkles, ArrowLeft } from "lucide-react"
-import { apiClient, type ChatMessage, type ChatResponse, type ChatHistoryResponse } from "@/lib/api-client-new"
+import { apiClient, type ChatMessage, type ChatResponse } from "@/lib/api-client-new"
 
 interface User {
   id: string
@@ -41,7 +41,6 @@ export function SellerChat({ user, onBack }: SellerChatProps) {
   const [isInitializing, setIsInitializing] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const [lastMessageId, setLastMessageId] = useState<number | null>(null)
   const [hasInitializedWelcome, setHasInitializedWelcome] = useState(false)
 
   useEffect(() => {
@@ -69,7 +68,7 @@ export function SellerChat({ user, onBack }: SellerChatProps) {
         })
         
         if (statusResponse.ok) {
-          const status = await statusResponse.json()
+          await statusResponse.json()
           // We don't automatically update messages, but we could show a notification
           // about new offers or status changes
           
@@ -329,15 +328,14 @@ What would you like to do today?`
                 {message.content}
               </p>
               
-              {/* Function call indicator */}
-              {message.function_calls && (
+              {message.function_calls ? (
                 <div className="mt-2 pt-2 border-t border-white/20">
                   <div className="flex items-center gap-1 text-xs opacity-80">
                     <Sparkles className="w-3 h-3" />
-                    <span>Executed: {message.function_calls.name}</span>
+                    <span>Executed: {(message.function_calls as { name?: string })?.name || 'Function'}</span>
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
             
             {/* Timestamp */}

@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     // Create a service role client with full access
     const supabaseServiceRole = createClient(
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     console.log('🔧 Starting zip_code migration...')
     
     // First, let's check if the column already exists by trying to select it
-    const { data: testData, error: testError } = await supabaseServiceRole
+    const { error: testError } = await supabaseServiceRole
       .from('profiles')
       .select('zip_code')
       .limit(1)
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       console.log('📝 zip_code column does not exist, attempting to add it...')
       
       // Use raw SQL to add the column
-      const { data: sqlData, error: sqlError } = await supabaseServiceRole
+      const { error: sqlError } = await supabaseServiceRole
         .rpc('exec', {
           sql: 'ALTER TABLE public.profiles ADD COLUMN zip_code VARCHAR(10);'
         })

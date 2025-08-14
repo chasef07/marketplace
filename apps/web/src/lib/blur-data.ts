@@ -2,7 +2,7 @@
 export const BLUR_DATA_URL = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyxxkYHWvSY2uamiCEhcEVQlUfLBlCd1ZPG4mF9eLgz1NmFl7HYW6PYixAhxY/JpPY1NwBj32zGOHNJWTbPY2zdDwCfMnmYqUKQU/Q=='
 
 // Generate blur data URL for specific aspect ratios
-export const generateBlurDataURL = (width: number, height: number) => {
+export const generateBlurDataURL = () => {
   // Create a simple geometric pattern for blur placeholder
   const canvas = document.createElement('canvas')
   canvas.width = 10

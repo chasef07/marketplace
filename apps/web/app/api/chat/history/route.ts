@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-helpers'
 
-const supabase = createSupabaseServerClient()
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,7 +9,6 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const conversationId = searchParams.get('conversation_id')
-    const limit = parseInt(searchParams.get('limit') || '50')
 
     // Since we don't persist chat history in the database currently,
     // return empty messages for fresh conversation start

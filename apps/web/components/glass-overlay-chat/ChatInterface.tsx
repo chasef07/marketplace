@@ -23,8 +23,7 @@ export function ChatInterface({ isExpanded, onNotification, className = '' }: Ch
     queuedCount,
     sendMessage,
     initializeChat,
-    handleButtonClick,
-    clearMessages
+    handleButtonClick
   } = useMarketplaceChat()
 
   const [inputMessage, setInputMessage] = useState('')

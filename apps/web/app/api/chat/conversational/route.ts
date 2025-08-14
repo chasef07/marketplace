@@ -669,7 +669,7 @@ async function handleCounter(supabase: SupabaseClient, userId: string, negotiati
     const newRoundNumber = roundNumber + 1
 
     // Create counter offer
-    const { data: offer, error: offerError } = await supabase
+    const { error: offerError } = await supabase
       .from('offers')
       .insert({
         negotiation_id: negotiationId,
@@ -773,7 +773,7 @@ async function handleCounterForce(supabase: SupabaseClient, userId: string, nego
     const newRoundNumber = roundNumber + 1
 
     // Create counter offer (force bypasses turn validation and most business rules)
-    const { data: offer, error: offerError } = await supabase
+    const { error: offerError } = await supabase
       .from('offers')
       .insert({
         negotiation_id: negotiationId,

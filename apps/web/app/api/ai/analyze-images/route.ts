@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       // Upload to Supabase Storage
       const sanitizedName = singleImage.name.replace(/[^a-zA-Z0-9.-]/g, '_')
       const fileName = `${Date.now()}-${sanitizedName}`
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('furniture-images')
         .upload(fileName, buffer, {
           contentType: mimeType,
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
         // Upload to Supabase Storage - sanitize filename
         const sanitizedName = image.name.replace(/[^a-zA-Z0-9.-]/g, '_')
         const fileName = `${Date.now()}-${i}-${sanitizedName}`
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('furniture-images')
           .upload(fileName, buffer, {
             contentType: mimeType,
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create image content for OpenAI - include all images
-    const imageContent = images.map((img, index) => ({
+    const imageContent = images.map((img) => ({
       type: "image_url" as const,
       image_url: {
         url: `data:${img.mimeType};base64,${img.base64}`,

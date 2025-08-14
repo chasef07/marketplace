@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase'
 
 export default function MyProfilePage() {
-  const [loading, setLoading] = useState(true)
+  const [loading] = useState(true)
   const router = useRouter()
   const supabase = createClient()
 
@@ -44,7 +44,7 @@ export default function MyProfilePage() {
     }
 
     redirectToProfile()
-  }, [router])
+  }, [router, supabase])
 
   if (loading) {
     return (

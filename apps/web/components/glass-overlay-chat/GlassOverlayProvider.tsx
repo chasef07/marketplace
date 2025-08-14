@@ -29,7 +29,7 @@ export function GlassOverlayProvider({ children, autoShow = false }: GlassOverla
       try {
         const currentUser = await apiClient.getCurrentUser()
         setUser(currentUser)
-      } catch (error) {
+      } catch {
         console.debug('User not authenticated for glass overlay')
         setUser(null)
       }
@@ -39,7 +39,7 @@ export function GlassOverlayProvider({ children, autoShow = false }: GlassOverla
 
     // Listen for auth state changes
     const { data: { subscription } } = apiClient.supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (event) => {
         if (event === 'SIGNED_IN') {
           checkAuth()
         } else if (event === 'SIGNED_OUT') {

@@ -80,9 +80,9 @@ export async function POST(
     const declineMessage = body.reason || 'Offer declined'
 
     // Get current offer and round number using helper functions
-    const { data: currentOffer } = await supabase
+    await supabase
       .rpc('get_current_offer', { neg_id: negotiationId })
-    const { data: currentRound } = await supabase
+    await supabase
       .rpc('get_round_count', { neg_id: negotiationId })
 
     const { error: offerError } = await supabase

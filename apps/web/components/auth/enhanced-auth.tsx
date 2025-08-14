@@ -248,7 +248,7 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
             try {
               user = await apiClient.getCurrentUser()
               if (user) break
-            } catch (err) {
+            } catch {
               console.log(`Profile not ready, retry ${retries + 1}/${maxRetries}`)
             }
             
@@ -267,7 +267,7 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
           }
         }
       } else if (mode === 'signin') {
-        const signInResult = await apiClient.signIn(formData.email, formData.password)
+        await apiClient.signIn(formData.email, formData.password)
         
         // No need to check for error since apiClient.signIn throws on error
         

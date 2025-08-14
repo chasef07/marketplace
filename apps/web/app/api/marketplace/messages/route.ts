@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       .rpc('get_current_offer', { neg_id: targetNegotiationId })
     
     // Get current round number
-    const { data: currentRound } = await supabase
+    await supabase
       .rpc('get_round_count', { neg_id: targetNegotiationId })
 
     // Add message to offers table

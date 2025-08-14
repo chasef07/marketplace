@@ -34,7 +34,7 @@ export function SimpleGlassOverlayProvider({ children }: SimpleGlassOverlayProvi
 
     // Listen for auth state changes
     const { data: { subscription } } = apiClient.supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (event) => {
         if (event === 'SIGNED_IN') {
           checkAuth()
         } else if (event === 'SIGNED_OUT') {
