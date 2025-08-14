@@ -7,9 +7,15 @@ import type { Database } from '@/lib/database.types'
 
 // Type interfaces for enriched negotiation data
 interface EnrichedNegotiation {
-  latest_offer: number;
+  id: string;
+  latest_offer: {
+    amount: number;
+    created_at: string;
+    offer_type: string;
+  } | null;
   offer_count: number;
   buyer_original_offer: number;
+  created_at: string;
   offer_history: Array<{
     amount: number;
     created_at: string;
@@ -164,7 +170,7 @@ async function handleWelcome(supabase: SupabaseClient, userId: string) {
     const offerCount = enrichedNegotiations.length
     let message = `💼 **Marketplace Assistant**\n\nYou have ${offerCount} active offer${offerCount > 1 ? 's' : ''}:\n\n`
 
-    const buttons: {text: string, action: string}[] = []
+    const buttons = [] as {text: string, action: string}[]
 
     (enrichedNegotiations as EnrichedNegotiation[]).forEach((neg, index) => {
       const buyerName = neg.profiles?.username || 'Unknown Buyer'
@@ -191,15 +197,11 @@ async function handleWelcome(supabase: SupabaseClient, userId: string) {
       if (buyerOriginalOffer && latestOffer) {
         if (latestOffer.offer_type === 'buyer') {
           // Latest move was by buyer
-          if (latestOffer.is_counter_offer) {
-            message += `💰 **Buyer countered: $${latestOffer.price}** (originally $${buyerOriginalOffer.price})\n`
-          } else {
-            message += `📥 **Buyer offered: $${latestOffer.price}**\n`
-          }
+          message += `💰 **Buyer offered: $${latestOffer.amount}**\n`
           message += `⏳ **Your turn to respond**\n`
         } else {
           // Latest move was by seller (you)
-          message += `📤 **You countered: $${latestOffer.price}** (buyer offered $${buyerOriginalOffer.price})\n`
+          message += `📤 **You countered: $${latestOffer.amount}**\n`
           message += `⏳ **Waiting for buyer response**\n`
         }
       }
@@ -210,7 +212,7 @@ async function handleWelcome(supabase: SupabaseClient, userId: string) {
       if (latestOffer?.offer_type === 'buyer') {
         // Buyer made last move - seller can respond
         buttons.push(
-          { text: `✅ Accept $${latestOffer.price}`, action: `accept_${neg.id}` },
+          { text: `✅ Accept $${latestOffer.amount}`, action: `accept_${neg.id}` },
           { text: `❌ Decline #${index + 1}`, action: `decline_${neg.id}` },
           { text: `💰 Counter #${index + 1}`, action: `show_counter_${neg.id}` }
         )
@@ -469,8 +471,8 @@ async function showCounterInput(supabase: SupabaseClient, userId: string, negoti
       .limit(1)
       .single()
 
-    const currentOffer = latestOffer?.price || 0
-    const buyerOriginal = buyerOriginalOffer?.price || 0
+    const currentOffer = latestOffer?.amount || 0
+    const buyerOriginal = (buyerOriginalOffer as any)?.price || 0
     const startingPrice = negotiation.items?.starting_price || 0
     const itemName = negotiation.items?.name || 'Item'
     const buyerName = negotiation.profiles?.username || 'Unknown'
