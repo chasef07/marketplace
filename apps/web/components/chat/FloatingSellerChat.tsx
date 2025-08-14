@@ -12,6 +12,14 @@ interface User {
   email: string
 }
 
+interface InputField {
+  prefix?: string;
+  type: string;
+  placeholder: string;
+  submitAction: string;
+  submitText: string;
+}
+
 interface FloatingSellerChatProps {
   user: User
 }
@@ -371,27 +379,27 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
                           <div className="mt-3 space-y-2">
                             <div className="flex gap-2">
                               <div className="relative flex-1">
-                                {message.metadata.inputField.prefix && (
+                                {(message.metadata.inputField as InputField).prefix && (
                                   <span 
                                     className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm font-medium"
                                     style={{ color: '#374151' }}
                                   >
-                                    {message.metadata.inputField.prefix}
+                                    {(message.metadata.inputField as InputField).prefix}
                                   </span>
                                 )}
                                 <input
-                                  type={message.metadata.inputField.type}
+                                  type={(message.metadata.inputField as InputField).type}
                                   value={inputValue}
                                   onChange={(e) => setInputValue(e.target.value)}
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter' && !isLoading && inputValue.trim()) {
-                                      handleInputSubmit(message.metadata.inputField.submitAction)
+                                      handleInputSubmit((message.metadata.inputField as InputField).submitAction)
                                     }
                                   }}
-                                  placeholder={message.metadata.inputField.placeholder}
+                                  placeholder={(message.metadata.inputField as InputField).placeholder}
                                   disabled={isLoading}
                                   className={`w-full px-3 py-2 text-sm rounded-lg border-0 outline-none transition-all duration-200 ${
-                                    message.metadata.inputField.prefix ? 'pl-8' : 'pl-3'
+                                    (message.metadata.inputField as InputField).prefix ? 'pl-8' : 'pl-3'
                                   }`}
                                   style={{
                                     background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.2) 100%)',
@@ -403,7 +411,7 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
                                 />
                               </div>
                               <button
-                                onClick={() => handleInputSubmit(message.metadata.inputField.submitAction)}
+                                onClick={() => handleInputSubmit((message.metadata.inputField as InputField).submitAction)}
                                 disabled={isLoading || !inputValue.trim()}
                                 className="px-4 py-2 text-xs rounded-lg font-medium transition-all duration-200 hover:scale-105 hover:shadow-md relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
                                 style={{ 
@@ -416,7 +424,7 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
                                   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
                                 }}
                               >
-                                {isLoading ? 'Sending...' : message.metadata.inputField.submitText}
+                                {isLoading ? 'Sending...' : (message.metadata.inputField as InputField).submitText}
                               </button>
                             </div>
                           </div>

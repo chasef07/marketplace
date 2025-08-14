@@ -122,7 +122,7 @@ export function SellerChat({ user, onBack }: SellerChatProps) {
         const negotiations = await negotiationsResponse.json()
         
         // Use the my-negotiations endpoint for accurate active negotiations count
-        const activeNegotiations = negotiations.filter((neg: unknown) => neg.status === 'active')
+        const activeNegotiations = negotiations.filter((neg: any) => neg.status === 'active')
         
         if (status.items && status.items.length > 0) {
           welcomeContent = `Good ${timeOfDay}! ${status.items.length} active listing${status.items.length > 1 ? 's' : ''}, ${activeNegotiations.length} active offer${activeNegotiations.length !== 1 ? 's' : ''}.
