@@ -3,9 +3,26 @@ import { createSupabaseServerClient } from '@/lib/supabase'
 import { ratelimit, withRateLimit } from '@/lib/rate-limit'
 import { getAuthenticatedUser } from '@/src/lib/auth-helpers'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@/lib/database.types'
 
 // Type interfaces for enriched negotiation data
+interface BuyerOriginalOffer {
+  price: number;
+}
+
+interface NegotiationItem {
+  name: string;
+  starting_price: number;
+}
+
+interface NegotiationProfile {
+  username: string;
+}
+
+interface NegotiationDetails {
+  items: NegotiationItem[];
+  profiles: NegotiationProfile[];
+}
+
 interface EnrichedNegotiation {
   id: string;
   latest_offer: {
@@ -57,26 +74,26 @@ export async function POST(request: NextRequest) {
 
       if (message.startsWith('accept_')) {
         const negotiationId = parseInt(message.replace('accept_', ''))
-        return await handleAccept(supabase, userId, negotiationId, authResult.token)
+        return await handleAccept(supabase, userId, negotiationId)
       }
 
       if (message.startsWith('decline_')) {
         const negotiationId = parseInt(message.replace('decline_', ''))
-        return await handleDecline(supabase, userId, negotiationId, authResult.token)
+        return await handleDecline(supabase, userId, negotiationId)
       }
 
       if (message.startsWith('counter_')) {
         const parts = message.split('_')
         const negotiationId = parseInt(parts[1])
         const price = parseFloat(parts[2])
-        return await handleCounter(supabase, userId, negotiationId, price, authResult.token)
+        return await handleCounter(supabase, userId, negotiationId, price)
       }
 
       if (message.startsWith('force_counter_')) {
         const parts = message.split('_')
         const negotiationId = parseInt(parts[2])
         const price = parseFloat(parts[3])
-        return await handleCounterForce(supabase, userId, negotiationId, price, authResult.token)
+        return await handleCounterForce(supabase, userId, negotiationId, price)
       }
 
       if (message.startsWith('show_counter_')) {
@@ -175,7 +192,7 @@ async function handleWelcome(supabase: SupabaseClient, userId: string) {
     (enrichedNegotiations as EnrichedNegotiation[]).forEach((neg, index) => {
       const buyerName = neg.profiles?.username || 'Unknown Buyer'
       const itemName = neg.items?.name || 'Unknown Item'
-      const startingPrice = neg.items?.starting_price || 0
+      const startingPrice = 0 // Default value for enriched negotiations
       const latestOffer = neg.latest_offer
       const buyerOriginalOffer = neg.buyer_original_offer
       const offerCount = neg.offer_count
@@ -240,7 +257,7 @@ async function handleWelcome(supabase: SupabaseClient, userId: string) {
   }
 }
 
-async function handleAccept(supabase: SupabaseClient, userId: string, negotiationId: number, authToken: string | null) {
+async function handleAccept(supabase: SupabaseClient, userId: string, negotiationId: number) {
   try {
     // Get negotiation details
     const { data: negotiation, error: negotiationError } = await supabase
@@ -335,7 +352,7 @@ async function handleAccept(supabase: SupabaseClient, userId: string, negotiatio
   }
 }
 
-async function handleDecline(supabase: SupabaseClient, userId: string, negotiationId: number, authToken: string | null) {
+async function handleDecline(supabase: SupabaseClient, userId: string, negotiationId: number) {
   try {
     // Get negotiation details
     const { data: negotiation, error: negotiationError } = await supabase
@@ -472,10 +489,10 @@ async function showCounterInput(supabase: SupabaseClient, userId: string, negoti
       .single()
 
     const currentOffer = latestOffer?.amount || 0
-    const buyerOriginal = (buyerOriginalOffer as any)?.price || 0
-    const startingPrice = negotiation.items?.starting_price || 0
-    const itemName = negotiation.items?.name || 'Item'
-    const buyerName = negotiation.profiles?.username || 'Unknown'
+    const buyerOriginal = (buyerOriginalOffer as BuyerOriginalOffer)?.price || 0
+    const startingPrice = (negotiation as unknown as NegotiationDetails).items?.[0]?.starting_price || 0
+    const itemName = (negotiation as unknown as NegotiationDetails).items?.[0]?.name || 'Item'
+    const buyerName = (negotiation as unknown as NegotiationDetails).profiles?.[0]?.username || 'Unknown'
     
     // Suggest reasonable counter range
     const suggestedMin = Math.max(buyerOriginal, Math.floor(startingPrice * 0.8))
@@ -504,7 +521,7 @@ async function showCounterInput(supabase: SupabaseClient, userId: string, negoti
   }
 }
 
-async function handleCounter(supabase: SupabaseClient, userId: string, negotiationId: number, price: number, authToken: string | null) {
+async function handleCounter(supabase: SupabaseClient, userId: string, negotiationId: number, price: number) {
   try {
     if (!price || price <= 0) {
       return NextResponse.json({
@@ -535,7 +552,7 @@ async function handleCounter(supabase: SupabaseClient, userId: string, negotiati
       })
     }
 
-    const startingPrice = negotiation.items?.starting_price || 0
+    const startingPrice = (negotiation as unknown as NegotiationDetails).items?.[0]?.starting_price || 0
     
     // Business logic validation
     if (price > startingPrice * 1.2) {
@@ -706,7 +723,7 @@ async function handleCounter(supabase: SupabaseClient, userId: string, negotiati
   }
 }
 
-async function handleCounterForce(supabase: SupabaseClient, userId: string, negotiationId: number, price: number, authToken: string | null) {
+async function handleCounterForce(supabase: SupabaseClient, userId: string, negotiationId: number, price: number) {
   try {
     // Get negotiation details with minimal validation (this is "force" so we bypass some checks)
     const { data: negotiationDetails, error: negotiationError } = await supabase

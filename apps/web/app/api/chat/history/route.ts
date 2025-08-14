@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       conversation_id: conversationId || 1, // Default conversation ID
       conversation: {
         id: parseInt(conversationId || '1'),
-        seller_id: user.id,
+        seller_id: user?.id || 'unknown',
         last_message_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
