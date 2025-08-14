@@ -101,12 +101,12 @@ export async function PUT(request: NextRequest) {
       }
 
       // Validate required fields
-      if (updateData.display_name && updateData.display_name.trim().length === 0) {
+      if (updateData.display_name && (updateData.display_name as string).trim().length === 0) {
         return NextResponse.json({ error: 'Display name cannot be empty' }, { status: 400 })
       }
 
       // Limit bio length
-      if (updateData.bio && updateData.bio.length > 500) {
+      if (updateData.bio && (updateData.bio as string).length > 500) {
         return NextResponse.json({ error: 'Bio cannot exceed 500 characters' }, { status: 400 })
       }
 

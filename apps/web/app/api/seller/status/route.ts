@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     // Get authenticated user
     const { user } = await requireAuth(request)
 
-    console.log('Getting seller status for user:', user.id)
+    console.log('Getting seller status for user:', user?.id)
     
     // Get seller's items (don't require negotiations to exist)
     const { data: items, error: itemsError } = await supabase
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
           profiles!negotiations_buyer_id_fkey (username)
         )
       `)
-      .eq('seller_id', user.id)
+      .eq('seller_id', user?.id || 'unknown')
       .eq('item_status', 'active')
 
     console.log('Items query result:', { items, error: itemsError })
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
           profiles!negotiations_buyer_id_fkey (username)
         )
       `)
-      .eq('negotiations.seller_id', user.id)
+      .eq('negotiations.seller_id', user?.id || 'unknown')
       .order('created_at', { ascending: false })
       .limit(10)
 

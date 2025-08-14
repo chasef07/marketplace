@@ -349,7 +349,7 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
                         {/* Buttons */}
                         {message.role === 'assistant' && message.metadata?.buttons && (
                           <div className="flex flex-wrap gap-1 mt-2">
-                            {message.metadata.buttons.map((button: {text: string, action: string}, index: number) => (
+                            {(message.metadata.buttons as {text: string, action: string}[]).map((button, index: number) => (
                               <button
                                 key={index}
                                 onClick={() => handleButtonClick(button.action || button.text)}

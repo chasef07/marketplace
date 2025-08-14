@@ -31,14 +31,14 @@ export async function GET(request: NextRequest) {
       .from('negotiations_enhanced')
       .select(`
         id,
-        current_offer,
+        latest_offer_price,
         status,
         created_at,
         item_id
       `)
       .eq('seller_id', user.id)
       .eq('status', 'active')
-      .order('current_offer', { ascending: false })
+      .order('latest_offer_price', { ascending: false })
 
     // Enrich with item, buyer data, and recent message previews
     const enrichedNegotiations = await Promise.all(

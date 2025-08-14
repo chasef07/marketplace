@@ -97,7 +97,7 @@ export async function POST(
     
     const roundNumber = (currentRound as number) || 0
     
-    if (roundNumber >= (negotiation.max_rounds || 10)) {
+    if (roundNumber >= 10) { // Default max rounds
       return NextResponse.json({ error: 'Maximum rounds reached' }, { status: 400 })
     }
 

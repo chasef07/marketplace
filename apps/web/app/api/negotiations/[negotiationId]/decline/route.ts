@@ -90,9 +90,8 @@ export async function POST(
       .insert({
         negotiation_id: negotiationId,
         offer_type: offerType,
-        price: currentOffer || 0,
+        price: null,
         message: declineMessage,
-        round_number: ((currentRound as number) || 0) + 1,
         is_counter_offer: false
       })
 

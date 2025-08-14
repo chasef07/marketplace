@@ -10,14 +10,14 @@ async function getStatus(sellerId: string) {
     .from('negotiations_enhanced')
     .select(`
       id,
-      current_offer,
+      latest_offer_price,
       status,
       item_id,
       created_at
     `)
     .eq('seller_id', sellerId)
     .eq('status', 'active')
-    .order('current_offer', { ascending: false })
+    .order('latest_offer_price', { ascending: false })
 
   if (error) throw new Error(`Failed to fetch status: ${error.message}`)
 

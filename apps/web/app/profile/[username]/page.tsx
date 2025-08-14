@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: ProfilePageProps): Promise<Me
   
   const { data: profile } = await supabase
     .from('profiles')
-    .select('username, seller_personality, buyer_personality')
+    .select('username')
     .eq('username', username)
     .eq('is_active', true)
     .single()

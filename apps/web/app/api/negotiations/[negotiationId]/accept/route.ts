@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase'
 import { ratelimit, withRateLimit } from '@/lib/rate-limit'
 
+interface CurrentOffer {
+  price: number;
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ negotiationId: string }> }
@@ -91,7 +95,7 @@ export async function POST(
       .from('negotiations')
       .update({
         status: 'completed',
-        final_price: currentOffer || 0,
+        final_price: (currentOffer as unknown as CurrentOffer)?.price || 0,
         completed_at: new Date().toISOString()
       })
       .eq('id', negotiationId)
