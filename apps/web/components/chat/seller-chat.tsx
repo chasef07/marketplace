@@ -17,6 +17,17 @@ interface User {
   last_login?: string
 }
 
+interface Negotiation {
+  status: string;
+  item_id: number;
+}
+
+interface Item {
+  id: number;
+  name: string;
+  starting_price: number;
+}
+
 interface SellerChatProps {
   user: User
   onBack: () => void
@@ -122,13 +133,13 @@ export function SellerChat({ user, onBack }: SellerChatProps) {
         const negotiations = await negotiationsResponse.json()
         
         // Use the my-negotiations endpoint for accurate active negotiations count
-        const activeNegotiations = negotiations.filter((neg: any) => neg.status === 'active')
+        const activeNegotiations = negotiations.filter((neg: Negotiation) => neg.status === 'active')
         
         if (status.items && status.items.length > 0) {
           welcomeContent = `Good ${timeOfDay}! ${status.items.length} active listing${status.items.length > 1 ? 's' : ''}, ${activeNegotiations.length} active offer${activeNegotiations.length !== 1 ? 's' : ''}.
 
-${status.items.slice(0, 2).map((item: unknown) => {
-  const itemNegotiations = activeNegotiations.filter((neg: unknown) => neg.item_id === item.id)
+${status.items.slice(0, 2).map((item: Item) => {
+  const itemNegotiations = activeNegotiations.filter((neg: Negotiation) => neg.item_id === item.id)
   return `📦 "${item.name}" - $${item.starting_price} (${itemNegotiations.length} active offer${itemNegotiations.length !== 1 ? 's' : ''})`
 }).join('\n')}
 
@@ -222,12 +233,12 @@ What would you like to do today?`
       let errorMessage = "I'm having trouble connecting right now. "
       let retryButtons = []
       
-      if (error.message?.includes('Authentication')) {
+      if ((error as Error).message?.includes('Authentication')) {
         errorMessage = "Please log in again to continue using the AI assistant."
         retryButtons = [
           { text: "🔐 Log In", action: "login_required" }
         ]
-      } else if (error.message?.includes('Network') || error.message?.includes('fetch')) {
+      } else if ((error as Error).message?.includes('Network') || (error as Error).message?.includes('fetch')) {
         errorMessage = "Network connection issue. Let me try to reconnect..."
         retryButtons = [
           { text: "🔄 Retry", action: "retry_message" },
