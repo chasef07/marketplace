@@ -82,7 +82,7 @@ export const HomePage = React.memo(function HomePage() {
       authStateTimeout = setTimeout(async () => {
         if (!mounted) return
         
-        if (session?.user) {
+        if ((session as { user?: unknown })?.user) {
           // User signed in - get their profile data
           try {
             const userData = await apiClient.getCurrentUser()

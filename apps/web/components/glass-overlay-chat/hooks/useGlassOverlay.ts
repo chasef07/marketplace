@@ -24,7 +24,7 @@ export function useGlassOverlay() {
 
   const dragStartPos = useRef<Position>({ x: 0, y: 0 })
   const dragOffset = useRef<Position>({ x: 0, y: 0 })
-  const animationFrame = useRef<number>()
+  const animationFrame = useRef<number>(0)
 
   // Load preferences from localStorage
   useEffect(() => {

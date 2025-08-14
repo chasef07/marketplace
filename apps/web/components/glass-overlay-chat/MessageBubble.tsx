@@ -87,8 +87,7 @@ export function MessageBubble({ message, isCompact = false, className = '', onBu
               {message.content}
             </p>
             
-            {/* Function call indicator */}
-            {hasFunctionCall && !isCompact && (
+            {hasFunctionCall && !isCompact ? (
               <motion.div 
                 className="mt-2 pt-2 border-t border-white/20"
                 initial={{ opacity: 0 }}
@@ -97,13 +96,12 @@ export function MessageBubble({ message, isCompact = false, className = '', onBu
               >
                 <div className="flex items-center gap-1 text-xs opacity-80">
                   <Sparkles className="w-3 h-3" />
-                  <span>Executed: {message.functionCalls.name}</span>
+                  <span>Executed: {(message.functionCalls as { name?: string })?.name || 'Function'}</span>
                 </div>
               </motion.div>
-            )}
+            ) : null}
 
-            {/* Welcome message sparkles */}
-            {isWelcome && !isCompact && (
+            {isWelcome && !isCompact ? (
               <motion.div 
                 className="absolute -top-1 -right-1"
                 animate={{ 
@@ -118,47 +116,48 @@ export function MessageBubble({ message, isCompact = false, className = '', onBu
               >
                 <Sparkles className="w-4 h-4 text-blue-400" />
               </motion.div>
-            )}
+            ) : null}
           </motion.div>
 
-          {/* Interactive Buttons */}
-          {!isUser && message.metadata?.buttons && message.metadata.buttons.length > 0 && !isCompact && (
+          {!isUser && message.metadata?.buttons && Array.isArray(message.metadata.buttons) && message.metadata.buttons.length > 0 && !isCompact ? (
             <div className="mt-3 flex gap-2 justify-start">
-              {message.metadata.buttons.map((button: unknown, index: number) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => {
-                    console.log('Button clicked in MessageBubble:', button.action, button.data)
-                    if (onButtonClick) {
-                      onButtonClick(button.action, button.data)
-                    }
-                  }}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 hover:shadow-md cursor-pointer ${
-                    button.text.includes('Accept') || button.text.includes('Yes')
-                      ? 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100'
-                      : button.text.includes('Decline') || button.text.includes('Cancel')
-                      ? 'bg-red-50 border-red-200 text-red-800 hover:bg-red-100'  
-                      : button.text.includes('Counter') || button.text.includes('$')
-                      ? 'bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100'
-                      : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {button.text}
-                </button>
-              ))}
+              {message.metadata.buttons.map((button: unknown, index: number) => {
+                const typedButton = button as { action?: string; data?: unknown; text?: string }
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => {
+                      console.log('Button clicked in MessageBubble:', typedButton.action, typedButton.data)
+                      if (onButtonClick && typedButton.action) {
+                        onButtonClick(typedButton.action, typedButton.data)
+                      }
+                    }}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-all duration-200 hover:shadow-md cursor-pointer ${
+                      typedButton.text?.includes('Accept') || typedButton.text?.includes('Yes')
+                        ? 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100'
+                        : typedButton.text?.includes('Decline') || typedButton.text?.includes('Cancel')
+                        ? 'bg-red-50 border-red-200 text-red-800 hover:bg-red-100'  
+                        : typedButton.text?.includes('Counter') || typedButton.text?.includes('$')
+                        ? 'bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100'
+                        : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {typedButton.text}
+                  </button>
+                )
+              })}
             </div>
-          )}
+          ) : null}
           
-          {/* Timestamp */}
-          {!isCompact && (
+          {!isCompact ? (
             <div className={`text-xs text-gray-500 mt-1 ${isUser ? 'text-right' : 'text-left'}`}>
               {formatTime(message.timestamp)}
-              {message.metadata?.dynamic && (
+              {message.metadata?.dynamic ? (
                 <span className="ml-1 text-blue-500">●</span>
-              )}
+              ) : null}
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </motion.div>

@@ -25,7 +25,7 @@ const loadLeaflet = async () => {
   const L = await import('leaflet')
   
   // Fix default icons issue in Leaflet
-  delete (L.Icon.Default.prototype as Record<string, unknown>)._getIconUrl
+  delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
@@ -99,8 +99,8 @@ const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: stri
         // Thorough cleanup of existing map
         if (mapInstanceRef.current) {
           try {
-            mapInstanceRef.current.off()
-            mapInstanceRef.current.remove()
+            (mapInstanceRef.current as any).off()
+            (mapInstanceRef.current as any).remove()
           } catch (e) {
             console.warn('Error during map cleanup:', e)
           }
@@ -219,8 +219,8 @@ const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: stri
       isInitializingRef.current = false
       if (mapInstanceRef.current) {
         try {
-          mapInstanceRef.current.off()
-          mapInstanceRef.current.remove()
+          (mapInstanceRef.current as any).off()
+          (mapInstanceRef.current as any).remove()
         } catch (e) {
           console.warn('Error during cleanup:', e)
         }
@@ -235,8 +235,8 @@ const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: stri
       isInitializingRef.current = false
       if (mapInstanceRef.current) {
         try {
-          mapInstanceRef.current.off()
-          mapInstanceRef.current.remove()
+          (mapInstanceRef.current as any).off()
+          (mapInstanceRef.current as any).remove()
         } catch (e) {
           console.warn('Error during cleanup:', e)
         }

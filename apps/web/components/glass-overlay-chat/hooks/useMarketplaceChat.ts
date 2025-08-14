@@ -24,8 +24,8 @@ export function useMarketplaceChat() {
     role: msg.role === 'system' ? 'assistant' : msg.role, // Convert system messages to assistant
     content: msg.content,
     timestamp: msg.created_at,
-    functionCalls: msg.function_calls,
-    functionResults: msg.function_results,
+    functionCalls: msg.function_calls as Record<string, unknown> | undefined,
+    functionResults: msg.function_results as Record<string, unknown> | undefined,
     metadata: msg.metadata || {}
   }), [])
 
@@ -264,13 +264,13 @@ export function useMarketplaceChat() {
       const errorMessage: ChatUIMessage = {
         id: `error-${Date.now()}`,
         role: 'assistant',
-        content: `Sorry, I encountered an error: ${error.message}`,
+        content: `Sorry, I encountered an error: ${(error as Error).message}`,
         timestamp: new Date().toISOString(),
         metadata: { error: true }
       }
       
       setMessages(prev => [...prev, errorMessage])
-      setError(error.message)
+      setError((error as Error).message)
     } finally {
       setIsLoading(false)
     }
