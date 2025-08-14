@@ -3,10 +3,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Heart, MapPin, User, DollarSign, MessageSquare, ChevronDown, ChevronUp, Edit, Save, X } from "lucide-react"
+import { ArrowLeft, MapPin, User, DollarSign, MessageSquare, Edit, Save, X } from "lucide-react"
 import { apiClient, ImageData } from "@/lib/api-client-new"
 import { FURNITURE_BLUR_DATA_URL } from "@/lib/blur-data"
-import Image from "next/image"
 import { ItemDetailSkeleton } from "@/components/ui/skeleton"
 import { ImageCarousel } from "@/components/ui/ImageCarousel"
 
@@ -557,9 +556,8 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
                         borderColor: 'rgba(74, 111, 165, 0.3)', 
                         backgroundColor: 'rgba(255, 255, 255, 0.9)', 
                         color: '#2C3E50',
-                        focusRingColor: '#4A6FA5',
                         MozAppearance: 'textfield'
-                      }}
+                      } as React.CSSProperties}
                       placeholder="0.00"
                       step="0.01"
                     />
@@ -577,9 +575,8 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
                     style={{ 
                       borderColor: 'rgba(74, 111, 165, 0.3)', 
                       backgroundColor: 'rgba(255, 255, 255, 0.9)', 
-                      color: '#2C3E50',
-                      focusRingColor: '#4A6FA5'
-                    }}
+                      color: '#2C3E50'
+                    } as React.CSSProperties}
                     rows={3}
                     placeholder="Add a message to the seller..."
                   />

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { colors, gradients, shadows } from './design-system/colors'
-import { animations, animationClasses } from './design-system/animations'
+import { animations } from './design-system/animations'
 import { AIAnalysisLoading } from '../ui/ai-analysis-loading'
 import { type AIAnalysisResult } from "@/lib/api-client-new"
 

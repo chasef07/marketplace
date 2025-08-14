@@ -80,7 +80,8 @@ export async function withRateLimit(
 
   try {
     const ip = getClientIP(request);
-    const { success, limit, reset, remaining } = await limiter.limit(ip);
+    const result = await (limiter as any).limit(ip);
+    const { success, limit, reset, remaining } = result;
 
     if (!success) {
       return new Response(

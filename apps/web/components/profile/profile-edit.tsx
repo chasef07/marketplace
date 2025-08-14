@@ -133,7 +133,7 @@ export default function ProfileEdit({ initialProfile }: ProfileEditProps) {
       
       // Generate unique filename
       const fileExt = file.name.split('.').pop()
-      const fileName = `profile_${profile.id}_${Date.now()}.${fileExt}`
+      const fileName = `profile_${profile?.id}_${Date.now()}.${fileExt}`
       
       const { error: uploadError } = await supabase.storage
         .from('furniture-images')

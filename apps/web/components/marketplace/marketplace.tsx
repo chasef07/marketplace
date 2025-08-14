@@ -2,13 +2,13 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Search, Heart, Star, MapPin, Clock, Plus, Bot } from "lucide-react"
+import { Search, Plus } from "lucide-react"
 import { colors, gradients, shadows } from '../home/design-system/colors'
 import { animations } from '../home/design-system/animations'
 import { useState, useEffect, useMemo, useCallback } from "react"
 import useSWR from 'swr'
 import { useDebouncedCallback } from 'use-debounce'
-import { apiClient, Item, PaginationInfo } from "@/lib/api-client-new"
+import { Item, PaginationInfo } from "@/lib/api-client-new"
 import { FURNITURE_BLUR_DATA_URL } from "@/lib/blur-data"
 import Image from "next/image"
 import { ItemSkeleton } from "@/components/ui/skeleton"

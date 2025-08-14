@@ -85,7 +85,7 @@ const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: stri
     if (isInitializingRef.current) return
     
     // If map exists and is for the same zip code, just return
-    if (mapInstanceRef.current && currentZipCodeRef.current === zipCode) return
+    if ((mapInstanceRef.current as any) && currentZipCodeRef.current === zipCode) return
 
     const initMap = async () => {
       try {
@@ -97,14 +97,14 @@ const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: stri
         }
 
         // Thorough cleanup of existing map
-        if (mapInstanceRef.current) {
+        if ((mapInstanceRef.current as any)) {
           try {
             (mapInstanceRef.current as any).off()
             (mapInstanceRef.current as any).remove()
           } catch (e) {
             console.warn('Error during map cleanup:', e)
           }
-          mapInstanceRef.current = null
+          (mapInstanceRef.current as any) = null
         }
 
         // Clear and reset container
@@ -126,7 +126,7 @@ const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: stri
         console.log('Creating map with coordinates:', coordinates)
 
         // Create map with error handling
-        const map = L.map(mapRef.current, {
+        const map = (L as any).map(mapRef.current, {
           center: [coordinates.lat, coordinates.lng],
           zoom: 11,
           zoomControl: true,
@@ -139,13 +139,13 @@ const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: stri
         mapInstanceRef.current = map
 
         // Add tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        (L as any).tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© OpenStreetMap contributors',
           maxZoom: 19,
         }).addTo(map)
 
         // Create custom marker
-        const customIcon = L.divIcon({
+        const customIcon = (L as any).divIcon({
           html: `
             <div style="
               width: 24px; 
@@ -176,7 +176,7 @@ const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: stri
         })
 
         // Add marker
-        const marker = L.marker([coordinates.lat, coordinates.lng], { icon: customIcon })
+        const marker = (L as any).marker([coordinates.lat, coordinates.lng], { icon: customIcon })
           .addTo(map)
           .bindPopup(`
             <div style="text-align: center; font-family: system-ui; min-width: 120px;">
@@ -197,7 +197,7 @@ const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: stri
 
         // Force map to resize properly
         setTimeout(() => {
-          if (map && mapInstanceRef.current) {
+          if (map && (mapInstanceRef.current as any)) {
             map.invalidateSize()
           }
         }, 100)
@@ -217,14 +217,14 @@ const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: stri
     // Cleanup function
     return () => {
       isInitializingRef.current = false
-      if (mapInstanceRef.current) {
+      if ((mapInstanceRef.current as any)) {
         try {
           (mapInstanceRef.current as any).off()
           (mapInstanceRef.current as any).remove()
         } catch (e) {
           console.warn('Error during cleanup:', e)
         }
-        mapInstanceRef.current = null
+        (mapInstanceRef.current as any) = null
       }
     }
   }, [coordinates?.lat, coordinates?.lng, zipCode])
@@ -233,14 +233,14 @@ const InteractiveMap = memo(function InteractiveMap({ zipCode }: { zipCode: stri
   useEffect(() => {
     return () => {
       isInitializingRef.current = false
-      if (mapInstanceRef.current) {
+      if ((mapInstanceRef.current as any)) {
         try {
           (mapInstanceRef.current as any).off()
           (mapInstanceRef.current as any).remove()
         } catch (e) {
           console.warn('Error during cleanup:', e)
         }
-        mapInstanceRef.current = null
+        (mapInstanceRef.current as any) = null
       }
     }
   }, [])

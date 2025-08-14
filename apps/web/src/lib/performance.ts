@@ -113,12 +113,18 @@ export const trackMemoryUsage = () => {
   // Check if performance.memory is available (Chrome only)
   if ('memory' in performance) {
     const memory = (performance as {memory?: {usedJSHeapSize?: number, totalJSHeapSize?: number, jsHeapSizeLimit?: number}}).memory;
+    
+    if (!memory) {
+      console.warn('Memory API not available');
+      return;
+    }
+    
     const metric = {
       type: 'memory-usage',
-      usedJSHeapSize: memory.usedJSHeapSize,
-      totalJSHeapSize: memory.totalJSHeapSize,
-      jsHeapSizeLimit: memory.jsHeapSizeLimit,
-      usagePercentage: (memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100,
+      usedJSHeapSize: memory.usedJSHeapSize || 0,
+      totalJSHeapSize: memory.totalJSHeapSize || 0,
+      jsHeapSizeLimit: memory.jsHeapSizeLimit || 0,
+      usagePercentage: memory.usedJSHeapSize && memory.jsHeapSizeLimit ? (memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100 : 0,
       timestamp: Date.now(),
       url: window.location.pathname,
     };

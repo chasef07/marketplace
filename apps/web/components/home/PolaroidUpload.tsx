@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Camera, Sparkles, Upload, Loader2, X, Plus } from 'lucide-react'
+import Image from 'next/image'
+import { Camera, Loader2, X, Plus } from 'lucide-react'
 import { apiClient, type AIAnalysisResult } from "@/lib/api-client-new"
 
 interface PolaroidUploadProps {
@@ -168,7 +169,7 @@ export function PolaroidUpload({ onShowListingPreview }: PolaroidUploadProps) {
                     <div className="image-grid">
                       {previewUrls.map((url, index) => (
                         <div key={index} className="image-thumbnail">
-                          <img src={url} alt={`Preview ${index + 1}`} />
+                          <Image src={url} alt={`Preview ${index + 1}`} width={80} height={80} className="w-full h-full object-cover" />
                           <button 
                             className="remove-button" 
                             onClick={(e) => {

@@ -65,7 +65,7 @@ export default function ProfilePageWrapper({ username }: ProfilePageWrapperProps
   return (
     <ProfileView
       username={username}
-      isOwnProfile={isOwnProfile}
+      isOwnProfile={isOwnProfile || false}
       onNavigateHome={handleNavigateHome}
       onNavigateMarketplace={handleNavigateMarketplace}
       onCreateListing={handleCreateListing}

@@ -3,16 +3,32 @@
 import { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { User, MapPin, Calendar, Star, Package, ShoppingBag, Edit, ArrowLeft, Home, Store, Bell, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { User, MapPin, Calendar, Star, Package, ShoppingBag, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase'
 import { colors, gradients, shadows } from '../home/design-system/colors'
 import { animations } from '../home/design-system/animations'
-import { FloatingSellerChat } from '../chat/FloatingSellerChat'
 import useSWR from 'swr'
 import { apiClient } from '@/src/lib/api-client-new'
 import { getRotatingGreeting } from '@/lib/greetings'
+
+type NegotiationWithItems = {
+  id: number
+  status: string
+  final_price: number | null
+  latest_offer_price: number | null
+  created_at: string
+  items: {
+    id: number
+    name: string
+    image_filename?: string
+    starting_price: number
+  }
+  profiles: {
+    username: string
+  }
+}
 
 
 // ProfileData interface (shared with wrapper)
@@ -471,16 +487,6 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
         }
       `}</style>
       
-      {/* Floating Chat - Only for own profile */}
-      {isOwnProfile && profile && (
-        <FloatingSellerChat 
-          user={{
-            id: profile.id,
-            username: profile.username,
-            email: profile.username + '@example.com' // Fallback since email isn't in ProfileData
-          }} 
-        />
-      )}
     </div>
   )
 }
@@ -553,15 +559,15 @@ function BuyerNotificationsSection({ userId: _userId }: BuyerNotificationsSectio
       </div>
 
       <div className="space-y-4">
-        {myOffers.negotiations.map((negotiation: unknown) => (
+        {myOffers.negotiations.map((negotiation: NegotiationWithItems) => (
           <div key={negotiation.id} className="p-6 border rounded-lg hover:shadow-md transition-all">
             <div className="flex items-start gap-4">
               {/* Item Image */}
               <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                {negotiation.items.image_filename ? (
+                {negotiation.items?.image_filename ? (
                   <Image
-                    src={`/api/images/${negotiation.items.image_filename}`}
-                    alt={negotiation.items.name}
+                    src={`/api/images/${negotiation.items?.image_filename}`}
+                    alt={negotiation.items?.name || 'Item'}
                     width={80}
                     height={80}
                     className="w-full h-full object-cover"
@@ -576,17 +582,17 @@ function BuyerNotificationsSection({ userId: _userId }: BuyerNotificationsSectio
               {/* Offer Details */}
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-gray-900 text-lg mb-1">
-                  {negotiation.items.name}
+                  {negotiation.items?.name}
                 </h3>
                 <p className="text-sm text-gray-600 mb-2">
-                  Seller: @{negotiation.profiles.username} | Listed: ${negotiation.items.starting_price}
+                  Seller: @{negotiation.profiles?.username} | Listed: ${negotiation.items?.starting_price}
                 </p>
                 <p className="text-xs text-gray-500 mb-3">
                   Status: {negotiation.status}
                 </p>
 
                 <div className="flex gap-3">
-                  <Link href={`/marketplace/${negotiation.items.id}`}>
+                  <Link href={`/marketplace/${negotiation.items?.id}`}>
                     <Button size="sm" variant="outline">View Item</Button>
                   </Link>
                 </div>

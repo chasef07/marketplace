@@ -21,7 +21,7 @@ export { useGlassOverlay } from './hooks/useGlassOverlay'
 export { useSimpleOverlay } from './hooks/useSimpleOverlay'
 
 // Integration examples
-export { AppWithSimpleGlassOverlay } from './simple-integration'
+// Removed simple-integration exports (file deleted)
 
 // Types
 export type {

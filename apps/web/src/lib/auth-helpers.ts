@@ -22,7 +22,11 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<AuthRe
     
     if (!authError && userData.user) {
       return {
-        user: userData.user,
+        user: {
+          ...userData.user,
+          id: userData.user.id,
+          email: userData.user.email
+        },
         token: token
       }
     }
@@ -40,7 +44,11 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<AuthRe
   }
   
   return {
-    user: session.user,
+    user: {
+      ...session.user,
+      id: session.user.id,
+      email: session.user.email
+    },
     token: session.access_token
   }
 }

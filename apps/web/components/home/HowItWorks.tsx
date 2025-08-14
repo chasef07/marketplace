@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { colors, gradients, shadows } from './design-system/colors'
-import { animations, animationClasses, staggerDelays } from './design-system/animations'
+import { colors, gradients } from './design-system/colors'
+import { animations } from './design-system/animations'
 
 interface Step {
   id: string
