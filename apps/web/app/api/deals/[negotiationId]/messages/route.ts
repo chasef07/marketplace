@@ -53,22 +53,19 @@ export async function GET(
         return NextResponse.json({ error: 'Not authorized for this negotiation' }, { status: 403 })
       }
 
-      // Get messages
+      // Get messages from offers table
       const { data: messages, error: messagesError } = await supabase
-        .from('deal_messages')
+        .from('offers')
         .select(`
           id,
-          sender_id,
-          receiver_id,
-          message_type,
-          content,
-          metadata,
-          is_read,
+          message,
+          offer_type,
+          price,
           created_at,
-          sender:sender_id(username, email),
-          receiver:receiver_id(username, email)
+          negotiation_id
         `)
         .eq('negotiation_id', negotiationId)
+        .not('message', 'is', null)
         .order('created_at', { ascending: true })
 
       if (messagesError) {
@@ -76,15 +73,8 @@ export async function GET(
         return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 })
       }
 
-      // Get current deal status
-      const { data: currentStatus } = await supabase
-        .rpc('get_current_deal_status', { neg_id: negotiationId })
-
-      // Mark messages as read for current user
-      await supabase.rpc('mark_messages_read', { 
-        neg_id: negotiationId, 
-        user_id: user.id 
-      })
+      // Get negotiation status from the negotiation object
+      const currentStatus = negotiation.status
 
       return NextResponse.json({
         messages: messages || [],
@@ -158,16 +148,15 @@ export async function POST(
       // Determine receiver
       const receiverId = negotiation.seller_id === user.id ? negotiation.buyer_id : negotiation.seller_id
 
-      // Create message
+      // Create message as an offer with no price (message only)
       const { data: message, error: messageError } = await supabase
-        .from('deal_messages')
+        .from('offers')
         .insert({
           negotiation_id: negotiationId,
-          sender_id: user.id,
-          receiver_id: receiverId,
-          message_type,
-          content,
-          metadata
+          offer_type: user.id === negotiation.seller_id ? 'seller' : 'buyer',
+          is_message_only: true,
+          message: content,
+          price: null
         })
         .select()
         .single()

@@ -54,7 +54,7 @@ export async function POST(
       // Verify user is part of the negotiation
       const { data: negotiation, error: negError } = await supabase
         .from('negotiations')
-        .select('seller_id, buyer_id, status as neg_status')
+        .select('seller_id, buyer_id, status')
         .eq('id', negotiationId)
         .single()
 
