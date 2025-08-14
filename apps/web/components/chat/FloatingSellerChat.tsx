@@ -346,8 +346,7 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
                       >
                         <p className="whitespace-pre-wrap">{message.content}</p>
                         
-                        {/* Buttons */}
-                        {message.role === 'assistant' && message.metadata?.buttons && (
+                        {message.role === 'assistant' && message.metadata?.buttons ? (
                           <div className="flex flex-wrap gap-1 mt-2">
                             {(message.metadata.buttons as {text: string, action: string}[]).map((button, index: number) => (
                               <button
@@ -366,10 +365,9 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
                               </button>
                             ))}
                           </div>
-                        )}
+                        ) : null}
 
-                        {/* Input Field */}
-                        {message.role === 'assistant' && message.metadata?.inputField && (
+                        {message.role === 'assistant' && message.metadata?.inputField ? (
                           <div className="mt-3 space-y-2">
                             <div className="flex gap-2">
                               <div className="relative flex-1">
@@ -422,7 +420,7 @@ export function FloatingSellerChat({ user }: FloatingSellerChatProps) {
                               </button>
                             </div>
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   ))
