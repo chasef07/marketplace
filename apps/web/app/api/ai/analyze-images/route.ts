@@ -14,7 +14,7 @@ if (!process.env.OPENAI_API_KEY) {
 
 const supabase = createSupabaseServerClient()
 
-interface ImageData {
+interface ImageAnalysisData {
   filename: string
   base64: string
   mimeType: string
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     const formData = await request.formData()
-    const images: ImageData[] = []
+    const images: ImageAnalysisData[] = []
     
     // Handle both single image ('image') and multiple images ('image0', 'image1', etc.)
     const singleImage = formData.get('image') as File
@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
       furniture_type: string;
     }
 
-    interface ImageData {
+    interface ResponseImageData {
       filename: string;
       order: number;
       is_primary: boolean;
@@ -223,12 +223,16 @@ export async function POST(request: NextRequest) {
       analysis: Analysis;
       pricing: Pricing;
       listing: Listing;
-      images: ImageData[];
+      images: ResponseImageData[];
       image_filename?: string;
     } = {
       success: true,
       analysis: {
         furniture_type: analysis.furniture_type,
+        style: analysis.style || 'Unknown',
+        material: analysis.material || 'Unknown',
+        brand: analysis.brand || 'Unknown',
+        color: analysis.color || 'Unknown',
         estimated_dimensions: analysis.estimated_dimensions,
         key_features: analysis.key_features,
       },

@@ -5,6 +5,25 @@ import { getAuthenticatedUser } from '@/src/lib/auth-helpers'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/database.types'
 
+// Type interfaces for enriched negotiation data
+interface EnrichedNegotiation {
+  latest_offer: number;
+  offer_count: number;
+  buyer_original_offer: number;
+  offer_history: Array<{
+    amount: number;
+    created_at: string;
+    status: string;
+  }>;
+  profiles?: {
+    username: string;
+  };
+  items?: {
+    name: string;
+    starting_price: number;
+  };
+}
+
 // Simple marketplace assistant - no complex state management
 export async function POST(request: NextRequest) {
   return withRateLimit(request, ratelimit.chat, async () => {
@@ -145,9 +164,9 @@ async function handleWelcome(supabase: SupabaseClient, userId: string) {
     const offerCount = enrichedNegotiations.length
     let message = `💼 **Marketplace Assistant**\n\nYou have ${offerCount} active offer${offerCount > 1 ? 's' : ''}:\n\n`
 
-    const buttons: Array<{text: string, action: string}> = []
+    const buttons: {text: string, action: string}[] = []
 
-    enrichedNegotiations.forEach((neg, index) => {
+    (enrichedNegotiations as EnrichedNegotiation[]).forEach((neg, index) => {
       const buyerName = neg.profiles?.username || 'Unknown Buyer'
       const itemName = neg.items?.name || 'Unknown Item'
       const startingPrice = neg.items?.starting_price || 0
