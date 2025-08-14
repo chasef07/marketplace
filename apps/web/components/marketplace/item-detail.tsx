@@ -10,7 +10,7 @@ import { ItemDetailSkeleton } from "@/components/ui/skeleton"
 import { ImageCarousel } from "@/components/ui/ImageCarousel"
 
 // Lazy load the map component
-const SimpleLocationMap = dynamic(() => import('@/components/maps/simple-location-map').then(mod => ({ default: mod.SimpleLocationMap })), {
+const LocationMap = dynamic(() => import('@/components/maps/location-map').then(mod => ({ default: mod.LocationMap })), {
   loading: () => <div className="h-32 bg-gray-200 animate-pulse rounded-lg flex items-center justify-center">
     <MapPin className="h-6 w-6 text-gray-400" />
   </div>,
@@ -522,7 +522,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
                     <div className="space-y-2 mt-4">
                       <p className="text-sm font-medium" style={{ color: '#4A6FA5' }}>Pickup Area</p>
                       <div className="w-full h-48 overflow-hidden rounded-lg border border-gray-200">
-                        <SimpleLocationMap zipCode={item.seller.zip_code} />
+                        <LocationMap zipCode={item.seller.zip_code} />
                       </div>
                     </div>
                   )}

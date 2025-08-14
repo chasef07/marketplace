@@ -1,6 +1,14 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
+// Interface for rate limit response
+interface RateLimitResponse {
+  success: boolean;
+  limit: number;
+  reset: number;
+  remaining: number;
+}
+
 // Check if Redis environment variables are available
 const hasRedisConfig = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -69,7 +77,7 @@ export function getClientIP(request: Request): string {
 // Middleware wrapper for rate limiting
 export async function withRateLimit(
   request: Request,
-  limiter: unknown,
+  limiter: Ratelimit | null,
   handler: () => Promise<Response>
 ): Promise<Response> {
   // If no Redis config available, skip rate limiting in development
@@ -80,7 +88,7 @@ export async function withRateLimit(
 
   try {
     const ip = getClientIP(request);
-    const result = await (limiter as any).limit(ip);
+    const result = await limiter!.limit(ip) as RateLimitResponse;
     const { success, limit, reset, remaining } = result;
 
     if (!success) {
