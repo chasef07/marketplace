@@ -18,6 +18,8 @@ All commands should be run from the `apps/web/` directory:
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anonymous key  
   - `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key
   - `OPENAI_API_KEY` - Your OpenAI API key
+  - `UPSTASH_REDIS_REST_URL` - Upstash Redis URL (for rate limiting)
+  - `UPSTASH_REDIS_REST_TOKEN` - Upstash Redis token (for rate limiting)
 
 ## Project Architecture
 
@@ -98,13 +100,18 @@ This is a serverless AI-powered furniture marketplace built as a Next.js monorep
 ## Database Schema
 
 Run the SQL in `/supabase/schema.sql` in your Supabase project to create the initial schema.
-Run `/supabase/migrations/002_performance_indexes.sql` to add performance-optimized database indexes.
 
 ### Key Tables
 - `profiles` - User data with seller/buyer personalities
-- `items` - Furniture listings with rich AI-generated metadata
-- `negotiations` - Complex negotiation system with status tracking
-- `offers` - Individual offers within negotiations
+- `items` - Furniture listings with rich AI-generated metadata and status tracking
+- `negotiations` - Complex negotiation system with round limits and status tracking
+- `offers` - Individual offers within negotiations with timing and counter-offer flags
+
+### Important Enums
+- `furniture_type` - Couch, dining_table, bookshelf, chair, desk, bed, dresser, coffee_table, nightstand, cabinet, other
+- `item_status` - Draft, pending_review, active, under_negotiation, sold_pending, sold, paused, archived, flagged, removed
+- `negotiation_status` - Active, deal_pending, completed, cancelled, picked_up
+- `offer_type` - Buyer, seller
 
 ### Important Functions
 - `increment_views(item_id)` - Atomically increment item view counts
@@ -138,41 +145,39 @@ Run `/supabase/migrations/002_performance_indexes.sql` to add performance-optimi
 - Protected API routes check authentication
 
 ### Deployment Configuration
-- Vercel deployment via `vercel.json`
+- Vercel deployment with Next.js automatic optimization
 - Environment variables configured in Vercel dashboard
-- Monorepo structure with workspace-based builds
-- Edge functions for optimal performance
+- Monorepo structure with Next.js app in `apps/web/`
+- Serverless functions for API routes with optimal performance
+- Security headers configured in `next.config.ts` including CSP, HSTS, and frame protection
 
 ## Setup Instructions
 
 1. **Create Supabase Project**: https://supabase.com
 2. **Run Database Schema**: Execute `/supabase/schema.sql` in SQL editor
 3. **Configure Storage**: Create 'furniture-images' bucket (public)
-4. **Set Environment Variables**: Copy from `.env.local.example`
+4. **Set Environment Variables**: Copy from `.env.local.example` to `.env.local` in `apps/web/`
 5. **Install Dependencies**: `npm install` from `apps/web/`
-6. **Run Development**: `npm run dev`
+6. **Configure Upstash Redis**: Create Redis instance at https://upstash.com (required for rate limiting)
+7. **Run Development**: `npm run dev` from `apps/web/`
 
-## Current Project Status
+## Important Notes
 
-### Recent Changes
-- **Performance Optimization**: Added comprehensive performance monitoring and tracking utilities
-- **Location Features**: Implemented geocoding API for zip code to coordinates conversion with location maps
-- **Performance Database Indexes**: Added optimized database indexes for improved query performance
-- **Rate Limiting**: Implemented API rate limiting for better security and performance
-- **UI/UX Improvements**: Enhanced image loading with blur placeholders and pagination
-- **Search Optimization**: Removed AI search bar component, streamlined search functionality
-- **Caching Strategy**: Added intelligent caching headers for geocoding and static assets
+### Key Integrations
+- **Singleton Supabase Clients**: Use `createClient()` for browser/components, `createSupabaseServerClient()` for API routes
+- **Glass Overlay Chat System**: Complex AI chat interface with marketplace integration in `components/glass-overlay-chat/`
+- **Performance Monitoring**: Web Vitals tracking via `components/performance-provider.tsx` and `src/lib/performance.ts`
+- **Rate Limiting**: Upstash Redis-based rate limiting in `src/lib/rate-limit.ts` - required for production
 
-### Clean Architecture
-- Removed legacy components and unused API routes
-- Focused on core marketplace functionality
-- Streamlined component structure for better maintainability
-- Enhanced type safety with updated TypeScript definitions
+### Security Implementation
+- Row Level Security (RLS) policies secure all database access
+- Comprehensive security headers in Next.js configuration
+- Input validation in all API routes
+- Secure file uploads with signed URLs and content validation
+- Rate limiting on all API endpoints
 
-## Migration Notes
-- Successfully migrated from Python FastAPI to Next.js API routes
-- All backend functionality preserved in TypeScript
-- Supabase replaces custom JWT and SQLite database
-- Enhanced with real-time capabilities and better security
-- No Python dependencies required - pure Node.js/TypeScript stack
-- Recent cleanup focused on core marketplace features
+### AI Pipeline Architecture
+1. **Image Upload** → Supabase Storage → Secure signed URL
+2. **AI Analysis** → OpenAI GPT-4 Vision API → Structured furniture data extraction
+3. **Data Processing** → Parse and validate AI response → Store in database
+4. **Real-time Updates** → Supabase Realtime → Frontend state updates
