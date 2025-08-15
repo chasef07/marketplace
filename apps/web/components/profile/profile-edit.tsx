@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { User, Upload, Save, X } from 'lucide-react'
@@ -45,21 +45,7 @@ export default function ProfileEdit({ initialProfile }: ProfileEditProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
-  useEffect(() => {
-    if (!initialProfile) {
-      fetchProfile()
-    } else {
-      setFormData({
-        display_name: initialProfile.display_name || '',
-        bio: initialProfile.bio || '',
-        location_city: initialProfile.location_city || '',
-        location_state: initialProfile.location_state || '',
-        zip_code: initialProfile.zip_code || ''
-      })
-    }
-  }, [initialProfile])
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       // Using shared supabase instance
       const { data: { session } } = await supabase.auth.getSession()
@@ -93,7 +79,21 @@ export default function ProfileEdit({ initialProfile }: ProfileEditProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase.auth, router])
+
+  useEffect(() => {
+    if (!initialProfile) {
+      fetchProfile()
+    } else {
+      setFormData({
+        display_name: initialProfile.display_name || '',
+        bio: initialProfile.bio || '',
+        location_city: initialProfile.location_city || '',
+        location_state: initialProfile.location_state || '',
+        zip_code: initialProfile.zip_code || ''
+      })
+    }
+  }, [initialProfile, fetchProfile])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))

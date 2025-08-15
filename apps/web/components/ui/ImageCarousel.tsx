@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Image from 'next/image'
 import { ImageData } from '@/lib/api-client-new'
+import { BLUR_PLACEHOLDERS } from '@/lib/blur-data'
 
 interface ImageCarouselProps {
   images: (string | ImageData)[]
@@ -54,8 +55,12 @@ export function ImageCarousel({
           src={imageUrls[currentIndex]}
           alt={`${alt} ${currentIndex + 1}`}
           fill
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, 50vw"
+          className="object-cover transition-opacity duration-300"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          priority={currentIndex === 0}
+          placeholder="blur"
+          blurDataURL={BLUR_PLACEHOLDERS.furniture}
+          quality={85}
         />
         
         {/* Navigation arrows - only show if more than 1 image and showArrows is true */}

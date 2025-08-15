@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { colors, gradients } from '../home/design-system/colors'
 
 interface AIAnalysisLoadingProps {
@@ -12,19 +12,19 @@ export function AIAnalysisLoading({ progress, message = "Analyzing your furnitur
   const [currentStep, setCurrentStep] = useState(0)
   const [scanLine, setScanLine] = useState(0)
 
-  const steps = [
+  const steps = useMemo(() => [
     { icon: "📸", text: "Processing image", progress: 0 },
     { icon: "🔍", text: "Identifying furniture", progress: 25 },
     { icon: "🎨", text: "Analyzing style & material", progress: 50 },
     { icon: "💰", text: "Calculating market price", progress: 75 },
     { icon: "📝", text: "Generating description", progress: 90 }
-  ]
+  ], [])
 
   useEffect(() => {
     // Update current step based on progress
     const step = steps.findIndex(step => progress < step.progress + 20)
     setCurrentStep(step === -1 ? steps.length - 1 : Math.max(0, step))
-  }, [progress])
+  }, [progress, steps])
 
   useEffect(() => {
     // Animate scan line

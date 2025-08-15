@@ -12,6 +12,7 @@ import { animations } from '../home/design-system/animations'
 import useSWR from 'swr'
 import { apiClient } from '@/src/lib/api-client-new'
 import { getRotatingGreeting } from '@/lib/greetings'
+import { BLUR_PLACEHOLDERS } from '@/src/lib/blur-data'
 
 type NegotiationWithItems = {
   id: number
@@ -227,6 +228,10 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
                   width={96}
                   height={96}
                   className="rounded-full object-cover ring-4 ring-blue-100 shadow-lg"
+                  placeholder="blur"
+                  blurDataURL={BLUR_PLACEHOLDERS.profile}
+                  quality={90}
+                  priority
                 />
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-white"></div>
               </div>
@@ -362,6 +367,10 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
                         alt={item.name}
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-500"
+                        placeholder="blur"
+                        blurDataURL={BLUR_PLACEHOLDERS.furniture}
+                        quality={85}
+                        sizes="(max-width: 768px) 50vw, 25vw"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -571,6 +580,9 @@ function BuyerNotificationsSection({ userId: _userId }: BuyerNotificationsSectio
                     width={80}
                     height={80}
                     className="w-full h-full object-cover"
+                    placeholder="blur"
+                    blurDataURL={BLUR_PLACEHOLDERS.furniture}
+                    quality={80}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">

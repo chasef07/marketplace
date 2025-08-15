@@ -114,17 +114,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
   // Memoize user ID to prevent unnecessary re-fetches when user object changes
   const userId = useMemo(() => user?.id, [user?.id])
   
-  useEffect(() => {
-    fetchItem()
-  }, [itemId])
-  
-  useEffect(() => {
-    if (userId) {
-      fetchNegotiation()
-    }
-  }, [itemId, userId])
-
-  const fetchItem = async () => {
+  const fetchItem = useCallback(async () => {
     try {
       setLoading(true)
       const response = await apiClient.getItem(itemId)
@@ -134,7 +124,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
     } finally {
       setLoading(false)
     }
-  }
+  }, [itemId])
 
   const fetchNegotiation = useCallback(async () => {
     if (!userId) return
@@ -149,6 +139,16 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
       console.error('Failed to fetch negotiation:', err)
     }
   }, [itemId, userId])
+
+  useEffect(() => {
+    fetchItem()
+  }, [itemId, fetchItem])
+  
+  useEffect(() => {
+    if (userId) {
+      fetchNegotiation()
+    }
+  }, [itemId, userId, fetchNegotiation])
 
   const fetchOffers = useCallback(async () => {
     if (!negotiation) return
@@ -270,7 +270,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
     }
   }
 
-  const isOwnItem = useMemo(() => userId && item && userId === item.seller_id, [userId, item?.seller_id])
+  const isOwnItem = useMemo(() => userId && item && userId === item.seller_id, [userId, item])
 
   if (loading) {
     return <ItemDetailSkeleton />
