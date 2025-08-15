@@ -181,3 +181,27 @@ Run the SQL in `/supabase/schema.sql` in your Supabase project to create the ini
 2. **AI Analysis** → OpenAI GPT-4 Vision API → Structured furniture data extraction
 3. **Data Processing** → Parse and validate AI response → Store in database
 4. **Real-time Updates** → Supabase Realtime → Frontend state updates
+
+## Available Subagents
+
+This project includes specialized Claude Code subagents for specific development tasks:
+
+### Frontend UI Reviewer (`frontend-ui-reviewer`)
+- **Purpose**: Design and implement UI components using shadcn/ui
+- **Use Cases**: Component layouts, responsive design, shadcn integration, styling issues
+- **Expertise**: Modern React patterns, TypeScript, accessibility, performance optimization
+- **File**: `.claude/agents/frontend-ui-reviewer.md`
+
+### Vercel Deployment Validator (`vercel-deployment-validator`)
+- **Purpose**: Validate deployment readiness and troubleshoot Vercel deployment issues
+- **Use Cases**: Pre-deployment checks, build errors, vercel.json configuration, serverless optimization
+- **Expertise**: Next.js 15, serverless architecture, build system validation, TypeScript checks
+- **File**: `.claude/agents/vercel-deployment-validator.md`
+
+### Supabase Backend Specialist (`supabase-backend-specialist`)
+- **Purpose**: Expert-level Supabase backend optimization, security auditing, and performance troubleshooting
+- **Use Cases**: Database schema design, RLS policies, authentication flows, API performance, storage configuration
+- **Expertise**: PostgreSQL optimization, security audits, authentication systems, real-time subscriptions
+- **File**: `.claude/agents/supabase-backend-specialist.md`
+
+These subagents can be invoked automatically by Claude Code when their expertise matches your development needs, or you can explicitly request their use for specialized analysis and recommendations.

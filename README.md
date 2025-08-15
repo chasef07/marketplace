@@ -213,6 +213,27 @@ npm run type-check
 npm run lint
 ```
 
+## 🤖 Claude Code Subagents
+
+This project includes specialized Claude Code subagents for enhanced development workflows:
+
+### 🎨 **Frontend UI Reviewer**
+- **Purpose**: Design and implement UI components using shadcn/ui
+- **Specialties**: Component architecture, responsive design, accessibility optimization
+- **Auto-triggers**: When working with shadcn components, styling issues, or UI implementations
+
+### 🚀 **Vercel Deployment Validator** 
+- **Purpose**: Validate deployment readiness and troubleshoot Vercel issues
+- **Specialties**: Build validation, serverless optimization, Next.js 15 compatibility
+- **Auto-triggers**: Pre-deployment checks, build errors, or Vercel configuration
+
+### 🗄️ **Supabase Backend Specialist**
+- **Purpose**: Expert-level Supabase optimization and security auditing
+- **Specialties**: Database schema design, RLS policies, authentication flows, performance tuning
+- **Auto-triggers**: Database issues, authentication problems, or backend optimization needs
+
+These subagents automatically activate when Claude Code detects relevant development tasks, providing specialized expertise for your AI-powered marketplace.
+
 ## 🤝 Contributing
 
 1. Fork the repository
