@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 All commands should be run from the `apps/web/` directory:
 - **Development server**: `npm run dev` (with Turbopack enabled)
 - **Build**: `npm run build`
+- **Bundle analysis**: `npm run build:analyze` (analyze bundle size and composition)
 - **Production server**: `npm start`
 - **Lint**: `npm run lint`
 - **Type check**: `npm run type-check`
@@ -25,10 +26,16 @@ All commands should be run from the `apps/web/` directory:
 
 ### Technology Stack
 - **Structure**: Single Next.js app in `apps/web/`
-- **Frontend & Backend**: Next.js 15 with App Router and API routes
+- **Frontend & Backend**: Next.js 15.4.5 with App Router and API routes
+- **UI Framework**: React 19.1.0 with shadcn/ui components
 - **Database & Auth**: Supabase (PostgreSQL + Auth + Storage + Realtime)
 - **AI**: OpenAI GPT-4o for image analysis and embeddings for search
-- **Deployment**: Vercel with serverless functions
+- **Maps**: React Leaflet for interactive location mapping
+- **Analytics**: Vercel Analytics and Speed Insights for performance monitoring
+- **Animations**: Framer Motion for smooth UI transitions
+- **Data Fetching**: SWR for client-side data management
+- **Image Optimization**: Sharp for server-side image processing
+- **Deployment**: Vercel with serverless functions and bundle analysis
 
 ### High-Level Architecture
 This is a serverless AI-powered furniture marketplace built as a Next.js monorepo:
@@ -149,7 +156,12 @@ Run the SQL in `/supabase/schema.sql` in your Supabase project to create the ini
 - Environment variables configured in Vercel dashboard
 - Monorepo structure with Next.js app in `apps/web/`
 - Serverless functions for API routes with optimal performance
-- Security headers configured in `next.config.ts` including CSP, HSTS, and frame protection
+- Advanced Next.js configuration in `next.config.ts`:
+  - Bundle analyzer integration with `withBundleAnalyzer`
+  - Comprehensive CSP policies for Supabase and OpenAI domains
+  - Image optimization with WebP/AVIF formats and external image caching
+  - Package import optimizations for performance
+  - Security headers including CSP, HSTS, and frame protection
 
 ## Setup Instructions
 
@@ -186,22 +198,22 @@ Run the SQL in `/supabase/schema.sql` in your Supabase project to create the ini
 
 This project includes specialized Claude Code subagents for specific development tasks:
 
-### Frontend UI Reviewer (`frontend-ui-reviewer`)
-- **Purpose**: Design and implement UI components using shadcn/ui
+### Supabase Backend Specialist (`supabase-backend-specialist`)
+- **Purpose**: Expert-level Supabase backend optimization, security auditing, and performance troubleshooting
+- **Use Cases**: Database schema design, RLS policies, authentication flows, API performance, storage configuration
+- **Expertise**: PostgreSQL optimization, security audits, authentication systems, real-time subscriptions
+- **File**: `.claude/agents/supabase-backend-specialist.md`
+
+### shadcn UI Expert (`shadcn-ui-expert`)
+- **Purpose**: Design and implement frontend UI components using shadcn/ui
 - **Use Cases**: Component layouts, responsive design, shadcn integration, styling issues
 - **Expertise**: Modern React patterns, TypeScript, accessibility, performance optimization
-- **File**: `.claude/agents/frontend-ui-reviewer.md`
+- **File**: `.claude/agents/shadcn-ui-expert.md`
 
 ### Vercel Deployment Validator (`vercel-deployment-validator`)
 - **Purpose**: Validate deployment readiness and troubleshoot Vercel deployment issues
 - **Use Cases**: Pre-deployment checks, build errors, vercel.json configuration, serverless optimization
 - **Expertise**: Next.js 15, serverless architecture, build system validation, TypeScript checks
 - **File**: `.claude/agents/vercel-deployment-validator.md`
-
-### Supabase Backend Specialist (`supabase-backend-specialist`)
-- **Purpose**: Expert-level Supabase backend optimization, security auditing, and performance troubleshooting
-- **Use Cases**: Database schema design, RLS policies, authentication flows, API performance, storage configuration
-- **Expertise**: PostgreSQL optimization, security audits, authentication systems, real-time subscriptions
-- **File**: `.claude/agents/supabase-backend-specialist.md`
 
 These subagents can be invoked automatically by Claude Code when their expertise matches your development needs, or you can explicitly request their use for specialized analysis and recommendations.

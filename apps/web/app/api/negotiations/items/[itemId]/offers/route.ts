@@ -112,6 +112,9 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to create offer' }, { status: 500 })
     }
 
+    // Note: Agent automatically queues buyer offers via database trigger
+    // No manual triggering needed - the queue_offer_for_agent() function handles this
+
     return NextResponse.json({
       negotiation,
       offer
