@@ -459,10 +459,8 @@ ON offers(negotiation_id, created_at DESC);
 ## 9. Implementation Priority & Timeline
 
 ### Phase 1: Critical Performance Fixes (Week 1-2)
-1. Fix useEffect dependency warnings
-2. Add database performance indexes
-3. Implement image compression and blur placeholders
-4. Set up bundle analyzer
+1. Add database performance indexes
+
 
 ### Phase 2: Core Optimizations (Week 3-4)
 1. Split large components and implement memoization

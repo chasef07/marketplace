@@ -10,7 +10,7 @@ export const runtime = 'edge';
  * {
  *   "crons": [{
  *     "path": "/api/agent/cron",
- *     "schedule": "*/30 * * * * *"
+ *     "schedule": "* /30 * * * * *"
  *   }]
  * }
  */

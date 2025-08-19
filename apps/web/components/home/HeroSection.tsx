@@ -9,6 +9,7 @@ import { colors, gradients, shadows, cssVariables } from './design-system/colors
 import { animations, animationClasses } from './design-system/animations'
 import { type AIAnalysisResult } from "@/lib/api-client-new"
 import { getRotatingGreeting } from "@/lib/greetings"
+import AdminAccessButton from "../admin/AdminAccessButton"
 
 interface User {
   id: string
@@ -126,6 +127,7 @@ export function HeroSection({
                   >
                     Profile
                   </Button>
+                  <AdminAccessButton variant="icon" className="nav-button" />
                   <Button 
                     variant="ghost" 
                     onClick={onSignOut}
