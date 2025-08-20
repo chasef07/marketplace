@@ -1,7 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import { Play, Settings, RefreshCw, Target, Lightbulb } from 'lucide-react';
+import { Play, Settings, RefreshCw, Target, Lightbulb, Plus, X, Clock, DollarSign, ChevronDown, ChevronRight } from 'lucide-react';
+
+interface CompetingOffer {
+  id: string;
+  buyerName: string;
+  offerPrice: number;
+  hoursAgo: number;
+}
+
+interface OfferSimulationResult {
+  offerId: string;
+  buyerName: string;
+  offerPrice: number;
+  decision: string;
+  recommendedPrice?: number;
+  confidence: number;
+  reasoning: string;
+  nashPrice: number;
+  marketValue: number;
+  executionTime: number;
+  competitiveRanking: number; // 1 = best offer, 2 = second best, etc.
+  offerStrength: 'strong' | 'fair' | 'weak';
+}
 
 interface TestScenario {
   itemName: string;
@@ -12,6 +34,7 @@ interface TestScenario {
   aggressivenessLevel: number;
   autoAcceptThreshold: number;
   minAcceptableRatio: number;
+  multipleOffers: CompetingOffer[];
 }
 
 interface TestResult {
@@ -22,6 +45,8 @@ interface TestResult {
   nashPrice: number;
   marketValue: number;
   executionTime: number;
+  individualOfferResults?: OfferSimulationResult[];
+  overallStrategy?: string;
 }
 
 const furnitureTypes = [
@@ -50,6 +75,7 @@ const presetScenarios = [
       aggressivenessLevel: 0.5,
       autoAcceptThreshold: 0.95,
       minAcceptableRatio: 0.75,
+      multipleOffers: [],
     }
   },
   {
@@ -63,6 +89,9 @@ const presetScenarios = [
       aggressivenessLevel: 0.5,
       autoAcceptThreshold: 0.95,
       minAcceptableRatio: 0.75,
+      multipleOffers: [
+        { id: '1', buyerName: 'Buyer 1', offerPrice: 650, hoursAgo: 2 }
+      ],
     }
   },
   {
@@ -76,6 +105,11 @@ const presetScenarios = [
       aggressivenessLevel: 0.7,
       autoAcceptThreshold: 0.95,
       minAcceptableRatio: 0.75,
+      multipleOffers: [
+        { id: '1', buyerName: 'Buyer 1', offerPrice: 1000, hoursAgo: 1 },
+        { id: '2', buyerName: 'Buyer 2', offerPrice: 950, hoursAgo: 6 },
+        { id: '3', buyerName: 'Buyer 3', offerPrice: 1100, hoursAgo: 3 }
+      ],
     }
   },
   {
@@ -89,6 +123,27 @@ const presetScenarios = [
       aggressivenessLevel: 0.2,
       autoAcceptThreshold: 0.85,
       minAcceptableRatio: 0.65,
+      multipleOffers: [],
+    }
+  },
+  {
+    name: 'Multiple Competing Offers',
+    scenario: {
+      itemName: 'Designer Couch',
+      furnitureType: 'couch',
+      listingPrice: 900,
+      offerPrice: 405,
+      competingOffers: 5,
+      aggressivenessLevel: 0.6,
+      autoAcceptThreshold: 0.95,
+      minAcceptableRatio: 0.75,
+      multipleOffers: [
+        { id: '1', buyerName: 'Buyer 1', offerPrice: 400, hoursAgo: 4 },
+        { id: '2', buyerName: 'Buyer 2', offerPrice: 250, hoursAgo: 24 },
+        { id: '3', buyerName: 'Buyer 3', offerPrice: 405, hoursAgo: 5 },
+        { id: '4', buyerName: 'Buyer 4', offerPrice: 380, hoursAgo: 12 },
+        { id: '5', buyerName: 'Buyer 5', offerPrice: 420, hoursAgo: 2 }
+      ],
     }
   },
 ];
@@ -103,21 +158,31 @@ export default function TestingPlayground() {
     aggressivenessLevel: 0.5,
     autoAcceptThreshold: 0.95,
     minAcceptableRatio: 0.75,
+    multipleOffers: [],
   });
 
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [newOfferBuyer, setNewOfferBuyer] = useState('');
+  const [newOfferPrice, setNewOfferPrice] = useState('');
+  const [newOfferHours, setNewOfferHours] = useState('');
+  const [expandedOffers, setExpandedOffers] = useState<Set<string>>(new Set());
 
   const runSimulation = async () => {
     setTesting(true);
     setError(null);
+    setExpandedOffers(new Set()); // Reset expanded state for new simulation
     
     try {
       const response = await fetch('/api/admin/agent/simulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(scenario),
+        body: JSON.stringify({
+          ...scenario,
+          competingOffers: scenario.multipleOffers.length,
+          multipleOffersData: scenario.multipleOffers
+        }),
       });
 
       if (!response.ok) {
@@ -137,10 +202,96 @@ export default function TestingPlayground() {
     setScenario(preset.scenario);
     setTestResult(null);
     setError(null);
+    setExpandedOffers(new Set()); // Reset expanded state
+  };
+
+  const addOffer = () => {
+    if (!newOfferBuyer || !newOfferPrice || !newOfferHours) return;
+    
+    const newOffer: CompetingOffer = {
+      id: Date.now().toString(),
+      buyerName: newOfferBuyer,
+      offerPrice: parseFloat(newOfferPrice),
+      hoursAgo: parseInt(newOfferHours)
+    };
+
+    setScenario({
+      ...scenario,
+      multipleOffers: [...scenario.multipleOffers, newOffer],
+      competingOffers: scenario.multipleOffers.length + 1
+    });
+
+    setNewOfferBuyer('');
+    setNewOfferPrice('');
+    setNewOfferHours('');
+  };
+
+  const removeOffer = (id: string) => {
+    const updatedOffers = scenario.multipleOffers.filter(offer => offer.id !== id);
+    setScenario({
+      ...scenario,
+      multipleOffers: updatedOffers,
+      competingOffers: updatedOffers.length
+    });
   };
 
   const getOfferRatio = () => {
     return scenario.listingPrice > 0 ? (scenario.offerPrice / scenario.listingPrice) : 0;
+  };
+
+  const getSortedOffers = () => {
+    return [...scenario.multipleOffers].sort((a, b) => {
+      // Sort by price (highest first), then by time (most recent first)
+      if (b.offerPrice !== a.offerPrice) {
+        return b.offerPrice - a.offerPrice;
+      }
+      return a.hoursAgo - b.hoursAgo;
+    });
+  };
+
+  const getHighestOffer = () => {
+    if (scenario.multipleOffers.length === 0) return null;
+    return scenario.multipleOffers.reduce((highest, current) => 
+      current.offerPrice > highest.offerPrice ? current : highest
+    );
+  };
+
+  const getMostRecentOffer = () => {
+    if (scenario.multipleOffers.length === 0) return null;
+    return scenario.multipleOffers.reduce((mostRecent, current) => 
+      current.hoursAgo < mostRecent.hoursAgo ? current : mostRecent
+    );
+  };
+
+  const formatTimeAgo = (hoursAgo: number) => {
+    if (hoursAgo < 1) return 'Less than 1 hour ago';
+    if (hoursAgo === 1) return '1 hour ago';
+    if (hoursAgo < 24) return `${hoursAgo} hours ago`;
+    const days = Math.floor(hoursAgo / 24);
+    if (days === 1) return '1 day ago';
+    return `${days} days ago`;
+  };
+
+  const toggleOfferExpansion = (offerId: string) => {
+    const newExpanded = new Set(expandedOffers);
+    if (newExpanded.has(offerId)) {
+      newExpanded.delete(offerId);
+    } else {
+      newExpanded.add(offerId);
+    }
+    setExpandedOffers(newExpanded);
+  };
+
+  const getIndividualResult = (offerId: string): OfferSimulationResult | null => {
+    return testResult?.individualOfferResults?.find(result => result.offerId === offerId) || null;
+  };
+
+  const getOfferStrengthColor = (strength: 'strong' | 'fair' | 'weak') => {
+    switch (strength) {
+      case 'strong': return 'text-green-600 bg-green-50 border-green-200';
+      case 'fair': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+      case 'weak': return 'text-red-600 bg-red-50 border-red-200';
+    }
   };
 
   const getDecisionColor = (decision: string) => {
@@ -339,9 +490,18 @@ export default function TestingPlayground() {
 
         {/* Results */}
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center space-x-2 mb-6">
-            <Lightbulb className="h-5 w-5 text-yellow-500" />
-            <h3 className="font-semibold text-gray-900">Simulation Results</h3>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-2">
+              <Lightbulb className="h-5 w-5 text-yellow-500" />
+              <h3 className="font-semibold text-gray-900">
+                {scenario.multipleOffers.length > 0 ? 'Strategic Overview' : 'Simulation Results'}
+              </h3>
+            </div>
+            {scenario.multipleOffers.length > 0 && (
+              <span className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                Competitive analysis • {scenario.multipleOffers.length} offers
+              </span>
+            )}
           </div>
 
           {error && (
@@ -385,10 +545,17 @@ export default function TestingPlayground() {
 
               {/* Reasoning */}
               <div>
-                <h4 className="font-medium text-gray-900 mb-2">Agent Reasoning</h4>
+                <h4 className="font-medium text-gray-900 mb-2">
+                  {scenario.multipleOffers.length > 0 ? 'Strategic Analysis' : 'Agent Reasoning'}
+                </h4>
                 <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-700">
                   {testResult.reasoning}
                 </div>
+                {scenario.multipleOffers.length > 0 && (
+                  <div className="mt-2 text-xs text-gray-500">
+                    📊 Strategic overview considering all {scenario.multipleOffers.length} competing offers • See individual tactics below
+                  </div>
+                )}
               </div>
 
               {/* Price Analysis */}
@@ -415,6 +582,45 @@ export default function TestingPlayground() {
                   </div>
                 </div>
               </div>
+
+              {/* Overall Strategy for Multiple Offers */}
+              {testResult.overallStrategy && (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Overall Strategy</h4>
+                  <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-lg">
+                    <div className="text-sm text-indigo-800">
+                      {testResult.overallStrategy}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Multiple Offers Summary */}
+              {testResult.individualOfferResults && testResult.individualOfferResults.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">Individual Decision Summary</h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-green-50 border border-green-200 p-3 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-green-800">
+                        {testResult.individualOfferResults.filter(r => r.decision === 'ACCEPT').length}
+                      </div>
+                      <div className="text-sm text-green-600">ACCEPT</div>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-blue-800">
+                        {testResult.individualOfferResults.filter(r => r.decision === 'COUNTER').length}
+                      </div>
+                      <div className="text-sm text-blue-600">COUNTER</div>
+                    </div>
+                    <div className="bg-red-50 border border-red-200 p-3 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-red-800">
+                        {testResult.individualOfferResults.filter(r => r.decision === 'DECLINE').length}
+                      </div>
+                      <div className="text-sm text-red-600">DECLINE</div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-12">
@@ -423,6 +629,272 @@ export default function TestingPlayground() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Multiple Competing Offers Section */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center space-x-2 mb-6">
+          <DollarSign className="h-5 w-5 text-green-500" />
+          <h3 className="font-semibold text-gray-900">Multiple Competing Offers</h3>
+          <span className="text-sm text-gray-500">({scenario.multipleOffers.length}/5 offers)</span>
+        </div>
+
+        {/* Add New Offer Form */}
+        <div className="bg-gray-50 p-5 rounded-lg mb-6 border">
+          <h4 className="font-medium text-gray-900 mb-3">Add New Offer</h4>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Buyer Name</label>
+              <input
+                type="text"
+                value={newOfferBuyer}
+                onChange={(e) => setNewOfferBuyer(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                placeholder="e.g., Buyer 1"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Offer Price</label>
+              <div className="relative">
+                <span className="absolute left-3 top-2 text-gray-500">$</span>
+                <input
+                  type="number"
+                  value={newOfferPrice}
+                  onChange={(e) => setNewOfferPrice(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg pl-8 pr-3 py-2 text-sm"
+                  placeholder="400"
+                  min="0"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Hours Ago</label>
+              <input
+                type="number"
+                value={newOfferHours}
+                onChange={(e) => setNewOfferHours(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                placeholder="4"
+                min="0"
+              />
+            </div>
+            <div className="flex items-end">
+              <button
+                onClick={addOffer}
+                disabled={!newOfferBuyer || !newOfferPrice || !newOfferHours || scenario.multipleOffers.length >= 5}
+                className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Offer</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Offers Display */}
+        {scenario.multipleOffers.length > 0 ? (
+          <div className="space-y-4">
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="text-sm text-blue-600">Highest Offer</div>
+                <div className="text-xl font-bold text-blue-900">
+                  ${getHighestOffer()?.offerPrice || 0}
+                </div>
+                <div className="text-sm text-blue-600">
+                  {getHighestOffer()?.buyerName}
+                </div>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <div className="text-sm text-purple-600">Most Recent</div>
+                <div className="text-xl font-bold text-purple-900">
+                  ${getMostRecentOffer()?.offerPrice || 0}
+                </div>
+                <div className="text-sm text-purple-600">
+                  {formatTimeAgo(getMostRecentOffer()?.hoursAgo || 0)}
+                </div>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="text-sm text-green-600">Average Offer</div>
+                <div className="text-xl font-bold text-green-900">
+                  ${Math.round(scenario.multipleOffers.reduce((sum, offer) => sum + offer.offerPrice, 0) / scenario.multipleOffers.length)}
+                </div>
+                <div className="text-sm text-green-600">
+                  {((scenario.multipleOffers.reduce((sum, offer) => sum + offer.offerPrice, 0) / scenario.multipleOffers.length / scenario.listingPrice) * 100).toFixed(1)}% of listing
+                </div>
+              </div>
+            </div>
+
+            {/* Individual Offers */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-gray-900">Individual Buyer Analysis</h4>
+                {testResult?.individualOfferResults ? (
+                  <span className="text-sm text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                    Detailed per-buyer reasoning • Click cards for analysis
+                  </span>
+                ) : (
+                  <span className="text-sm text-gray-500">Run simulation to see individual analysis</span>
+                )}
+              </div>
+              {testResult?.individualOfferResults && (
+                <div className="text-sm text-gray-600 mb-4">
+                  Each buyer gets separate detailed analysis. These may have different recommendations than the strategic overview above.
+                </div>
+              )}
+              
+              {getSortedOffers().map((offer, index) => {
+                const isHighest = offer.id === getHighestOffer()?.id;
+                const isMostRecent = offer.id === getMostRecentOffer()?.id;
+                const offerRatio = (offer.offerPrice / scenario.listingPrice) * 100;
+                const isExpanded = expandedOffers.has(offer.id);
+                const individualResult = getIndividualResult(offer.id);
+
+                return (
+                  <div 
+                    key={offer.id}
+                    className={`border rounded-lg transition-all duration-200 ${
+                      isHighest ? 'border-blue-300 bg-blue-50' : 
+                      isMostRecent ? 'border-purple-300 bg-purple-50' : 
+                      'border-gray-200 bg-white hover:bg-gray-50'
+                    }`}
+                  >
+                    {/* Main Offer Card */}
+                    <div 
+                      className="p-4 cursor-pointer"
+                      onClick={() => toggleOfferExpansion(offer.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div>
+                            <div className="font-medium text-gray-900">{offer.buyerName}</div>
+                            <div className="flex items-center space-x-2 text-sm text-gray-600">
+                              <Clock className="h-4 w-4" />
+                              <span>{formatTimeAgo(offer.hoursAgo)}</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold">${offer.offerPrice}</div>
+                            <div className="text-sm text-gray-600">
+                              {offerRatio.toFixed(1)}% of listing
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {/* Badges */}
+                          <div className="flex items-center space-x-1">
+                            {isHighest && (
+                              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                Highest
+                              </span>
+                            )}
+                            {isMostRecent && (
+                              <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                                Most Recent
+                              </span>
+                            )}
+                            {individualResult && (
+                              <span className={`px-2 py-1 text-xs rounded-full border ${getOfferStrengthColor(individualResult.offerStrength)}`}>
+                                {individualResult.offerStrength}
+                              </span>
+                            )}
+                            {individualResult && (
+                              <span className={`px-2 py-1 text-xs rounded-full ${getDecisionColor(individualResult.decision)}`}>
+                                {individualResult.decision}
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center space-x-1">
+                            {/* Expand/Collapse Button */}
+                            {individualResult && (
+                              <div className="text-gray-400">
+                                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                              </div>
+                            )}
+                            
+                            {/* Remove Button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeOffer(offer.id);
+                              }}
+                              className="p-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expanded Individual Analysis */}
+                    {isExpanded && individualResult && (
+                      <div className="border-t border-gray-200 p-4 bg-gray-50">
+                        <div className="space-y-4">
+                          {/* Decision Summary */}
+                          <div className={`p-3 rounded-lg border ${getDecisionColor(individualResult.decision)}`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="text-lg font-bold">Agent Decision: {individualResult.decision}</div>
+                              <div className="text-sm">Confidence: {(individualResult.confidence * 100).toFixed(1)}%</div>
+                            </div>
+                            {individualResult.recommendedPrice && (
+                              <div className="text-base">
+                                Recommended Price: <span className="font-bold">${individualResult.recommendedPrice}</span>
+                              </div>
+                            )}
+                            <div className="text-sm mt-1">
+                              Competitive Ranking: #{individualResult.competitiveRanking} of {scenario.multipleOffers.length}
+                            </div>
+                          </div>
+
+                          {/* Analysis Details */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div className="bg-white p-3 rounded-lg border">
+                              <div className="text-xs text-gray-600">Nash Equilibrium</div>
+                              <div className="text-lg font-bold">${individualResult.nashPrice}</div>
+                            </div>
+                            <div className="bg-white p-3 rounded-lg border">
+                              <div className="text-xs text-gray-600">Market Value</div>
+                              <div className="text-lg font-bold">${individualResult.marketValue}</div>
+                            </div>
+                            <div className="bg-white p-3 rounded-lg border">
+                              <div className="text-xs text-gray-600">Analysis Time</div>
+                              <div className="text-lg font-bold">{individualResult.executionTime}ms</div>
+                            </div>
+                          </div>
+
+                          {/* Agent Reasoning */}
+                          <div>
+                            <h5 className="font-medium text-gray-900 mb-2">Agent Reasoning for {offer.buyerName}</h5>
+                            <div className="bg-white p-3 rounded-lg border text-sm text-gray-700">
+                              {individualResult.reasoning}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* No Analysis Available */}
+                    {isExpanded && !individualResult && (
+                      <div className="border-t border-gray-200 p-4 bg-gray-50">
+                        <div className="text-center py-4 text-gray-500">
+                          <Play className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p>Run simulation to see agent analysis for this offer</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500">No competing offers yet. Add some offers to simulate competitive bidding.</p>
+          </div>
+        )}
       </div>
     </div>
   );
