@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { User, MapPin, Calendar, Star, Package, ShoppingBag, Edit, Bot } from 'lucide-react'
+import { User, MapPin, Calendar, Star, Package, ShoppingBag, Edit, Bot, Clock, DollarSign, CheckCircle, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase'
@@ -13,6 +13,7 @@ import useSWR from 'swr'
 import { apiClient } from '@/src/lib/api-client-new'
 import { getRotatingGreeting } from '@/lib/greetings'
 import { BLUR_PLACEHOLDERS } from '@/src/lib/blur-data'
+import { QuickActionsOverlay } from '../marketplace/QuickActionsOverlay'
 
 type NegotiationWithItems = {
   id: number
@@ -20,6 +21,16 @@ type NegotiationWithItems = {
   final_price: number | null
   latest_offer_price: number | null
   created_at: string
+  display_status: string
+  needs_attention: boolean
+  latest_offer: {
+    id: number
+    price: number
+    offer_type: 'buyer' | 'seller'
+    is_counter_offer: boolean
+    created_at: string
+  } | null
+  offer_count: number
   items: {
     id: number
     name: string
@@ -525,6 +536,70 @@ function BuyerNotificationsSection({ userId: _userId }: BuyerNotificationsSectio
     price: ''
   })
 
+  // Handler for accepting counter offers
+  const handleAcceptCounter = async (negotiationId: number) => {
+    setProcessing(`accept-${negotiationId}`)
+    try {
+      const headers = await apiClient.getAuthHeaders(true)
+      const response = await fetch(`/api/negotiations/${negotiationId}/buyer-accept`, {
+        method: 'POST',
+        headers
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to accept counter offer')
+      }
+
+      // Refresh the negotiations list
+      await mutate()
+      
+      // Show success message (you could add a toast here)
+      console.log('Counter offer accepted successfully!')
+    } catch (error) {
+      console.error('Failed to accept counter offer:', error)
+      alert((error as Error).message || 'Failed to accept counter offer')
+    } finally {
+      setProcessing('')
+    }
+  }
+
+  // Handler for submitting counter offers
+  const handleSubmitCounter = async () => {
+    if (!counterOffer.negotiationId || !counterOffer.price) return
+    
+    setProcessing(`counter-${counterOffer.negotiationId}`)
+    try {
+      const headers = await apiClient.getAuthHeaders(true)
+      const response = await fetch(`/api/negotiations/${counterOffer.negotiationId}/counter`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          price: parseFloat(counterOffer.price),
+          message: 'Counter offer from buyer'
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to submit counter offer')
+      }
+
+      // Refresh the negotiations list
+      await mutate()
+      
+      // Close dialog and reset
+      setCounterOffer({ negotiationId: null, isOpen: false, price: '' })
+      
+      console.log('Counter offer submitted successfully!')
+    } catch (error) {
+      console.error('Failed to submit counter offer:', error)
+      alert((error as Error).message || 'Failed to submit counter offer')
+    } finally {
+      setProcessing('')
+    }
+  }
+
   // Simple, direct data fetching - no complex status detection
   const { data: myOffers, error, mutate } = useSWR(
     'buyer-offers',
@@ -571,12 +646,24 @@ function BuyerNotificationsSection({ userId: _userId }: BuyerNotificationsSectio
 
   return (
     <div className="max-w-4xl mx-auto p-6 mt-8">
-      <div className="flex items-center gap-3 mb-6">
-        <ShoppingBag className="h-6 w-6 text-gray-700" />
-        <h2 className="text-xl font-semibold text-gray-900">My Offers & Negotiations</h2>
-        <span className="text-sm text-gray-500">
-          ({myOffers.negotiations.length} total)
-        </span>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <ShoppingBag className="h-6 w-6 text-gray-700" />
+          <h2 className="text-xl font-semibold text-gray-900">My Offers & Negotiations</h2>
+          <span className="text-sm text-gray-500">
+            ({myOffers.negotiations.length} total)
+          </span>
+        </div>
+        
+        {/* Quick Actions Button for Buyers */}
+        <QuickActionsOverlay 
+          trigger={
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <Bot className="h-4 w-4" />
+              Quick Actions
+            </Button>
+          }
+        />
       </div>
 
       <div className="space-y-4">
@@ -611,20 +698,130 @@ function BuyerNotificationsSection({ userId: _userId }: BuyerNotificationsSectio
                 <p className="text-sm text-gray-600 mb-2">
                   Seller: @{negotiation.profiles?.username} | Listed: ${negotiation.items?.starting_price}
                 </p>
-                <p className="text-xs text-gray-500 mb-3">
-                  Status: {negotiation.status}
-                </p>
+                
+                {/* Status and Latest Offer Info */}
+                <div className="flex items-center gap-3 mb-3">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    negotiation.display_status === 'counter_received' ? 'bg-orange-100 text-orange-800' :
+                    negotiation.display_status === 'accepted' ? 'bg-green-100 text-green-800' :
+                    negotiation.display_status === 'declined' ? 'bg-red-100 text-red-800' :
+                    'bg-blue-100 text-blue-800'
+                  }`}>
+                    {negotiation.display_status === 'counter_received' ? '🔄 Counter Received' :
+                     negotiation.display_status === 'accepted' ? '✅ Accepted' :
+                     negotiation.display_status === 'declined' ? '❌ Declined' :
+                     '⏳ Awaiting Response'}
+                  </span>
+                  
+                  {negotiation.latest_offer && (
+                    <span className="text-sm font-semibold text-gray-900">
+                      Latest: ${negotiation.latest_offer.price}
+                    </span>
+                  )}
+                  
+                  {negotiation.needs_attention && (
+                    <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium animate-pulse">
+                      🔔 Action Needed
+                    </span>
+                  )}
+                </div>
+
+                {/* Offer History Summary */}
+                {negotiation.latest_offer && (
+                  <p className="text-xs text-gray-500 mb-3">
+                    {negotiation.latest_offer.offer_type === 'seller' && negotiation.latest_offer.is_counter_offer
+                      ? `Seller countered with $${negotiation.latest_offer.price}`
+                      : negotiation.latest_offer.offer_type === 'buyer'
+                      ? `Your offer: $${negotiation.latest_offer.price}`
+                      : `Latest offer: $${negotiation.latest_offer.price}`
+                    } • {negotiation.offer_count} round{negotiation.offer_count !== 1 ? 's' : ''}
+                  </p>
+                )}
 
                 <div className="flex gap-3">
                   <Link href={`/marketplace/${negotiation.items?.id}`}>
                     <Button size="sm" variant="outline">View Item</Button>
                   </Link>
+                  
+                  {/* Quick Action Buttons for Counter Offers */}
+                  {negotiation.display_status === 'counter_received' && (
+                    <>
+                      <Button 
+                        size="sm" 
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        disabled={processing === `accept-${negotiation.id}`}
+                        onClick={() => handleAcceptCounter(negotiation.id)}
+                      >
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        {processing === `accept-${negotiation.id}` ? 'Accepting...' : `Accept $${negotiation.latest_offer?.price}`}
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => {
+                          setCounterOffer({
+                            negotiationId: negotiation.id,
+                            isOpen: true,
+                            price: ''
+                          })
+                        }}
+                      >
+                        <DollarSign className="w-3 h-3 mr-1" />
+                        Counter
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         ))}
       </div>
+      
+      {/* Counter Offer Dialog */}
+      {counterOffer.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Make Counter Offer</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Your Counter Offer Amount
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    value={counterOffer.price}
+                    onChange={(e) => setCounterOffer(prev => ({ ...prev, price: e.target.value }))}
+                    className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter amount"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-3 pt-2">
+                <Button
+                  onClick={handleSubmitCounter}
+                  disabled={!counterOffer.price || processing.includes('counter')}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {processing.includes('counter') ? 'Submitting...' : 'Submit Counter'}
+                </Button>
+                <Button
+                  onClick={() => setCounterOffer({ negotiationId: null, isOpen: false, price: '' })}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

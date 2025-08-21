@@ -56,12 +56,45 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
     averageConfidence: 0,
     successfulDeals: 0
   })
+  const [manualProcessing, setManualProcessing] = useState(false)
+  const [debugInfo, setDebugInfo] = useState<any>(null)
 
   const supabase = createClient()
 
   useEffect(() => {
     loadData()
   }, [user.id])
+
+  // Development auto-processing for local testing
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🤖 Starting development agent auto-processing (every 30s)')
+      
+      const interval = setInterval(async () => {
+        try {
+          const response = await fetch('/api/agent/cron', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ maxTasks: 5 })
+          })
+          
+          const result = await response.json()
+          if (result.processed > 0) {
+            console.log(`🤖 Dev auto-processing: ${result.processed} offers processed`)
+            // Refresh dashboard data after processing
+            loadData()
+          }
+        } catch (error) {
+          console.error('🤖 Dev agent processing failed:', error)
+        }
+      }, 30000) // Every 30 seconds
+
+      return () => {
+        console.log('🤖 Stopping development agent auto-processing')
+        clearInterval(interval)
+      }
+    }
+  }, [])
 
   const loadData = async () => {
     try {
@@ -168,6 +201,138 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
     }
   }
 
+  const manualProcessOffers = async () => {
+    setManualProcessing(true)
+    try {
+      console.log('🔧 Manual processing started...')
+      
+      const response = await fetch('/api/agent/cron', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ maxTasks: 10 })
+      })
+      
+      const result = await response.json()
+      console.log('🔧 Manual processing result:', result)
+      
+      if (result.processed > 0) {
+        console.log(`🔧 Processed ${result.processed} offers manually`)
+        await loadData() // Refresh dashboard
+      } else {
+        console.log('🔧 No offers to process')
+      }
+      
+      alert(`Manual processing complete: ${result.processed} offers processed`)
+    } catch (error) {
+      console.error('🔧 Manual processing failed:', error)
+      alert('Manual processing failed: ' + (error as Error).message)
+    } finally {
+      setManualProcessing(false)
+    }
+  }
+
+  const debugAgentFlow = async () => {
+    try {
+      console.log('🐛 Fetching debug info...')
+      
+      const response = await fetch('/api/debug/agent-flow')
+      const result = await response.json()
+      
+      console.log('🐛 Debug info:', result)
+      setDebugInfo(result)
+      
+      // Show summary in alert
+      if (result.success) {
+        const analysis = result.analysis
+        alert(`Debug Info:
+• Queue pending: ${analysis.queue_has_pending}
+• Recent buyer offers: ${analysis.recent_buyer_offers}
+• Agent-enabled items (via offers): ${analysis.agent_enabled_items_via_offers}
+• Agent-enabled items (direct): ${analysis.agent_enabled_items_direct}
+• Total decisions: ${analysis.total_decisions}
+• Offers missing decisions: ${analysis.offers_missing_decisions}
+• Decision rate: ${analysis.decision_rate}%
+• Sellers with agent: ${analysis.sellers_with_agent}
+
+Check console for full details.`)
+      }
+    } catch (error) {
+      console.error('🐛 Debug failed:', error)
+      alert('Debug failed: ' + (error as Error).message)
+    }
+  }
+
+  const testTrigger = async () => {
+    try {
+      console.log('🔬 Testing trigger for latest offer...')
+      
+      const response = await fetch('/api/debug/test-trigger')
+      const result = await response.json()
+      
+      console.log('🔬 Trigger test result:', result)
+      
+      if (result.success) {
+        const analysis = result.analysis
+        const failingConditions = analysis.failing_conditions || []
+        
+        let alertMessage = `Trigger Test Results:
+• Should trigger: ${analysis.trigger_should_fire}
+• Was queued: ${analysis.queue_entry_exists}
+• Decision made: ${analysis.decision_exists}
+
+FAILING CONDITIONS: ${failingConditions.length > 0 ? failingConditions.join(', ') : 'None'}
+
+Conditions Check:
+• Is buyer offer: ${analysis.conditions?.is_buyer_offer}
+• Seller agent enabled: ${analysis.conditions?.seller_agent_enabled}
+• Item agent enabled: ${analysis.conditions?.item_agent_enabled}
+• Seller profile exists: ${analysis.conditions?.seller_profile_exists}
+• Item exists: ${analysis.conditions?.item_exists}
+
+IDs: Seller ${analysis.seller_id}, Item ${analysis.item_id}, Offer ${analysis.offer_id}`
+
+        // If seller profile is missing, offer to fix it
+        if (failingConditions.includes('seller_profile_exists')) {
+          alertMessage += `
+
+⚠️ SELLER PROFILE MISSING! 
+Click "🔧 Fix Profile" to create it.`
+        }
+
+        alert(alertMessage + '\n\nCheck console for full details.')
+      }
+    } catch (error) {
+      console.error('🔬 Trigger test failed:', error)
+      alert('Trigger test failed: ' + (error as Error).message)
+    }
+  }
+
+  const fixSellerProfile = async () => {
+    try {
+      console.log('🔧 Creating seller agent profile...')
+      
+      const response = await fetch('/api/debug/fix-seller-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seller_id: user.id })
+      })
+      
+      const result = await response.json()
+      console.log('🔧 Fix profile result:', result)
+      
+      if (result.success) {
+        alert(`✅ Seller agent profile ${result.message.includes('already') ? 'already exists' : 'created successfully'}!
+
+Now test the trigger again to verify it works.`)
+      } else {
+        alert(`❌ Failed to create seller profile: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('🔧 Fix profile failed:', error)
+      alert('Fix profile failed: ' + (error as Error).message)
+    }
+  }
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -221,14 +386,46 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
                 <p className="text-gray-600">Manage your autonomous selling assistant</p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              className="flex items-center"
-              onClick={onNavigateAgentSettings}
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              Agent Settings
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={debugAgentFlow}
+              >
+                🐛 Debug
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={testTrigger}
+              >
+                🔬 Test Trigger
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={fixSellerProfile}
+                className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+              >
+                🔧 Fix Profile
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                disabled={manualProcessing}
+                onClick={manualProcessOffers}
+              >
+                {manualProcessing ? '⏳ Processing...' : '🔧 Manual Process'}
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex items-center"
+                onClick={onNavigateAgentSettings}
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Agent Settings
+              </Button>
+            </div>
           </div>
         </div>
       </div>
