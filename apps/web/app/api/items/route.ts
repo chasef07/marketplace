@@ -186,7 +186,8 @@ export async function POST(request: NextRequest) {
       original_furniture_type: body.furniture_type,
       starting_price: body.starting_price,
       images: imagesData, // JSONB images support
-      dimensions: body.dimensions
+      dimensions: body.dimensions,
+      agent_enabled: body.agent_enabled || false
     })
 
     const { data: item, error } = await supabase
@@ -198,7 +199,8 @@ export async function POST(request: NextRequest) {
         furniture_type: furnitureType,
         starting_price: body.starting_price,
         images: imagesData, // JSONB images support
-        dimensions: body.dimensions
+        dimensions: body.dimensions,
+        agent_enabled: body.agent_enabled || false // Default to false if not specified
       })
       .select()
       .single()

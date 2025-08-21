@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { User, MapPin, Calendar, Star, Package, ShoppingBag, Edit } from 'lucide-react'
+import { User, MapPin, Calendar, Star, Package, ShoppingBag, Edit, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase'
@@ -74,9 +74,10 @@ interface ProfileViewProps {
   onNavigateMarketplace?: () => void
   onCreateListing?: () => void
   onSignOut?: () => void
+  onNavigateAgentDashboard?: () => void
 }
 
-export default function ProfileView({ username, isOwnProfile = false, onNavigateHome, onNavigateMarketplace, onCreateListing, onSignOut }: ProfileViewProps) {
+export default function ProfileView({ username, isOwnProfile = false, onNavigateHome, onNavigateMarketplace, onCreateListing, onSignOut, onNavigateAgentDashboard }: ProfileViewProps) {
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -308,12 +309,23 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
               {/* Action Buttons */}
               <div className="flex gap-3 mt-4 md:mt-0">
                 {isOwnProfile ? (
-                  <Link href="/profile/edit">
-                    <Button variant="outline" size="sm">
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Profile
+                  <>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={onNavigateAgentDashboard}
+                      className="flex items-center"
+                    >
+                      <Bot className="h-4 w-4 mr-2" />
+                      AI Agent
                     </Button>
-                  </Link>
+                    <Link href="/profile/edit">
+                      <Button variant="outline" size="sm">
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Profile
+                      </Button>
+                    </Link>
+                  </>
                 ) : (
                   <Button size="sm">
                     Message

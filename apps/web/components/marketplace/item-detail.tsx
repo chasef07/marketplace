@@ -36,6 +36,7 @@ interface FurnitureItem {
   created_at: string
   updated_at: string
   item_status: 'draft' | 'pending_review' | 'active' | 'under_negotiation' | 'sold_pending' | 'sold' | 'paused' | 'archived' | 'flagged' | 'removed'
+  agent_enabled?: boolean
   style?: string
   dimensions?: string
   material?: string
@@ -380,7 +381,14 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
             {/* Item Title & Basic Info - Mobile Only */}
             <div className="lg:hidden mb-4">
               <h1 className="text-2xl font-bold mb-2" style={{ color: '#2C3E50' }}>{item.name}</h1>
-              <p className="text-3xl font-bold mb-2" style={{ color: '#7CB342' }}>${item.starting_price}</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-3xl font-bold" style={{ color: '#7CB342' }}>${item.starting_price}</p>
+                {item.agent_enabled && (
+                  <div className="flex items-center bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                    🤖 AI Agent
+                  </div>
+                )}
+              </div>
               <p className="text-sm" style={{ color: '#6B7280' }}>Listed {formatTimeAgo(item.created_at)}</p>
             </div>
 
@@ -434,7 +442,14 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
                       />
                     </div>
                   ) : (
-                    <p className="text-4xl font-bold" style={{ color: '#7CB342' }}>${item.starting_price}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-4xl font-bold" style={{ color: '#7CB342' }}>${item.starting_price}</p>
+                      {item.agent_enabled && (
+                        <div className="flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                          🤖 AI Agent
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
 

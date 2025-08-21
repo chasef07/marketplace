@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Play, Settings, RefreshCw, Target, Lightbulb, Plus, X, Clock, DollarSign, ChevronDown, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Play, Settings, RefreshCw, Target, Lightbulb, Plus, X, Clock, DollarSign, ChevronDown, ChevronRight, Database } from 'lucide-react';
 
 interface CompetingOffer {
   id: string;
@@ -47,6 +47,22 @@ interface TestResult {
   executionTime: number;
   individualOfferResults?: OfferSimulationResult[];
   overallStrategy?: string;
+}
+
+interface LiveMarketplaceItem {
+  id: number;
+  name: string;
+  starting_price: number;
+  furniture_type: string;
+  agent_enabled: boolean;
+  item_status: string;
+  created_at: string;
+  seller: {
+    username: string;
+  };
+  negotiationsCount: number;
+  offersCount: number;
+  highestOffer?: number;
 }
 
 const furnitureTypes = [
@@ -168,6 +184,103 @@ export default function TestingPlayground() {
   const [newOfferPrice, setNewOfferPrice] = useState('');
   const [newOfferHours, setNewOfferHours] = useState('');
   const [expandedOffers, setExpandedOffers] = useState<Set<string>>(new Set());
+  
+  // Live marketplace data
+  const [liveItems, setLiveItems] = useState<LiveMarketplaceItem[]>([]);
+  const [loadingLiveData, setLoadingLiveData] = useState(false);
+  const [selectedLiveItem, setSelectedLiveItem] = useState<LiveMarketplaceItem | null>(null);
+  const [testMode, setTestMode] = useState<'simulation' | 'live'>('simulation');
+  const [creatingTestScenario, setCreatingTestScenario] = useState(false);
+
+  // Load live marketplace data
+  useEffect(() => {
+    if (testMode === 'live') {
+      loadLiveMarketplaceData();
+    }
+  }, [testMode]);
+
+  const loadLiveMarketplaceData = async () => {
+    try {
+      setLoadingLiveData(true);
+      const response = await fetch('/api/items?limit=20');
+      if (response.ok) {
+        const data = await response.json();
+        const processedItems = data.items?.map((item: any) => ({
+          ...item,
+          negotiationsCount: 0, // Would need to be calculated from actual data
+          offersCount: 0,
+          highestOffer: undefined
+        })) || [];
+        setLiveItems(processedItems);
+      }
+    } catch (error) {
+      console.error('Error loading live marketplace data:', error);
+    } finally {
+      setLoadingLiveData(false);
+    }
+  };
+
+  const selectLiveItem = (item: LiveMarketplaceItem) => {
+    setSelectedLiveItem(item);
+    // Update scenario with live item data
+    setScenario(prev => ({
+      ...prev,
+      itemName: item.name,
+      furnitureType: item.furniture_type,
+      listingPrice: item.starting_price,
+      offerPrice: Math.round(item.starting_price * 0.8), // Default to 80% of listing price
+    }));
+  };
+
+  const createMultiBuyerTestScenario = async () => {
+    if (!selectedLiveItem || !selectedLiveItem.agent_enabled) {
+      alert('Please select a live item with AI agent enabled');
+      return;
+    }
+
+    try {
+      setCreatingTestScenario(true);
+      
+      const response = await fetch('/api/admin/test/multi-buyer-scenario', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          itemId: selectedLiveItem.id,
+          numBuyers: 3,
+          baseOfferAmount: Math.round(selectedLiveItem.starting_price * 0.8)
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ Test scenario created successfully!\n\n${result.message}\n\nNext: Call the agent monitor to see live responses.`);
+        
+        // Trigger agent processing
+        setTimeout(async () => {
+          try {
+            const monitorResponse = await fetch('/api/agent/monitor', { method: 'POST' });
+            if (monitorResponse.ok) {
+              const monitorResult = await monitorResponse.json();
+              console.log('Agent processing result:', monitorResult);
+            }
+          } catch (error) {
+            console.error('Error triggering agent monitor:', error);
+          }
+        }, 1000);
+        
+      } else {
+        const errorData = await response.json();
+        alert(`❌ Failed to create test scenario: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('Error creating test scenario:', error);
+      alert('❌ Error creating test scenario. Check console for details.');
+    } finally {
+      setCreatingTestScenario(false);
+    }
+  };
 
   const runSimulation = async () => {
     setTesting(true);
@@ -306,13 +419,136 @@ export default function TestingPlayground() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Testing Playground</h1>
-        <p className="text-gray-600 mt-1">Simulate negotiation scenarios to test agent behavior</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Testing Playground</h1>
+          <p className="text-gray-600 mt-1">Simulate negotiation scenarios to test agent behavior</p>
+        </div>
+        
+        {/* Test Mode Toggle */}
+        <div className="flex items-center bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setTestMode('simulation')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              testMode === 'simulation'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Simulation
+          </button>
+          <button
+            onClick={() => setTestMode('live')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center ${
+              testMode === 'live'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Database className="w-4 h-4 mr-2" />
+            Live Data
+          </button>
+        </div>
       </div>
 
+      {/* Live Marketplace Items */}
+      {testMode === 'live' && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <Database className="h-5 w-5 text-blue-500" />
+              <h3 className="font-semibold text-gray-900">Live Marketplace Items</h3>
+            </div>
+            <div className="flex items-center space-x-2">
+              {selectedLiveItem && selectedLiveItem.agent_enabled && (
+                <button
+                  onClick={createMultiBuyerTestScenario}
+                  disabled={creatingTestScenario}
+                  className="flex items-center px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                >
+                  <Plus className={`h-4 w-4 mr-1 ${creatingTestScenario ? 'animate-spin' : ''}`} />
+                  {creatingTestScenario ? 'Creating...' : 'Create Multi-Buyer Test'}
+                </button>
+              )}
+              <button
+                onClick={loadLiveMarketplaceData}
+                disabled={loadingLiveData}
+                className="flex items-center px-3 py-1 text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
+              >
+                <RefreshCw className={`h-4 w-4 mr-1 ${loadingLiveData ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
+          </div>
+          
+          {loadingLiveData ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="animate-pulse bg-gray-200 h-24 rounded-lg"></div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {liveItems.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => selectLiveItem(item)}
+                  className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                    selectedLiveItem?.id === item.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="font-medium text-gray-900 text-sm line-clamp-2">{item.name}</h4>
+                    {item.agent_enabled && (
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full flex-shrink-0 ml-2">
+                        🤖 Agent
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-1 text-xs text-gray-600">
+                    <div className="flex justify-between">
+                      <span>Price:</span>
+                      <span className="font-medium">${item.starting_price}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Type:</span>
+                      <span className="capitalize">{item.furniture_type.replace('_', ' ')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Seller:</span>
+                      <span>{item.seller.username}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Status:</span>
+                      <span className={`capitalize ${
+                        item.item_status === 'active' ? 'text-green-600' :
+                        item.item_status === 'under_negotiation' ? 'text-yellow-600' :
+                        'text-gray-600'
+                      }`}>
+                        {item.item_status.replace('_', ' ')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {liveItems.length === 0 && (
+                <div className="col-span-full text-center py-8 text-gray-500">
+                  <Database className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>No live marketplace items found</p>
+                  <p className="text-sm">Try refreshing or switch to simulation mode</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Preset Scenarios */}
-      <div className="bg-white rounded-lg shadow p-6">
+      {testMode === 'simulation' && (
+        <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center space-x-2 mb-4">
           <Target className="h-5 w-5 text-blue-500" />
           <h3 className="font-semibold text-gray-900">Preset Scenarios</h3>
@@ -335,13 +571,22 @@ export default function TestingPlayground() {
           ))}
         </div>
       </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Scenario Configuration */}
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center space-x-2 mb-6">
-            <Settings className="h-5 w-5 text-gray-500" />
-            <h3 className="font-semibold text-gray-900">Scenario Configuration</h3>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-2">
+              <Settings className="h-5 w-5 text-gray-500" />
+              <h3 className="font-semibold text-gray-900">Scenario Configuration</h3>
+            </div>
+            {testMode === 'live' && selectedLiveItem && (
+              <div className="flex items-center text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                <Database className="w-4 h-4 mr-1" />
+                Live Item #{selectedLiveItem.id}
+              </div>
+            )}
           </div>
 
           <div className="space-y-4">

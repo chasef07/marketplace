@@ -23,7 +23,7 @@ interface ListingPreviewProps {
   user: User | null
   onBack: () => void
   onSignUp: (editedData: AIAnalysisResult) => void
-  onCreateListing?: (editedData: AIAnalysisResult) => void
+  onCreateListing?: (editedData: AIAnalysisResult, agentEnabled?: boolean) => void
 }
 
 export function ListingPreview({ analysisData, uploadedImages, user, onBack, onSignUp, onCreateListing }: ListingPreviewProps) {
@@ -31,6 +31,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
   const [editedData, setEditedData] = useState<AIAnalysisResult>(analysisData)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isCreatingListing, setIsCreatingListing] = useState(false)
+  const [agentEnabled, setAgentEnabled] = useState(false) // Agent toggle state
 
 
   const handleSignUp = () => {
@@ -41,7 +42,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
     if (onCreateListing && !isCreatingListing) {
       setIsCreatingListing(true)
       try {
-        await onCreateListing(editedData)
+        await onCreateListing(editedData, agentEnabled)
       } catch (error) {
         // Error handling is done in parent component
       } finally {
@@ -199,6 +200,25 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
               </div>
             </div>
             
+            {/* Agent Toggle */}
+            {user && (
+              <div className="agent-section">
+                <div className="agent-toggle">
+                  <input
+                    type="checkbox"
+                    id="agent-enabled"
+                    checked={agentEnabled}
+                    onChange={(e) => setAgentEnabled(e.target.checked)}
+                    className="agent-checkbox"
+                  />
+                  <label htmlFor="agent-enabled" className="agent-label">
+                    <span className="agent-text">🤖 Enable AI Agent</span>
+                    <span className="agent-description">Let AI handle negotiations automatically</span>
+                  </label>
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="action-section">
               {user ? (
@@ -544,6 +564,64 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
           color: #6B5A47;
           padding-top: 1rem;
           border-top: 1px solid #E8DDD4;
+        }
+
+        .agent-section {
+          background: rgba(74, 111, 165, 0.05);
+          border: 1px solid rgba(74, 111, 165, 0.2);
+          border-radius: 12px;
+          padding: 1rem;
+        }
+
+        .agent-toggle {
+          display: flex;
+          align-items: flex-start;
+          gap: 0.75rem;
+        }
+
+        .agent-checkbox {
+          width: 18px;
+          height: 18px;
+          border: 2px solid #4A6FA5;
+          border-radius: 4px;
+          background: white;
+          cursor: pointer;
+          margin: 0;
+          flex-shrink: 0;
+        }
+
+        .agent-checkbox:checked {
+          background: #4A6FA5;
+          border-color: #4A6FA5;
+        }
+
+        .agent-checkbox:checked::after {
+          content: '✓';
+          color: white;
+          font-size: 12px;
+          display: block;
+          text-align: center;
+          line-height: 14px;
+        }
+
+        .agent-label {
+          cursor: pointer;
+          flex: 1;
+        }
+
+        .agent-text {
+          display: block;
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: #4A6FA5;
+          margin-bottom: 0.25rem;
+        }
+
+        .agent-description {
+          display: block;
+          font-size: 0.8rem;
+          color: #6B5A47;
+          line-height: 1.3;
         }
 
         .action-section {

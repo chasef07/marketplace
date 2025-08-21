@@ -65,20 +65,35 @@ export async function POST(request: NextRequest) {
         .update({ status: 'processing' })
         .eq('id', task.queue_id);
 
-      // Get seller agent profile
+      // Check if agent is enabled for this specific item
+      const { data: item } = await supabase
+        .from('items')
+        .select('agent_enabled')
+        .eq('id', task.item_id)
+        .single();
+
+      if (!item?.agent_enabled) {
+        await supabase.rpc('complete_agent_task', {
+          queue_id: task.queue_id,
+          error_msg: 'Agent disabled for this item'
+        });
+        return Response.json({ message: 'Agent disabled for item', processed: 0 });
+      }
+
+      // Get seller agent profile for settings
       const { data: agentProfile } = await supabase
         .from('seller_agent_profile')
         .select('*')
         .eq('seller_id', task.seller_id)
         .single();
 
-      if (!agentProfile?.agent_enabled) {
-        await supabase.rpc('complete_agent_task', {
-          queue_id: task.queue_id,
-          error_msg: 'Agent disabled for seller'
-        });
-        return Response.json({ message: 'Agent disabled', processed: 0 });
-      }
+      // Use default settings if no profile exists
+      const settings = agentProfile || {
+        aggressiveness_level: 0.5,
+        auto_accept_threshold: 0.95,
+        min_acceptable_ratio: 0.75,
+        response_delay_minutes: 0
+      };
 
       // Get negotiation context
       const { data: negotiation } = await supabase
@@ -111,27 +126,92 @@ export async function POST(request: NextRequest) {
         return Response.json({ message: 'Stale offer', processed: 0 });
       }
 
-      // Get competing offers count
-      const { count: competingOffersCount } = await supabase
+      // Get all competing offers for multi-offer analysis
+      const { data: competingNegotiations } = await supabase
         .from('negotiations')
-        .select('id', { count: 'exact' })
+        .select(`
+          id,
+          buyer_id,
+          offers!inner(
+            id,
+            price,
+            created_at,
+            offer_type
+          )
+        `)
         .eq('item_id', task.item_id)
         .eq('status', 'active')
         .neq('id', task.negotiation_id);
 
-      // Calculate decision using AI and game theory
-      const decision = await generateObject({
-        model: openai('gpt-4o'),
-        system: SYSTEM_PROMPT,
-        prompt: `Analyze this offer:
+      // Extract competing offers data for enhanced analysis
+      const competingOffers = competingNegotiations?.flatMap(neg => 
+        neg.offers
+          .filter((o: any) => o.offer_type === 'buyer')
+          .map((o: any) => ({
+            id: o.id,
+            buyerName: `Buyer-${neg.buyer_id.slice(-4)}`, // Anonymous buyer name
+            offerPrice: parseFloat(o.price),
+            hoursAgo: Math.floor((Date.now() - new Date(o.created_at).getTime()) / (1000 * 60 * 60))
+          }))
+      ) || [];
+
+      const competingOffersCount = competingOffers.length;
+
+      // Enhanced AI analysis with competitive context
+      let analysisPrompt = '';
+      
+      if (competingOffers.length > 0) {
+        // Multi-offer competitive analysis
+        analysisPrompt = `Analyze this competitive negotiation scenario:
+
+Item: ${task.furniture_type} listed at $${task.listing_price}
+
+Current Offer Analysis:
+- This offer: $${task.offer_price} (focus of decision)
+
+Competitive Context:
+- Total competing offers: ${competingOffersCount}
+- All offers: ${competingOffers.map(o => `$${o.offerPrice} (${o.buyerName}, ${o.hoursAgo}h ago)`).join(', ')}
+- Highest competing offer: $${Math.max(...competingOffers.map(o => o.offerPrice))}
+- Average offer: $${Math.round(competingOffers.reduce((sum, o) => sum + o.offerPrice, 0) / competingOffers.length)}
+
+Seller Agent Settings:
+- Aggressiveness: ${settings.aggressiveness_level}
+- Auto-accept threshold: ${settings.auto_accept_threshold}%
+- Min acceptable ratio: ${settings.min_acceptable_ratio}%
+
+Strategic Objectives:
+1. Leverage competitive pressure to maximize price
+2. Balance between accepting strong offers vs encouraging bidding wars
+3. Consider timing - newer offers may indicate rising interest
+4. Avoid losing all buyers by being too aggressive
+
+Make strategic decision considering the full competitive landscape.`;
+      } else {
+        // Single offer analysis
+        analysisPrompt = `Analyze this single offer:
 
 Item: ${task.furniture_type} listed at $${task.listing_price}
 Current offer: $${task.offer_price}
-Competing offers: ${competingOffersCount || 0}
-Seller aggressiveness: ${agentProfile.aggressiveness_level}
-Auto-accept threshold: ${agentProfile.auto_accept_threshold}
+Competing offers: 0 (no competition)
 
-Make decision to maximize seller profit.`,
+Seller Agent Settings:
+- Aggressiveness: ${settings.aggressiveness_level}
+- Auto-accept threshold: ${settings.auto_accept_threshold}%
+- Min acceptable ratio: ${settings.min_acceptable_ratio}%
+
+Since there's no competition, focus on:
+1. Whether offer meets minimum thresholds
+2. Encouraging higher offers through strategic countering
+3. Building negotiation momentum
+
+Make decision to maximize seller profit while avoiding buyer loss.`;
+      }
+
+      const decision = await generateObject({
+        model: openai('gpt-4o'),
+        system: SYSTEM_PROMPT,
+        prompt: analysisPrompt,
         tools: {
           nashEquilibrium: nashEquilibriumTool,
           marketAnalysis: marketAnalysisTool,
@@ -164,8 +244,12 @@ Make decision to maximize seller profit.`,
           reasoning: decision.object.reasoning,
           market_conditions: {
             competingOffers: competingOffersCount || 0,
-            aggressivenessLevel: agentProfile.aggressiveness_level,
-            autoAcceptThreshold: agentProfile.auto_accept_threshold,
+            competingOffersData: competingOffers.slice(0, 5), // Store top 5 competing offers
+            highestCompetingOffer: competingOffers.length > 0 ? Math.max(...competingOffers.map(o => o.offerPrice)) : null,
+            averageCompetingOffer: competingOffers.length > 0 ? Math.round(competingOffers.reduce((sum, o) => sum + o.offerPrice, 0) / competingOffers.length) : null,
+            aggressivenessLevel: settings.aggressiveness_level,
+            autoAcceptThreshold: settings.auto_accept_threshold,
+            minAcceptableRatio: settings.min_acceptable_ratio,
             executionTimeMs: executionTime,
           },
           execution_time_ms: executionTime,
@@ -260,6 +344,12 @@ Make decision to maximize seller profit.`,
           reasoning: decision.object.reasoning,
           actionResult,
           executionTimeMs: executionTime,
+          competitiveAnalysis: {
+            competingOffersCount,
+            highestCompetingOffer: competingOffers.length > 0 ? Math.max(...competingOffers.map(o => o.offerPrice)) : null,
+            averageCompetingOffer: competingOffers.length > 0 ? Math.round(competingOffers.reduce((sum, o) => sum + o.offerPrice, 0) / competingOffers.length) : null,
+            isCompetitiveScenario: competingOffers.length > 0
+          }
         }
       });
 

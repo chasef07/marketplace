@@ -21,6 +21,14 @@ const ProfileView = dynamic(() => import('../profile/profile-view'), {
   loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
 })
 
+const SellerAgentDashboard = dynamic(() => import('../seller/SellerAgentDashboard').then(mod => ({ default: mod.SellerAgentDashboard })), {
+  loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
+})
+
+const AgentSettings = dynamic(() => import('../seller/AgentSettings').then(mod => ({ default: mod.AgentSettings })), {
+  loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
+})
+
 const ProfileEdit = dynamic(() => import('../profile/profile-edit'), {
   loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
 })
@@ -38,7 +46,7 @@ interface User {
 
 export const HomePage = React.memo(function HomePage() {
   const [user, setUser] = useState<User | null>(null)
-  const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'item-detail' | 'listing-preview' | 'profile-view' | 'profile-edit'>('home')
+  const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'item-detail' | 'listing-preview' | 'profile-view' | 'profile-edit' | 'seller-agent-dashboard' | 'agent-settings'>('home')
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<{analysisData: AIAnalysisResult, uploadedImages: string[]} | null>(null)
@@ -150,7 +158,7 @@ export const HomePage = React.memo(function HomePage() {
     }
   }, []) // Empty dependency array - only run once on mount
 
-  const createListingAndNavigate = useCallback(async (analysisData: AIAnalysisResult) => {
+  const createListingAndNavigate = useCallback(async (analysisData: AIAnalysisResult, agentEnabled = false) => {
     try {
       const listingData = {
         name: analysisData.listing.title,
@@ -160,6 +168,7 @@ export const HomePage = React.memo(function HomePage() {
         condition: 'good', // Default condition
         image_filename: analysisData.image_filename, // Backward compatibility
         images: analysisData.images, // New multiple images support
+        agent_enabled: agentEnabled, // Add agent enablement
         // Include AI analysis details
         style: analysisData.analysis.style,
         material: analysisData.analysis.material,
@@ -303,6 +312,14 @@ export const HomePage = React.memo(function HomePage() {
     setCurrentView('profile-view')
   }
 
+  const handleViewAgentDashboard = () => {
+    setCurrentView('seller-agent-dashboard')
+  }
+
+  const handleViewAgentSettings = () => {
+    setCurrentView('agent-settings')
+  }
+
   // Note: Profile navigation handlers available but not used in current flow
   // const handleEditProfile = () => {
   //   setCurrentView('profile-edit')
@@ -393,6 +410,7 @@ export const HomePage = React.memo(function HomePage() {
         isOwnProfile={user?.username === selectedUsername}
         onNavigateHome={() => setCurrentView('home')}
         onNavigateMarketplace={() => setCurrentView('marketplace')}
+        onNavigateAgentDashboard={handleViewAgentDashboard}
       />
     )
   }
@@ -400,6 +418,25 @@ export const HomePage = React.memo(function HomePage() {
   if (currentView === 'profile-edit' && user) {
     return (
       <ProfileEdit />
+    )
+  }
+
+  if (currentView === 'seller-agent-dashboard' && user) {
+    return (
+      <SellerAgentDashboard
+        user={user}
+        onBack={() => setCurrentView('profile-view')}
+        onNavigateAgentSettings={handleViewAgentSettings}
+      />
+    )
+  }
+
+  if (currentView === 'agent-settings' && user) {
+    return (
+      <AgentSettings
+        user={user}
+        onClose={() => setCurrentView('seller-agent-dashboard')}
+      />
     )
   }
 
