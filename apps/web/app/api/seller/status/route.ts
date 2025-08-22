@@ -9,7 +9,6 @@ export async function GET(request: NextRequest) {
     // Get authenticated user
     const { user } = await requireAuth(request)
 
-    console.log('Getting seller status for user:', user?.id)
     
     // Get seller's items (don't require negotiations to exist)
     const { data: items, error: itemsError } = await supabase
@@ -26,7 +25,6 @@ export async function GET(request: NextRequest) {
       .eq('seller_id', user?.id || 'unknown')
       .eq('item_status', 'active')
 
-    console.log('Items query result:', { items, error: itemsError })
 
     if (itemsError) {
       console.error('Failed to fetch items:', itemsError)

@@ -162,11 +162,7 @@ export class SupabaseApiClient {
 
   // Helper method to get authenticated headers
   async getAuthHeaders(includeContentType: boolean = false): Promise<Record<string, string>> {
-    console.log('🔧 API Client - getAuthHeaders called')
-    
     const session = await this.getSession() // Use our protected getSession method
-    console.log('🔧 API Client - Session exists:', !!session)
-    console.log('🔧 API Client - Access token exists:', !!session?.access_token)
     
     const headers: Record<string, string> = {}
     
@@ -176,9 +172,6 @@ export class SupabaseApiClient {
     
     if (session?.access_token) {
       headers.Authorization = `Bearer ${session.access_token}`
-      console.log('🔧 API Client - Added auth header, token length:', session.access_token.length)
-    } else {
-      console.log('🔧 API Client - No access token available')
     }
     
     return headers
@@ -433,10 +426,7 @@ export class SupabaseApiClient {
   }
 
   async counterOffer(negotiationId: number, price: number, message: string = '') {
-    console.log('🔧 API Client - counterOffer called:', { negotiationId, price, message })
-    
     const headers = await this.getAuthHeaders(true)
-    console.log('🔧 API Client - Auth headers:', { hasAuth: !!headers.Authorization, hasContentType: !!headers['Content-Type'] })
     
     const url = `/api/negotiations/${negotiationId}/counter`
     const body = JSON.stringify({
@@ -444,21 +434,14 @@ export class SupabaseApiClient {
       message: message
     })
     
-    console.log('🔧 API Client - Making request to:', url)
-    console.log('🔧 API Client - Request body:', body)
-    
     const response = await fetch(url, {
       method: 'POST',
       headers,
       body
     })
     
-    console.log('🔧 API Client - Response status:', response.status)
-    console.log('🔧 API Client - Response ok:', response.ok)
-    
     if (!response.ok) {
       const errorText = await response.text()
-      console.log('🔧 API Client - Error response:', errorText)
       
       let errorData
       try {
@@ -474,7 +457,6 @@ export class SupabaseApiClient {
     this.clearNegotiationsCache()
     
     const result = await response.json()
-    console.log('🔧 API Client - Success response:', result)
     
     return result
   }
