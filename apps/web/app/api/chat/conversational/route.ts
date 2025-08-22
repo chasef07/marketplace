@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase'
 import { ratelimit, withRateLimit } from '@/lib/rate-limit'
 import { getAuthenticatedUser } from '@/src/lib/auth-helpers'
+import { offerService } from '@/src/lib/services/offer-service'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Type interfaces for enriched negotiation data
@@ -666,24 +667,20 @@ async function handleCounter(supabase: SupabaseClient, userId: string, negotiati
       }
     }
 
-    const newRoundNumber = roundNumber + 1
+    // Use unified offer service
+    const result = await offerService.createOffer({
+      negotiationId,
+      offerType,
+      price: price,
+      message: `Counter offer: $${price}`,
+      isCounterOffer: true,
+      isMessageOnly: false,
+      agentGenerated: false,
+      userId
+    })
 
-    // Create counter offer
-    const { error: offerError } = await supabase
-      .from('offers')
-      .insert({
-        negotiation_id: negotiationId,
-        offer_type: offerType,
-        price: price,
-        message: `Counter offer: $${price}`,
-        round_number: newRoundNumber,
-        is_counter_offer: true
-      })
-      .select()
-      .single()
-
-    if (offerError) {
-      console.error('Error creating counter offer:', offerError)
+    if (!result.success) {
+      console.error('Error creating counter offer:', result.error)
       return NextResponse.json({
         message: "❌ **Counter Offer Failed**\n\nFailed to create counter offer. Please try again.",
         buttons: [
@@ -768,26 +765,22 @@ async function handleCounterForce(supabase: SupabaseClient, userId: string, nego
     const { data: currentRound } = await supabase
       .rpc('get_round_count', { neg_id: negotiationId })
     
-    const roundNumber = (currentRound as number) || 0
     const offerType = negotiationDetails.seller_id === userId ? 'seller' : 'buyer'
-    const newRoundNumber = roundNumber + 1
 
-    // Create counter offer (force bypasses turn validation and most business rules)
-    const { error: offerError } = await supabase
-      .from('offers')
-      .insert({
-        negotiation_id: negotiationId,
-        offer_type: offerType,
-        price: price,
-        message: `Counter offer: $${price}`,
-        round_number: newRoundNumber,
-        is_counter_offer: true
-      })
-      .select()
-      .single()
+    // Create counter offer (force mode - bypasses some validation)
+    const result = await offerService.createOffer({
+      negotiationId,
+      offerType,
+      price: price,
+      message: `Counter offer: $${price}`,
+      isCounterOffer: true,
+      isMessageOnly: false,
+      agentGenerated: false, // This is a manual force action
+      userId
+    })
 
-    if (offerError) {
-      console.error('Error creating force counter offer:', offerError)
+    if (!result.success) {
+      console.error('Error creating force counter offer:', result.error)
       return NextResponse.json({
         message: "❌ **Counter Offer Failed**\n\nFailed to create counter offer. Please try again.",
         buttons: [

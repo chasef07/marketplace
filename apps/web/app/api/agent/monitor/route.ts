@@ -3,6 +3,7 @@ import { openai } from '@ai-sdk/openai';
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase';
+import { offerService } from '@/src/lib/services/offer-service';
 
 // Game theory tools (simplified for background processing)
 import { nashEquilibriumTool, marketAnalysisTool } from '@/src/lib/ai-tools/game-theory/nash-equilibrium';
@@ -397,22 +398,24 @@ Make decision based on buyer's demonstrated behavior and negotiation psychology.
         // Create counter offer using validated price
         const counterPrice = Math.round(validatedDecision.recommendedPrice / 5) * 5; // Round to $5
 
-        const { error: counterError } = await supabase
-          .from('offers')
-          .insert({
-            negotiation_id: task.negotiation_id,
-            offer_type: 'seller',
-            price: counterPrice,
-            message: `Counter offer: $${counterPrice}`,
-            agent_generated: true,
-            agent_decision_id: decisionLog?.id,
-          });
+        // Use unified offer service for agent counter offers
+        const result = await offerService.createOffer({
+          negotiationId: task.negotiation_id,
+          offerType: 'seller',
+          price: counterPrice,
+          message: `Counter offer: $${counterPrice}`,
+          isCounterOffer: true,
+          isMessageOnly: false,
+          agentGenerated: true,
+          agentDecisionId: decisionLog?.id,
+          userId: task.seller_id
+        });
 
         actionResult = { 
-          success: !counterError, 
+          success: result.success, 
           action: 'COUNTERED', 
           price: counterPrice,
-          error: counterError?.message 
+          error: result.success ? undefined : result.error
         };
 
       } else if (decision.object.decision === 'DECLINE') {

@@ -190,7 +190,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
         }
       }
       
-      return matchesSearch && matchesPrice && item.item_status === 'active'
+      return matchesSearch && matchesPrice && (item.item_status === 'active' || item.item_status === 'under_negotiation')
     })
   }, [items, searchQuery, selectedPriceRange])
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase'
 import { ratelimit, withRateLimit } from '@/lib/rate-limit'
+import { offerService } from '@/src/lib/services/offer-service'
 
 export async function POST(
   request: NextRequest,
@@ -88,28 +89,22 @@ export async function POST(
 
       negotiation = newNegotiation
     }
-    // Note: No need to update existing negotiation - offers table handles the progression
 
-    // Get current round number for this negotiation
-    const { data: currentRound } = await supabase
-      .rpc('get_round_count', { neg_id: negotiation.id })
+    // Use unified offer service
+    const result = await offerService.createOffer({
+      negotiationId: negotiation.id,
+      offerType: 'buyer',
+      price: body.price,
+      message: body.message || '',
+      isCounterOffer: false,
+      isMessageOnly: false,
+      agentGenerated: false,
+      userId: user.id
+    })
 
-    // Create the offer
-    const { data: offer, error: offerError } = await supabase
-      .from('offers')
-      .insert({
-        negotiation_id: negotiation.id,
-        offer_type: 'buyer',
-        price: body.price,
-        message: body.message || '',
-        round_number: ((currentRound as number) || 0) + 1
-      })
-      .select()
-      .single()
-
-    if (offerError) {
-      console.error('Error creating offer:', offerError)
-      return NextResponse.json({ error: 'Failed to create offer' }, { status: 500 })
+    if (!result.success) {
+      console.error('Error creating offer:', result.error)
+      return NextResponse.json({ error: result.error }, { status: 400 })
     }
 
     // Note: Agent automatically queues buyer offers via database trigger
@@ -117,7 +112,7 @@ export async function POST(
 
     return NextResponse.json({
       negotiation,
-      offer
+      offer: result.offer
     })
     } catch (error) {
       console.error('Create offer error:', error)

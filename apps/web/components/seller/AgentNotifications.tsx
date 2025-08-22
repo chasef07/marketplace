@@ -1,24 +1,27 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Bell, CheckCircle, X, DollarSign, TrendingUp, Clock } from 'lucide-react'
+import { Bell, CheckCircle, X, DollarSign, TrendingUp, Clock, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 
 interface AgentNotification {
-  id: number
+  id: string
   type: string
   title: string
   message: string
   offerPrice: number
   itemName: string
   itemId: number
-  buyerName: string
-  confidence: number
-  reasoning: string
+  buyerName?: string
+  sellerName?: string
+  confidence?: number
+  reasoning?: string
   createdAt: string
   negotiationId: number
+  offerId?: number
   priority: 'high' | 'medium' | 'low'
+  actions: string[]
 }
 
 interface AgentNotificationsProps {
@@ -51,7 +54,11 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
     }
   }
 
-  const handleNotificationAction = async (notificationId: number, action: string) => {
+  const [counterPrice, setCounterPrice] = useState<number | null>(null)
+  const [counterMessage, setCounterMessage] = useState('')
+  const [showCounterModal, setShowCounterModal] = useState<string | null>(null)
+
+  const handleNotificationAction = async (notificationId: string, action: string, price?: number, message?: string) => {
     try {
       setActionLoading(notificationId)
       
@@ -62,20 +69,32 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
         },
         body: JSON.stringify({
           notificationId,
-          action
+          action,
+          counterPrice: price,
+          message: message
         })
       })
 
       if (response.ok) {
         const result = await response.json()
         
-        // Remove notification from list
-        setNotifications(prev => prev.filter(n => n.id !== notificationId))
+        // Remove notification from list for most actions
+        if (action !== 'counter' || result.success) {
+          setNotifications(prev => prev.filter(n => n.id !== notificationId))
+        }
         
         if (result.action === 'offer_accepted') {
           // Show success message or redirect
           window.location.reload() // Simple refresh to update the UI
+        } else if (result.action === 'counter_offer_created') {
+          // Refresh notifications to show updated state
+          loadNotifications()
         }
+        
+        // Close counter modal
+        setShowCounterModal(null)
+        setCounterPrice(null)
+        setCounterMessage('')
       } else {
         console.error('Failed to handle notification action')
       }
@@ -84,6 +103,12 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
     } finally {
       setActionLoading(null)
     }
+  }
+
+  const openCounterModal = (notificationId: string, currentPrice: number) => {
+    setShowCounterModal(notificationId)
+    setCounterPrice(currentPrice * 0.9) // Start with 10% lower as suggestion
+    setCounterMessage('')
   }
 
   const formatCurrency = (amount: number) => {
@@ -161,50 +186,158 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
                   <Clock className="w-3 h-3 mr-1" />
                   {formatTimeAgo(notification.createdAt)}
                 </span>
+                <button
+                  onClick={() => window.open(`/item/${notification.itemId}`, '_blank')}
+                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                  title="View listing"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                </button>
               </div>
               
               <p className="text-sm text-gray-700 mb-3">{notification.message}</p>
               
               <div className="text-xs text-gray-600 space-y-1">
                 <div className="flex items-center justify-between">
-                  <span>Buyer: <strong>{notification.buyerName}</strong></span>
-                  <span>Confidence: <strong>{Math.round(notification.confidence * 100)}%</strong></span>
+                  {notification.buyerName && (
+                    <span>Buyer: <strong>{notification.buyerName}</strong></span>
+                  )}
+                  {notification.sellerName && (
+                    <span>Seller: <strong>{notification.sellerName}</strong></span>
+                  )}
+                  {notification.confidence && (
+                    <span>Confidence: <strong>{Math.round(notification.confidence * 100)}%</strong></span>
+                  )}
                 </div>
-                <p className="italic">{notification.reasoning}</p>
+                {notification.reasoning && (
+                  <p className="italic">{notification.reasoning}</p>
+                )}
               </div>
             </div>
             
             <div className="flex flex-col space-y-2 ml-4">
-              <Button
-                size="sm"
-                onClick={() => handleNotificationAction(notification.id, 'accept_recommendation')}
-                disabled={actionLoading === notification.id}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                {actionLoading === notification.id ? (
-                  'Accepting...'
-                ) : (
-                  <>
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    Accept {formatCurrency(notification.offerPrice)}
-                  </>
-                )}
-              </Button>
+              {notification.actions.includes('accept') && (
+                <Button
+                  size="sm"
+                  onClick={() => handleNotificationAction(notification.id, 'accept')}
+                  disabled={actionLoading === notification.id}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {actionLoading === notification.id ? (
+                    'Accepting...'
+                  ) : (
+                    <>
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Accept {formatCurrency(notification.offerPrice)}
+                    </>
+                  )}
+                </Button>
+              )}
               
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleNotificationAction(notification.id, 'acknowledge')}
-                disabled={actionLoading === notification.id}
-                className="text-xs"
-              >
-                <X className="w-3 h-3 mr-1" />
-                Dismiss
-              </Button>
+              {notification.actions.includes('counter') && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => openCounterModal(notification.id, notification.offerPrice)}
+                  disabled={actionLoading === notification.id}
+                  className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                >
+                  <DollarSign className="w-3 h-3 mr-1" />
+                  Counter
+                </Button>
+              )}
+              
+              {notification.actions.includes('decline') && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleNotificationAction(notification.id, 'decline')}
+                  disabled={actionLoading === notification.id}
+                  className="text-xs bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                >
+                  <X className="w-3 h-3 mr-1" />
+                  Decline
+                </Button>
+              )}
+              
+              {notification.actions.includes('dismiss') && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleNotificationAction(notification.id, 'dismiss')}
+                  disabled={actionLoading === notification.id}
+                  className="text-xs"
+                >
+                  <X className="w-3 h-3 mr-1" />
+                  Dismiss
+                </Button>
+              )}
             </div>
           </div>
         </Card>
       ))}
+      
+      {/* Counter Offer Modal */}
+      {showCounterModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Make Counter Offer</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Counter Price
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    value={counterPrice || ''}
+                    onChange={(e) => setCounterPrice(parseFloat(e.target.value) || 0)}
+                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Message (optional)
+                </label>
+                <textarea
+                  value={counterMessage}
+                  onChange={(e) => setCounterMessage(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Add a note for the buyer..."
+                  rows={3}
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCounterModal(null)
+                  setCounterPrice(null)
+                  setCounterMessage('')
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => handleNotificationAction(showCounterModal, 'counter', counterPrice || 0, counterMessage)}
+                disabled={!counterPrice || counterPrice <= 0 || actionLoading === showCounterModal}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {actionLoading === showCounterModal ? 'Sending...' : 'Send Counter Offer'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
