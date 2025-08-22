@@ -1,13 +1,16 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, MapPin, User, DollarSign, MessageSquare, Edit, Save, X } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ArrowLeft, MapPin, User, DollarSign, MessageSquare, Edit, Save, X, Bot, Clock, CheckCircle, XCircle, RotateCcw, Brain, Zap } from "lucide-react"
 import { apiClient, ImageData } from "@/lib/api-client-new"
 import { FURNITURE_BLUR_DATA_URL } from "@/lib/blur-data"
 import { ItemDetailSkeleton } from "@/components/ui/skeleton"
 import { ImageCarousel } from "@/components/ui/ImageCarousel"
+import { createClient } from "@/lib/supabase"
 
 // Lazy load the map component
 const LocationMap = dynamic(() => import('@/components/maps/location-map').then(mod => ({ default: mod.LocationMap })), {
@@ -69,6 +72,14 @@ interface Negotiation {
   updated_at: string
 }
 
+interface AgentDecision {
+  id: number
+  decision_type: string
+  confidence_score: number
+  reasoning: string
+  created_at: string
+}
+
 interface Offer {
   id: number
   negotiation_id: number
@@ -78,6 +89,10 @@ interface Offer {
   round_number: number
   created_at: string
   is_counter_offer: boolean
+  agent_generated?: boolean
+  agent_decisions?: AgentDecision[]
+  buyer_id?: string
+  seller_id?: string
 }
 
 interface ItemDetailProps {
@@ -100,6 +115,10 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
   const [offers, setOffers] = useState<Offer[]>([])
   const [showMessages, setShowMessages] = useState(false)
   const [loadingMessages, setLoadingMessages] = useState(false)
+  const [isConnectedToRealtime, setIsConnectedToRealtime] = useState(false)
+  const [realtimeError, setRealtimeError] = useState<string | null>(null)
+  const [offerActionLoading, setOfferActionLoading] = useState<string | null>(null)
+  const subscriptionsRef = useRef<any[]>([])
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState<{
     description: string;
@@ -151,15 +170,121 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
     }
   }, [itemId, userId, fetchNegotiation])
 
+  // Real-time subscriptions for offers and negotiations
+  useEffect(() => {
+    if (!negotiation || !userId) return
+
+    const supabase = createClient()
+    console.log('🔄 Setting up real-time subscriptions for negotiation:', negotiation.id)
+
+    // Subscribe to offers for this negotiation
+    const offersChannel = supabase
+      .channel(`offers_${negotiation.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'offers',
+          filter: `negotiation_id=eq.${negotiation.id}`
+        },
+        (payload) => {
+          console.log('📡 Real-time offer update:', payload)
+          // Refresh offers when any offer changes
+          fetchOffers().catch(err => {
+            console.error('Failed to refresh offers from real-time update:', err)
+            setRealtimeError('Failed to load latest offers')
+          })
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Offers subscription status:', status)
+        setIsConnectedToRealtime(status === 'SUBSCRIBED')
+        if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          setRealtimeError('Real-time connection lost')
+        } else if (status === 'SUBSCRIBED') {
+          setRealtimeError(null)
+        }
+      })
+
+    // Subscribe to negotiation status changes
+    const negotiationChannel = supabase
+      .channel(`negotiation_${negotiation.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'negotiations',
+          filter: `id=eq.${negotiation.id}`
+        },
+        (payload) => {
+          console.log('📡 Real-time negotiation update:', payload)
+          // Refresh negotiation data
+          fetchNegotiation().catch(err => {
+            console.error('Failed to refresh negotiation from real-time update:', err)
+            setRealtimeError('Failed to load latest negotiation data')
+          })
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          setRealtimeError('Real-time connection lost')
+        }
+      })
+
+    // Store subscriptions for cleanup
+    subscriptionsRef.current = [offersChannel, negotiationChannel]
+
+    return () => {
+      console.log('🧹 Cleaning up real-time subscriptions')
+      subscriptionsRef.current.forEach(channel => {
+        supabase.removeChannel(channel)
+      })
+      subscriptionsRef.current = []
+      setIsConnectedToRealtime(false)
+    }
+  }, [negotiation?.id, userId, fetchOffers, fetchNegotiation])
+
   const fetchOffers = useCallback(async () => {
     if (!negotiation) return
     
     try {
       setLoadingMessages(true)
-      const offersData = await apiClient.getNegotiationOffers(negotiation.id)
-      setOffers(offersData || [])
+      // Enhanced fetch with agent decision data
+      const supabase = createClient()
+      const { data: offersData, error } = await supabase
+        .from('offers')
+        .select(`
+          *,
+          agent_decisions(
+            id,
+            decision_type,
+            confidence_score,
+            reasoning,
+            created_at
+          )
+        `)
+        .eq('negotiation_id', negotiation.id)
+        .order('created_at', { ascending: true })
+      
+      if (error) {
+        console.error('Failed to fetch offers with agent data:', error)
+        // Fallback to API client
+        const fallbackData = await apiClient.getNegotiationOffers(negotiation.id)
+        setOffers(fallbackData || [])
+      } else {
+        setOffers(offersData || [])
+      }
     } catch (err) {
       console.error('Failed to fetch offers:', err)
+      // Final fallback
+      try {
+        const fallbackData = await apiClient.getNegotiationOffers(negotiation.id)
+        setOffers(fallbackData || [])
+      } catch (fallbackErr) {
+        console.error('Fallback fetch also failed:', fallbackErr)
+      }
     } finally {
       setLoadingMessages(false)
     }
@@ -170,6 +295,61 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
       await fetchOffers()
     }
     setShowMessages(!showMessages)
+  }
+
+  // Enhanced offer actions for AI agent responses
+  const handleAcceptOffer = async (offerId: number) => {
+    if (!negotiation || offerActionLoading) return
+    
+    try {
+      setOfferActionLoading('accept')
+      await apiClient.acceptOffer(negotiation.id)
+      // Refresh data after accepting
+      await fetchNegotiation()
+      await fetchOffers()
+    } catch (err) {
+      console.error('Failed to accept offer:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to accept offer. Please try again.'
+      alert(errorMessage)
+    } finally {
+      setOfferActionLoading(null)
+    }
+  }
+
+  const handleCounterOffer = async (price: number, message: string = '') => {
+    if (!negotiation || offerActionLoading) return
+    
+    try {
+      setOfferActionLoading('counter')
+      await apiClient.counterOffer(negotiation.id, price, message)
+      // Refresh data after counter offer
+      await fetchNegotiation()
+      await fetchOffers()
+    } catch (err) {
+      console.error('Failed to create counter offer:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create counter offer. Please try again.'
+      alert(errorMessage)
+    } finally {
+      setOfferActionLoading(null)
+    }
+  }
+
+  const handleDeclineOffer = async (reason: string = 'Unable to accept this offer.') => {
+    if (!negotiation || offerActionLoading) return
+    
+    try {
+      setOfferActionLoading('decline')
+      await apiClient.declineOffer(negotiation.id, reason)
+      // Refresh data after declining
+      await fetchNegotiation()
+      await fetchOffers()
+    } catch (err) {
+      console.error('Failed to decline offer:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to decline offer. Please try again.'
+      alert(errorMessage)
+    } finally {
+      setOfferActionLoading(null)
+    }
   }
 
   const formatTimeAgo = (timestamp: string) => {
@@ -272,6 +452,202 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
   }
 
   const isOwnItem = useMemo(() => userId && item && userId === item.seller_id, [userId, item])
+  const isBuyer = useMemo(() => userId && negotiation && negotiation.buyer_id === userId, [userId, negotiation])
+  const latestOffer = useMemo(() => offers.length > 0 ? offers[offers.length - 1] : null, [offers])
+  const needsResponse = useMemo(() => {
+    if (!latestOffer || !isBuyer) return false
+    return latestOffer.offer_type === 'seller' && latestOffer.is_counter_offer
+  }, [latestOffer, isBuyer])
+
+  // Enhanced offer display component
+  const OfferCard = ({ offer, isLatest }: { offer: Offer; isLatest: boolean }) => {
+    const isAgentOffer = offer.agent_generated
+    const agentDecision = offer.agent_decisions?.[0]
+    const isFromSeller = offer.offer_type === 'seller'
+    const isFromBuyer = offer.offer_type === 'buyer'
+    
+    return (
+      <Card 
+        className={`mb-4 transition-all duration-200 ${
+          isLatest ? 'ring-2 ring-blue-200 shadow-lg' : 'shadow-sm'
+        } ${
+          isAgentOffer ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200' : 'bg-white'
+        }`}
+        role="article"
+        aria-label={`${isAgentOffer ? 'AI Agent' : isFromSeller ? 'Seller' : 'Buyer'} offer for $${offer.price?.toFixed(2)}`}
+      >
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {isAgentOffer ? (
+                <Badge 
+                  className="bg-blue-100 text-blue-800 hover:bg-blue-200"
+                  role="img"
+                  aria-label="AI Agent generated offer"
+                >
+                  <Bot className="w-3 h-3 mr-1" aria-hidden="true" />
+                  AI Agent
+                </Badge>
+              ) : (
+                <Badge 
+                  variant="outline" 
+                  className="bg-gray-50"
+                  role="img"
+                  aria-label={`${isFromSeller ? 'Seller' : 'Buyer'} offer`}
+                >
+                  <User className="w-3 h-3 mr-1" aria-hidden="true" />
+                  {isFromSeller ? 'Seller' : 'Buyer'}
+                </Badge>
+              )}
+              
+              {offer.is_counter_offer && (
+                <Badge 
+                  variant="secondary"
+                  role="img"
+                  aria-label="Counter offer"
+                >
+                  <RotateCcw className="w-3 h-3 mr-1" aria-hidden="true" />
+                  Counter Offer
+                </Badge>
+              )}
+              
+              {isLatest && needsResponse && (
+                <Badge 
+                  className="bg-yellow-100 text-yellow-800 animate-pulse"
+                  role="alert"
+                  aria-label="This offer needs your response"
+                >
+                  <Clock className="w-3 h-3 mr-1" aria-hidden="true" />
+                  Needs Response
+                </Badge>
+              )}
+            </div>
+            
+            <div className="text-sm text-gray-500">
+              {formatTimeAgo(offer.created_at)}
+            </div>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="pt-0">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span 
+                className="text-2xl font-bold text-green-600"
+                aria-label={`Offer amount: ${offer.price?.toFixed(2) || '0.00'} dollars`}
+              >
+                ${offer.price?.toFixed(2) || '0.00'}
+              </span>
+              
+              {agentDecision && (
+                <div className="flex items-center gap-2">
+                  <Brain className="w-4 h-4 text-blue-600" aria-hidden="true" />
+                  <div className="text-sm">
+                    <span 
+                      className="font-medium text-blue-700"
+                      aria-label={`AI confidence level: ${Math.round((agentDecision.confidence_score || 0) * 100)} percent`}
+                    >
+                      {Math.round((agentDecision.confidence_score || 0) * 100)}% confident
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {offer.message && (
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-sm text-gray-700">{offer.message}</p>
+              </div>
+            )}
+            
+            {agentDecision?.reasoning && (
+              <div 
+                className="bg-blue-50 rounded-lg p-3 border-l-4 border-blue-400"
+                role="complementary"
+                aria-label="AI reasoning for this offer"
+              >
+                <div className="flex items-start gap-2">
+                  <Zap className="w-4 h-4 text-blue-600 mt-0.5" aria-hidden="true" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-800 mb-1">AI Reasoning:</p>
+                    <p className="text-sm text-blue-700">{agentDecision.reasoning}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {isLatest && needsResponse && isBuyer && (
+              <div 
+                className="flex gap-2 mt-4 pt-4 border-t border-gray-200"
+                role="group"
+                aria-label="Offer response actions"
+              >
+                <Button
+                  onClick={() => handleAcceptOffer(offer.id)}
+                  disabled={!!offerActionLoading}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                  size="sm"
+                  aria-label={`Accept offer of ${offer.price?.toFixed(2)} dollars`}
+                >
+                  {offerActionLoading === 'accept' ? (
+                    <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" aria-label="Loading" />
+                  ) : (
+                    <CheckCircle className="w-4 h-4 mr-2" aria-hidden="true" />
+                  )}
+                  <span className="hidden sm:inline">Accept ${offer.price?.toFixed(2)}</span>
+                  <span className="sm:hidden">Accept</span>
+                </Button>
+                
+                <Button
+                  onClick={() => setShowOfferForm(true)}
+                  disabled={!!offerActionLoading}
+                  variant="outline"
+                  className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                  size="sm"
+                  aria-label="Make a counter offer"
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" aria-hidden="true" />
+                  <span className="hidden sm:inline">Counter</span>
+                  <span className="sm:hidden">Counter</span>
+                </Button>
+                
+                <Button
+                  onClick={() => handleDeclineOffer('Thanks, but I cannot accept this offer.')}
+                  disabled={!!offerActionLoading}
+                  variant="outline"
+                  className="flex-1 border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  size="sm"
+                  aria-label="Decline this offer"
+                >
+                  {offerActionLoading === 'decline' ? (
+                    <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-red-600 border-t-transparent" aria-label="Loading" />
+                  ) : (
+                    <XCircle className="w-4 h-4 mr-2" aria-hidden="true" />
+                  )}
+                  <span className="hidden sm:inline">Decline</span>
+                  <span className="sm:hidden">Decline</span>
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Real-time connection status indicator
+  const RealtimeStatus = () => (
+    <div className="flex items-center gap-2 text-xs">
+      <div className={`w-2 h-2 rounded-full ${
+        realtimeError ? 'bg-red-500' : 
+        isConnectedToRealtime ? 'bg-green-500 animate-pulse' : 'bg-gray-300'
+      }`} />
+      <span className={realtimeError ? 'text-red-600' : 'text-gray-500'}>
+        {realtimeError ? 'Connection error' : 
+         isConnectedToRealtime ? 'Live updates active' : 'Connecting...'}
+      </span>
+    </div>
+  )
 
   if (loading) {
     return <ItemDetailSkeleton />
@@ -466,8 +842,52 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
                         size="lg"
                       >
                         <DollarSign className="h-4 w-4 mr-2" />
-                        Make Offer
+                        {negotiation ? 'Make Counter Offer' : 'Make Offer'}
                       </Button>
+                      
+                      {/* Negotiation Status */}
+                      {negotiation && (
+                        <div className="rounded-lg p-3 border" style={{ background: 'rgba(74, 111, 165, 0.05)', borderColor: 'rgba(74, 111, 165, 0.1)' }}>
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-sm font-medium" style={{ color: '#4A6FA5' }}>Active Negotiation</p>
+                            <RealtimeStatus />
+                          </div>
+                          
+                          {latestOffer && (
+                            <div className="text-xs text-gray-600">
+                              Last offer: ${latestOffer.price?.toFixed(2)} • {formatTimeAgo(latestOffer.created_at)}
+                              {latestOffer.agent_generated && (
+                                <Badge className="ml-2 bg-blue-100 text-blue-800 text-xs">
+                                  <Bot className="w-2 h-2 mr-1" />
+                                  AI
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+                          
+                          {needsResponse && (
+                            <div className="mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
+                              <p className="text-xs font-medium text-yellow-800">💬 Waiting for your response</p>
+                            </div>
+                          )}
+                          
+                          {realtimeError && (
+                            <div className="mt-2 p-2 bg-red-50 rounded border border-red-200">
+                              <p className="text-xs font-medium text-red-800">⚠️ {realtimeError}</p>
+                            </div>
+                          )}
+                          
+                          <Button
+                            onClick={toggleMessages}
+                            variant="outline"
+                            size="sm"
+                            className="w-full mt-2 text-xs"
+                          >
+                            <MessageSquare className="h-3 w-3 mr-1" />
+                            {showMessages ? 'Hide' : 'Show'} Offer History ({offers.length})
+                          </Button>
+                        </div>
+                      )}
                     </>
                   )}
                   {!user && (
@@ -544,6 +964,56 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
                 </div>
             </div>
 
+            {/* Enhanced Offer History Section */}
+            {showMessages && negotiation && (
+              <div className="lg:col-span-2 mt-6 px-4 lg:px-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5" style={{ color: '#4A6FA5' }} />
+                      Negotiation History
+                      {isConnectedToRealtime && (
+                        <Badge className="bg-green-100 text-green-800">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1" />
+                          Live
+                        </Badge>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingMessages ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span className="ml-2 text-sm text-gray-600">Loading negotiation history...</span>
+                      </div>
+                    ) : offers.length > 0 ? (
+                      <div className="space-y-4 max-h-96 overflow-y-auto">
+                        {offers.map((offer, index) => (
+                          <OfferCard 
+                            key={offer.id} 
+                            offer={offer} 
+                            isLatest={index === offers.length - 1}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <MessageSquare className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p className="text-sm lg:text-base">No offers yet. Start the negotiation by making an offer!</p>
+                      </div>
+                    )}
+                    
+                    {realtimeError && (
+                      <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-700">
+                          ⚠️ {realtimeError}. You may need to refresh the page to see the latest updates.
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
           </div>
         </div>
@@ -556,9 +1026,33 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
               <h3 className="text-xl font-bold mb-6" style={{ color: '#2C3E50' }}>Make an Offer</h3>
               
               <div className="space-y-4">
+                {latestOffer && latestOffer.agent_generated && (
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                    <div className="flex items-start gap-3">
+                      <Bot className="w-5 h-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-blue-800 mb-1">Responding to AI Agent Offer</h4>
+                        <p className="text-sm text-blue-700 mb-2">
+                          The seller's AI agent offered ${latestOffer.price?.toFixed(2)}
+                          {latestOffer.agent_decisions?.[0] && (
+                            <span className="ml-1">
+                              (Confidence: {Math.round((latestOffer.agent_decisions[0].confidence_score || 0) * 100)}%)
+                            </span>
+                          )}
+                        </p>
+                        {latestOffer.agent_decisions?.[0]?.reasoning && (
+                          <p className="text-xs text-blue-600 italic">
+                            "{latestOffer.agent_decisions[0].reasoning}"
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: '#2C3E50' }}>
-                    Offer Amount
+                    {negotiation ? 'Counter Offer Amount' : 'Offer Amount'}
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-lg" style={{ color: '#4A6FA5' }}>$</span>
@@ -573,10 +1067,32 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
                         color: '#2C3E50',
                         MozAppearance: 'textfield'
                       } as React.CSSProperties}
-                      placeholder="0.00"
+                      placeholder={latestOffer ? latestOffer.price?.toFixed(2) || '0.00' : '0.00'}
                       step="0.01"
                     />
                   </div>
+                  {latestOffer && (
+                    <div className="mt-2 flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setOfferAmount((latestOffer.price! * 0.95).toFixed(2))}
+                        className="text-xs"
+                      >
+                        -5% (${(latestOffer.price! * 0.95).toFixed(2)})
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setOfferAmount((latestOffer.price! * 1.05).toFixed(2))}
+                        className="text-xs"
+                      >
+                        +5% (${(latestOffer.price! * 1.05).toFixed(2)})
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -607,11 +1123,21 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
                     Cancel
                   </Button>
                   <Button 
-                    onClick={handleMakeOffer}
+                    onClick={negotiation ? () => {
+                      const amount = parseFloat(offerAmount)
+                      if (isNaN(amount) || amount <= 0) {
+                        alert('Please enter a valid offer amount')
+                        return
+                      }
+                      handleCounterOffer(amount, offerMessage)
+                      setShowOfferForm(false)
+                      setOfferAmount('')
+                      setOfferMessage('')
+                    } : handleMakeOffer}
                     className="flex-1 text-white hover:opacity-90"
                     style={{ backgroundColor: '#4A6FA5' }}
                   >
-                    Submit Offer
+                    {negotiation ? 'Submit Counter Offer' : 'Submit Offer'}
                   </Button>
                 </div>
               </div>

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { User, MapPin, Calendar, Star, Package, ShoppingBag, Edit, Bot, Clock, DollarSign, CheckCircle, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/lib/supabase'
 import { colors, gradients, shadows } from '../home/design-system/colors'
 import { animations } from '../home/design-system/animations'
@@ -14,6 +15,7 @@ import { apiClient } from '@/src/lib/api-client-new'
 import { getRotatingGreeting } from '@/lib/greetings'
 import { BLUR_PLACEHOLDERS } from '@/src/lib/blur-data'
 import { QuickActionsOverlay } from '../marketplace/QuickActionsOverlay'
+import { BuyerNotifications } from '../buyer/BuyerNotifications'
 
 type NegotiationWithItems = {
   id: number
@@ -664,6 +666,11 @@ function BuyerNotificationsSection({ userId: _userId }: BuyerNotificationsSectio
             </Button>
           }
         />
+      </div>
+
+      {/* Buyer Notifications Section */}
+      <div className="mb-8">
+        <BuyerNotifications userId={profile?.id || ''} />
       </div>
 
       <div className="space-y-4">

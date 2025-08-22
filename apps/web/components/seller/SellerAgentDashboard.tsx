@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Bot, Settings, Eye, MessageSquare, TrendingUp, BarChart3, Power, Package } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { AgentNotifications } from './AgentNotifications'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 interface AgentEnabledItem {
   id: number
@@ -58,49 +59,18 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
   })
   const [manualProcessing, setManualProcessing] = useState(false)
   const [debugInfo, setDebugInfo] = useState<any>(null)
+  const [channels, setChannels] = useState<RealtimeChannel[]>([])
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null)
 
   const supabase = createClient()
 
-  useEffect(() => {
-    loadData()
-  }, [user.id])
-
-  // Development auto-processing for local testing
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🤖 Starting development agent auto-processing (every 30s)')
-      
-      const interval = setInterval(async () => {
-        try {
-          const response = await fetch('/api/agent/cron', { 
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ maxTasks: 5 })
-          })
-          
-          const result = await response.json()
-          if (result.processed > 0) {
-            console.log(`🤖 Dev auto-processing: ${result.processed} offers processed`)
-            // Refresh dashboard data after processing
-            loadData()
-          }
-        } catch (error) {
-          console.error('🤖 Dev agent processing failed:', error)
-        }
-      }, 30000) // Every 30 seconds
-
-      return () => {
-        console.log('🤖 Stopping development agent auto-processing')
-        clearInterval(interval)
-      }
-    }
-  }, [])
-
-  const loadData = async () => {
+  // Memoize loadData to prevent unnecessary re-renders
+  const loadData = useCallback(async () => {
     try {
       setLoading(true)
 
       // Load seller's items with negotiation counts
+      // Note: agent_enabled might be at item level or seller level, we'll handle both
       const { data: itemsData } = await supabase
         .from('items')
         .select(`
@@ -122,14 +92,28 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
         .in('item_status', ['active', 'under_negotiation', 'sold'])
         .order('created_at', { ascending: false })
 
+      // Also get seller agent profile to check if agent is enabled at seller level
+      const { data: sellerAgentProfile } = await supabase
+        .from('seller_agent_profile')
+        .select('agent_enabled')
+        .eq('seller_id', user.id)
+        .single()
+
       // Process items data
       const processedItems = itemsData?.map(item => {
         const negotiations = item.negotiations || []
         const offers = negotiations.flatMap(n => n.offers || [])
         const buyerOffers = offers.filter(o => o.offer_type === 'buyer')
         
+        // Determine if agent is enabled for this item
+        // Priority: item-level agent_enabled, then seller-level agent_enabled, then default false
+        const agentEnabled = item.agent_enabled !== undefined 
+          ? item.agent_enabled 
+          : sellerAgentProfile?.agent_enabled || false
+        
         return {
           ...item,
+          agent_enabled: agentEnabled,
           negotiationsCount: negotiations.length,
           offersCount: buyerOffers.length,
           highestOffer: buyerOffers.length > 0 ? Math.max(...buyerOffers.map(o => parseFloat(o.price))) : undefined
@@ -178,26 +162,203 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
     } finally {
       setLoading(false)
     }
-  }
+  }, [user.id, supabase])
+
+  // Initial data load
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  // Set up real-time subscriptions
+  useEffect(() => {
+    if (!user.id) return
+
+    console.log('🔄 Setting up real-time subscriptions for seller agent dashboard')
+    
+    const newChannels: RealtimeChannel[] = []
+
+    // Subscribe to agent decisions for this seller
+    const agentDecisionsChannel = supabase
+      .channel(`agent_decisions_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'agent_decisions',
+          filter: `seller_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('🤖 New agent decision received:', payload.new)
+          setLastUpdateTime(new Date())
+          
+          // Add the new decision to state instead of full reload for better performance
+          setRecentDecisions(prev => {
+            const newDecision = {
+              ...payload.new,
+              items: { name: 'Loading...' } // Will be updated in full reload if needed
+            } as AgentDecision
+            
+            // Add to beginning and limit to 10
+            const updated = [newDecision, ...prev].slice(0, 10)
+            return updated
+          })
+          
+          // Update stats as well
+          setAgentStats(prev => ({
+            ...prev,
+            totalDecisions: prev.totalDecisions + 1,
+            averageConfidence: prev.totalDecisions > 0 
+              ? ((prev.averageConfidence * prev.totalDecisions) + (payload.new.confidence_score || 0)) / (prev.totalDecisions + 1)
+              : (payload.new.confidence_score || 0)
+          }))
+          
+          // Do a partial reload to get complete decision data with item name
+          setTimeout(() => loadData(), 1000)
+        }
+      )
+      .on('subscribe', (status) => {
+        console.log('🔄 Agent decisions subscription status:', status)
+      })
+      .subscribe()
+
+    newChannels.push(agentDecisionsChannel)
+
+    // Subscribe to offers for this seller's items
+    const offersChannel = supabase
+      .channel(`offers_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'offers'
+        },
+        async (payload) => {
+          // Check if this offer is for one of our items
+          const { data: negotiation } = await supabase
+            .from('negotiations')
+            .select('seller_id, item_id')
+            .eq('id', payload.new.negotiation_id)
+            .single()
+
+          if (negotiation?.seller_id === user.id) {
+            console.log('💰 New offer received for seller item:', payload.new)
+            setLastUpdateTime(new Date())
+            // Refresh data to update offer counts and stats
+            loadData()
+          }
+        }
+      )
+      .on('subscribe', (status) => {
+        console.log('🔄 Offers subscription status:', status)
+      })
+      .subscribe()
+
+    newChannels.push(offersChannel)
+
+    // Subscribe to item status changes for this seller
+    const itemsChannel = supabase
+      .channel(`items_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'items',
+          filter: `seller_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('📦 Item updated:', payload.new)
+          setLastUpdateTime(new Date())
+          // Update the specific item in local state
+          setItems(prev => prev.map(item => 
+            item.id === payload.new.id 
+              ? { ...item, ...payload.new }
+              : item
+          ))
+        }
+      )
+      .on('subscribe', (status) => {
+        console.log('🔄 Items subscription status:', status)
+      })
+      .subscribe()
+
+    newChannels.push(itemsChannel)
+
+    setChannels(newChannels)
+
+    // Cleanup function
+    return () => {
+      console.log('🧹 Cleaning up real-time subscriptions')
+      newChannels.forEach(channel => {
+        supabase.removeChannel(channel)
+      })
+      setChannels([])
+    }
+  }, [user.id, supabase, loadData])
+
+  // Development auto-processing for local testing
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🤖 Starting development agent auto-processing (every 15s)')
+      
+      const interval = setInterval(async () => {
+        try {
+          const response = await fetch('/api/agent/cron', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ maxTasks: 5 })
+          })
+          
+          const result = await response.json()
+          if (result.processed > 0) {
+            console.log(`🤖 Dev auto-processing: ${result.processed} offers processed`)
+            // Note: loadData will be called via real-time subscriptions
+            // but we keep this for cases where subscriptions might fail
+          }
+        } catch (error) {
+          console.error('🤖 Dev agent processing failed:', error)
+        }
+      }, 15000) // Every 15 seconds
+
+      return () => {
+        console.log('🤖 Stopping development agent auto-processing')
+        clearInterval(interval)
+      }
+    }
+  }, [])
 
   const toggleItemAgent = async (itemId: number, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
+      // Try to update at item level first
+      let error = null
+      
+      // Check if items table has agent_enabled column by attempting update
+      const itemUpdateResult = await supabase
         .from('items')
         .update({ agent_enabled: !currentStatus })
         .eq('id', itemId)
         .eq('seller_id', user.id)
-
-      if (!error) {
-        // Update local state
-        setItems(prev => prev.map(item => 
-          item.id === itemId 
-            ? { ...item, agent_enabled: !currentStatus }
-            : item
-        ))
+      
+      if (itemUpdateResult.error) {
+        // If item-level update fails, it might be managed at seller level
+        // For now, we'll treat individual item toggles as not supported for seller-level management
+        console.warn('Item-level agent toggle not supported, agent is managed at seller level')
+        alert('Agent settings are managed at the account level. Use Agent Settings to control the agent for all your items.')
+        return
       }
+
+      // Update local state if item-level update succeeded
+      setItems(prev => prev.map(item => 
+        item.id === itemId 
+          ? { ...item, agent_enabled: !currentStatus }
+          : item
+      ))
+      
     } catch (error) {
       console.error('Error toggling agent:', error)
+      alert('Failed to toggle agent. Please try again.')
     }
   }
 
@@ -382,8 +543,26 @@ Now test the trigger again to verify it works.`)
                 <h1 className="text-2xl font-bold text-gray-900 flex items-center">
                   <Bot className="w-6 h-6 mr-2 text-blue-600" />
                   AI Agent Dashboard
+                  {channels.length > 0 && (
+                    <span className="ml-3 flex items-center">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-green-600 ml-1 font-normal">Live</span>
+                    </span>
+                  )}
                 </h1>
-                <p className="text-gray-600">Manage your autonomous selling assistant</p>
+                <p className="text-gray-600">
+                  Manage your autonomous selling assistant
+                  {channels.length > 0 && (
+                    <span className="text-green-600 text-sm ml-2">
+                      • Real-time updates active
+                      {lastUpdateTime && (
+                        <span className="text-gray-500 ml-2">
+                          (Last update: {lastUpdateTime.toLocaleTimeString()})
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
             <div className="flex gap-2">

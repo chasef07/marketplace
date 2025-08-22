@@ -76,10 +76,19 @@ export async function GET(request: NextRequest) {
         (negotiations || []).map(async (negotiation) => {
           console.log(`\n🔍 Processing negotiation ${negotiation.id} for item: ${negotiation.items?.name}`)
           
-          // Get latest offer
+          // Get latest offer with agent decision info
           const { data: latestOffer, error: offerError } = await supabase
             .from('offers')
-            .select('*')
+            .select(`
+              *,
+              agent_decisions(
+                id,
+                decision_type,
+                confidence_score,
+                reasoning,
+                created_at
+              )
+            `)
             .eq('negotiation_id', negotiation.id)
             .order('created_at', { ascending: false })
             .limit(1)
@@ -94,6 +103,7 @@ export async function GET(request: NextRequest) {
             offer_type: latestOffer.offer_type,
             price: latestOffer.price,
             is_counter_offer: latestOffer.is_counter_offer,
+            agent_generated: latestOffer.agent_generated,
             created_at: latestOffer.created_at
           } : 'No offers found')
 
@@ -127,7 +137,8 @@ export async function GET(request: NextRequest) {
             if (latestOffer.offer_type === 'seller' && latestOffer.is_counter_offer) {
               displayStatus = 'counter_received'
               needsAttention = true
-              console.log(`   🔄 Status: counter_received (seller counter offer) - NEEDS ATTENTION`)
+              const agentGenerated = latestOffer.agent_generated ? ' (AI Agent)' : ''
+              console.log(`   🔄 Status: counter_received (seller counter offer${agentGenerated}) - NEEDS ATTENTION`)
             } else if (latestOffer.offer_type === 'buyer') {
               displayStatus = 'awaiting_response'
               console.log(`   ⏳ Status: awaiting_response (buyer offer waiting)`)
@@ -148,14 +159,27 @@ export async function GET(request: NextRequest) {
             needs_attention: needsAttention,
             time_since_last_update: latestOffer ? 
               Math.floor((new Date().getTime() - new Date(latestOffer.created_at).getTime()) / (1000 * 60 * 60)) : 
-              Math.floor((new Date().getTime() - new Date(negotiation.created_at).getTime()) / (1000 * 60 * 60))
+              Math.floor((new Date().getTime() - new Date(negotiation.created_at).getTime()) / (1000 * 60 * 60)),
+            agent_info: latestOffer?.agent_generated ? {
+              is_agent_generated: true,
+              agent_decision: latestOffer.agent_decisions?.[0] || null,
+              confidence_score: latestOffer.agent_decisions?.[0]?.confidence_score || null,
+              reasoning: latestOffer.agent_decisions?.[0]?.reasoning || null
+            } : {
+              is_agent_generated: false,
+              agent_decision: null,
+              confidence_score: null,
+              reasoning: null
+            }
           }
 
           console.log(`📋 Final enriched negotiation ${negotiation.id}:`, {
             id: enrichedNegotiation.id,
             display_status: enrichedNegotiation.display_status,
             needs_attention: enrichedNegotiation.needs_attention,
-            offer_count: enrichedNegotiation.offer_count
+            offer_count: enrichedNegotiation.offer_count,
+            agent_generated: enrichedNegotiation.agent_info.is_agent_generated,
+            confidence_score: enrichedNegotiation.agent_info.confidence_score
           })
 
           return enrichedNegotiation

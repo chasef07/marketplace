@@ -4,13 +4,13 @@ export const runtime = 'edge';
 
 /**
  * Cron endpoint for periodic agent monitoring
- * This should be called every 30 seconds via Vercel Cron or external service
+ * This should be called every 15 seconds via Vercel Cron or external service
  * 
  * Add to vercel.json:
  * {
  *   "crons": [{
  *     "path": "/api/agent/cron",
- *     "schedule": "* /30 * * * * *"
+ *     "schedule": "* /15 * * * * *"
  *   }]
  * }
  */
