@@ -16,6 +16,8 @@ import { getRotatingGreeting } from '@/lib/greetings'
 import { BLUR_PLACEHOLDERS } from '@/src/lib/blur-data'
 import { QuickActionsOverlay } from '../marketplace/QuickActionsOverlay'
 import { BuyerNotifications } from '../buyer/BuyerNotifications'
+import BuyerOfferManager from '../buyer/BuyerOfferManager'
+import OfferConfirmationPopup from '../buyer/OfferConfirmationPopup'
 
 type NegotiationWithItems = {
   id: number
@@ -94,6 +96,9 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showOfferConfirmation, setShowOfferConfirmation] = useState(false)
+  const [lastOfferDetails, setLastOfferDetails] = useState<any>(null)
+  const [initialOfferItemId, setInitialOfferItemId] = useState<number | null>(null)
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -116,6 +121,23 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
 
     fetchProfile()
   }, [username])
+
+  // Check for URL parameter to open offer form
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const makeOfferParam = urlParams.get('makeOffer')
+      if (makeOfferParam) {
+        const itemId = parseInt(makeOfferParam)
+        if (!isNaN(itemId)) {
+          setInitialOfferItemId(itemId)
+          // Clear the URL parameter
+          const newUrl = window.location.pathname
+          window.history.replaceState({}, '', newUrl)
+        }
+      }
+    }
+  }, [])
 
   // Memoized utility functions for better performance
   const supabaseClient = useMemo(() => createClient(), [])
@@ -426,6 +448,17 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
         )}
       </div>
 
+      {/* Buyer Offer Management Section - Only for own profile */}
+      {isOwnProfile && (
+        <div className="mb-8">
+          <BuyerOfferManager 
+            userId={profile.id} 
+            onOfferConfirmed={() => setShowOfferConfirmation(true)}
+            initialOfferItemId={initialOfferItemId || undefined}
+          />
+        </div>
+      )}
+
       {/* Buyer Notifications Section - Only for own profile */}
       {isOwnProfile && (
         <div className="mb-8">
@@ -434,6 +467,13 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
       )}
       
       </div>
+
+      {/* Offer Confirmation Popup */}
+      <OfferConfirmationPopup
+        isVisible={showOfferConfirmation}
+        onClose={() => setShowOfferConfirmation(false)}
+        offerDetails={lastOfferDetails}
+      />
 
       {/* Styles */}
       <style jsx>{`

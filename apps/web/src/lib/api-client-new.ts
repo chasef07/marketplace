@@ -111,9 +111,10 @@ export interface Negotiation {
   item_id: number
   buyer_id: string
   seller_id: string
-  status: 'active' | 'deal_pending' | 'completed' | 'cancelled'
-  current_round: number
-  max_rounds: number
+  status: 'active' | 'deal_pending' | 'completed' | 'cancelled' | 'picked_up'
+  final_price: number | null
+  expires_at: string | null
+  completed_at: string | null
   created_at: string
   updated_at: string
 }

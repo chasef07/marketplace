@@ -49,11 +49,27 @@ export async function POST(
       .eq('id', itemId)
       .single()
 
+    // Debug: Log item details
+    console.log('🔍 API Debug - Item details:', {
+      itemId,
+      item,
+      itemError,
+      expectedStatus: 'active'
+    })
+
     if (itemError || !item) {
+      console.log('❌ Item not found:', { itemError, item })
       return NextResponse.json({ error: 'Item not found' }, { status: 404 })
     }
 
-    if (item.item_status !== 'active') {
+    // Allow offers on active items and items under negotiation
+    const allowedStatuses = ['active', 'under_negotiation']
+    if (!allowedStatuses.includes(item.item_status)) {
+      console.log('❌ Item status check failed:', { 
+        actualStatus: item.item_status, 
+        allowedStatuses,
+        isAllowed: allowedStatuses.includes(item.item_status)
+      })
       return NextResponse.json({ error: 'Item is no longer available' }, { status: 400 })
     }
 

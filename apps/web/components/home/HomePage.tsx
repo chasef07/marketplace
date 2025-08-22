@@ -264,23 +264,11 @@ export const HomePage = React.memo(function HomePage() {
   }, [])
 
   const handleItemClick = useCallback((itemId: number) => {
+    console.log('🔍 Clicking item:', itemId)
     setSelectedItemId(itemId)
     setCurrentView('item-detail')
   }, [])
 
-  const handleMakeOffer = useCallback(async (itemId: number, price: number, message?: string) => {
-    try {
-      await apiClient.createOffer(itemId, price, message || '')
-      
-      // Force marketplace refresh to update item data
-      setMarketplaceKey(prev => prev + 1)
-      
-      return { success: true }
-    } catch (error) {
-      console.error('Failed to create offer:', error)
-      throw error
-    }
-  }, [])
 
   const handleBackToHome = () => {
     setCurrentView('home')
@@ -382,7 +370,6 @@ export const HomePage = React.memo(function HomePage() {
         itemId={selectedItemId}
         user={user}
         onBack={handleBackToMarketplace}
-        onMakeOffer={handleMakeOffer}
         onSignInClick={() => { setAuthMode('signin'); setCurrentView('auth'); }}
         onViewProfile={handleViewProfile}
       />

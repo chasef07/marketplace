@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is admin using database function
-    const { data: isAdminResult, error } = await supabase.rpc('is_admin');
+    const { data: isAdminResult, error } = await supabase.rpc('is_system_admin');
 
     if (error) {
       console.error('Error checking admin status:', error);

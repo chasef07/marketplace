@@ -81,7 +81,11 @@ export class OfferService {
         throw new Error(result.error.message)
       }
 
-      const createdOffer = result.data
+      const createdOffer = result.data?.[0]
+
+      if (!createdOffer) {
+        throw new Error('No offer created by transaction')
+      }
 
       console.log('🔄 OfferService.createOffer - Success:', {
         offerId: createdOffer.id,

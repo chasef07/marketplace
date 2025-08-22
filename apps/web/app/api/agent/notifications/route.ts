@@ -416,11 +416,11 @@ export async function POST(request: NextRequest) {
             id,
             negotiation_id,
             offer_type,
+            round_number,
             negotiations!inner(
               id,
               buyer_id,
-              seller_id,
-              current_round
+              seller_id
             )
           `)
           .eq('id', offerId)
