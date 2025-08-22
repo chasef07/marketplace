@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Bot, Settings, Eye, MessageSquare, TrendingUp, BarChart3, Power, Package } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { AgentNotifications } from './AgentNotifications'
+import { NegotiationTimeline } from './NegotiationTimeline'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 interface AgentEnabledItem {
@@ -70,14 +71,12 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
       setLoading(true)
 
       // Load seller's items with negotiation counts
-      // Note: agent_enabled might be at item level or seller level, we'll handle both
       const { data: itemsData } = await supabase
         .from('items')
         .select(`
           id,
           name,
           starting_price,
-          agent_enabled,
           item_status,
           views_count,
           created_at,
@@ -92,55 +91,77 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
         .in('item_status', ['active', 'under_negotiation', 'sold'])
         .order('created_at', { ascending: false })
 
-      // Also get seller agent profile to check if agent is enabled at seller level
-      const { data: sellerAgentProfile } = await supabase
-        .from('seller_agent_profile')
-        .select('agent_enabled')
-        .eq('seller_id', user.id)
-        .single()
+      // Try to get seller agent profile to check if agent is enabled at seller level
+      let sellerAgentProfile = null
+      try {
+        const { data } = await supabase
+          .from('seller_agent_profile')
+          .select('agent_enabled')
+          .eq('seller_id', user.id)
+          .single()
+        sellerAgentProfile = data
+      } catch (err) {
+        // seller_agent_profile table may not exist yet
+        console.log('Seller agent profile not found, defaulting to agent disabled')
+      }
 
       // Process items data
       const processedItems = itemsData?.map(item => {
         const negotiations = item.negotiations || []
-        const offers = negotiations.flatMap(n => n.offers || [])
-        const buyerOffers = offers.filter(o => o.offer_type === 'buyer')
+        const offers = negotiations.flatMap((n: any) => n.offers || [])
+        const buyerOffers = offers.filter((o: any) => o.offer_type === 'buyer')
         
-        // Determine if agent is enabled for this item
-        // Priority: item-level agent_enabled, then seller-level agent_enabled, then default false
-        const agentEnabled = item.agent_enabled !== undefined 
-          ? item.agent_enabled 
-          : sellerAgentProfile?.agent_enabled || false
+        // Default agent to disabled for now since column may not exist
+        const agentEnabled = sellerAgentProfile?.agent_enabled || false
         
         return {
           ...item,
           agent_enabled: agentEnabled,
           negotiationsCount: negotiations.length,
           offersCount: buyerOffers.length,
-          highestOffer: buyerOffers.length > 0 ? Math.max(...buyerOffers.map(o => parseFloat(o.price))) : undefined
+          highestOffer: buyerOffers.length > 0 ? Math.max(...buyerOffers.map((o: any) => parseFloat(o.price))) : undefined
         }
       }) || []
 
       setItems(processedItems)
 
-      // Load recent agent decisions
-      const { data: decisionsData } = await supabase
-        .from('agent_decisions')
-        .select(`
-          id,
-          decision_type,
-          original_offer_price,
-          recommended_price,
-          confidence_score,
-          reasoning,
-          created_at,
-          market_conditions,
-          items!inner(name)
-        `)
-        .eq('seller_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10)
+      // Try to load recent agent decisions
+      let decisionsData: any[] = []
+      try {
+        const { data } = await supabase
+          .from('agent_decisions')
+          .select('*')
+          .eq('seller_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(10)
+        
+        if (data) {
+          // Get item names for the decisions
+          const itemIds = [...new Set(data.map(d => d.item_id).filter(Boolean))]
+          let itemsMap: Record<string, any> = {}
+          
+          if (itemIds.length > 0) {
+            const { data: itemsData } = await supabase
+              .from('items')
+              .select('id, name')
+              .in('id', itemIds)
+            
+            itemsMap = itemsData?.reduce((acc, item) => ({
+              ...acc,
+              [item.id]: item
+            }), {}) || {}
+          }
+          
+          decisionsData = data.map(decision => ({
+            ...decision,
+            items: { name: itemsMap[decision.item_id]?.name || 'Unknown Item' }
+          }))
+        }
+      } catch (err) {
+        console.log('Agent decisions table may not exist yet, showing empty decisions')
+      }
 
-      setRecentDecisions(decisionsData || [])
+      setRecentDecisions(decisionsData)
 
       // Calculate stats
       const agentEnabledItems = processedItems.filter(item => item.agent_enabled)
@@ -217,7 +238,7 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
           setTimeout(() => loadData(), 1000)
         }
       )
-      .on('subscribe', (status) => {
+      .on('subscribe', (status: any) => {
         console.log('🔄 Agent decisions subscription status:', status)
       })
       .subscribe()
@@ -250,7 +271,7 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
           }
         }
       )
-      .on('subscribe', (status) => {
+      .on('subscribe', (status: any) => {
         console.log('🔄 Offers subscription status:', status)
       })
       .subscribe()
@@ -279,7 +300,7 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
           ))
         }
       )
-      .on('subscribe', (status) => {
+      .on('subscribe', (status: any) => {
         console.log('🔄 Items subscription status:', status)
       })
       .subscribe()
@@ -331,30 +352,9 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
 
   const toggleItemAgent = async (itemId: number, currentStatus: boolean) => {
     try {
-      // Try to update at item level first
-      let error = null
-      
-      // Check if items table has agent_enabled column by attempting update
-      const itemUpdateResult = await supabase
-        .from('items')
-        .update({ agent_enabled: !currentStatus })
-        .eq('id', itemId)
-        .eq('seller_id', user.id)
-      
-      if (itemUpdateResult.error) {
-        // If item-level update fails, it might be managed at seller level
-        // For now, we'll treat individual item toggles as not supported for seller-level management
-        console.warn('Item-level agent toggle not supported, agent is managed at seller level')
-        alert('Agent settings are managed at the account level. Use Agent Settings to control the agent for all your items.')
-        return
-      }
-
-      // Update local state if item-level update succeeded
-      setItems(prev => prev.map(item => 
-        item.id === itemId 
-          ? { ...item, agent_enabled: !currentStatus }
-          : item
-      ))
+      // Since agent_enabled column may not exist at item level,
+      // direct users to agent settings for now
+      alert('Agent settings are managed at the account level. Use Agent Settings to control the agent for all your items.')
       
     } catch (error) {
       console.error('Error toggling agent:', error)
@@ -659,6 +659,15 @@ Now test the trigger again to verify it works.`)
             <h2 className="text-lg font-semibold text-gray-900">🤖 Agent Recommendations</h2>
           </div>
           <AgentNotifications />
+        </Card>
+
+        {/* Negotiation Timeline */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">📈 Negotiation Timeline</h2>
+            <p className="text-sm text-gray-600">Recent AI agent negotiations and decisions</p>
+          </div>
+          <NegotiationTimeline sellerId={user.id} />
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

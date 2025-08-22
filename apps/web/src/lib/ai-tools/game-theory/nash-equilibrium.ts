@@ -2,7 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 
 export const nashEquilibriumTool = tool({
-  description: 'Calculate Nash equilibrium for buyer-seller negotiation scenarios using game theory',
+  description: 'Calculate Nash equilibrium for buyer-seller negotiation scenarios using game theory with full negotiation history',
   inputSchema: z.object({
     sellerTargetPrice: z.number().positive().describe('Seller target/ideal price'),
     buyerOfferPrice: z.number().positive().describe('Current buyer offer price'),
@@ -11,6 +11,12 @@ export const nashEquilibriumTool = tool({
     negotiationRound: z.number().int().min(1).describe('Current negotiation round'),
     timeUrgency: z.number().min(0).max(1).describe('Seller urgency factor (0-1)'),
     competitorCount: z.number().int().min(0).describe('Number of competing offers'),
+    negotiationHistory: z.array(z.object({
+      price: z.number(),
+      offerType: z.string(),
+      round: z.number()
+    })).optional().describe('Previous offers in chronological order'),
+    priceDirection: z.string().optional().describe('buyer price trend: increasing, decreasing, or stable'),
   }),
   execute: async ({
     sellerTargetPrice,
@@ -20,18 +26,50 @@ export const nashEquilibriumTool = tool({
     negotiationRound,
     timeUrgency,
     competitorCount,
+    negotiationHistory = [],
+    priceDirection = 'stable',
   }) => {
-    // Nash equilibrium calculation for alternating offers game
+    // History-aware Nash equilibrium calculation
     
-    // Discount factors (how much future rounds are valued vs. current)
-    const sellerDiscountFactor = 0.95 - (timeUrgency * 0.1); // More urgency = more discounting
-    const buyerDiscountFactor = 0.92; // Buyers typically slightly more impatient
+    // Analyze buyer behavior from negotiation history
+    const buyerOffers = negotiationHistory.filter(h => h.offerType === 'buyer');
+    let buyerTrendFactor = 1.0;
+    let buyerLearningAdjustment = 0;
     
-    // Calculate bargaining power
-    const sellerBargainingPower = Math.min(1, 0.5 + (competitorCount * 0.1) + (timeUrgency * 0.2));
+    if (buyerOffers.length >= 2) {
+      const lastOffer = buyerOffers[buyerOffers.length - 1];
+      const prevOffer = buyerOffers[buyerOffers.length - 2];
+      const priceChange = lastOffer.price - prevOffer.price;
+      const priceChangePercent = priceChange / prevOffer.price;
+      
+      // Adjust strategy based on buyer behavior
+      if (priceDirection === 'increasing') {
+        // Buyer is trending up - be less aggressive to maintain momentum
+        buyerTrendFactor = 0.85; // More conservative counters
+        buyerLearningAdjustment = priceChangePercent * 0.5; // Learn from their increment pattern
+      } else if (priceDirection === 'decreasing') {
+        // Buyer is trending down - be more firm
+        buyerTrendFactor = 1.15; // More aggressive to test their limit
+      }
+    }
+    
+    // Discount factors adjusted for negotiation history
+    const sellerDiscountFactor = 0.95 - (timeUrgency * 0.1) - (negotiationRound * 0.02); // Fatigue factor
+    const buyerDiscountFactor = 0.92 - (negotiationRound * 0.015); // Buyers get more impatient
+    
+    // Calculate bargaining power with history consideration
+    let sellerBargainingPower = Math.min(1, 0.5 + (competitorCount * 0.1) + (timeUrgency * 0.2));
+    
+    // Adjust bargaining power based on negotiation momentum
+    if (priceDirection === 'increasing') {
+      sellerBargainingPower += 0.1; // Seller has more power when buyer is moving up
+    } else if (priceDirection === 'decreasing') {
+      sellerBargainingPower -= 0.1; // Seller has less power when buyer is backing down
+    }
+    
     const buyerBargainingPower = 1 - sellerBargainingPower;
     
-    // Rubinstein alternating offers solution
+    // History-informed Rubinstein solution
     const denominator = 1 - (sellerDiscountFactor * buyerDiscountFactor);
     let nashPrice: number;
     
@@ -39,8 +77,16 @@ export const nashEquilibriumTool = tool({
       // Seller's turn to make offer
       nashPrice = (sellerTargetPrice + (buyerDiscountFactor * estimatedBuyerMax)) / denominator;
     } else {
-      // Buyer's turn (we're responding to buyer offer)
+      // Buyer's turn (we're responding to buyer offer) - key scenario
       nashPrice = (estimatedBuyerMax + (sellerDiscountFactor * sellerTargetPrice)) / denominator;
+      
+      // Apply buyer trend factor
+      nashPrice = nashPrice * buyerTrendFactor;
+      
+      // Learn from buyer's increment pattern
+      if (buyerLearningAdjustment > 0) {
+        nashPrice = buyerOfferPrice * (1 + buyerLearningAdjustment * 2); // Mirror their increment style
+      }
     }
     
     // Adjust for market conditions and competition
@@ -49,20 +95,51 @@ export const nashEquilibriumTool = tool({
       nashPrice = Math.min(estimatedBuyerMax, nashPrice * (1 + competitorCount * 0.05));
     }
     
-    // Bound the price reasonably
-    nashPrice = Math.max(
-      buyerOfferPrice * 1.05, // At least 5% above current offer
-      Math.min(estimatedBuyerMax * 0.95, nashPrice) // Don't exceed 95% of buyer max
-    );
+    // History-aware bounds - much more conservative for positive momentum
+    let lowerBound = buyerOfferPrice * 1.05; // Default 5% above
+    let upperBound = estimatedBuyerMax * 0.95; // Default 95% of max
     
-    // Calculate confidence based on information quality
+    if (priceDirection === 'increasing') {
+      // Buyer trending up - use smaller increments to maintain momentum
+      lowerBound = buyerOfferPrice * 1.03; // Only 3% above
+      upperBound = buyerOfferPrice * 1.12; // Cap at 12% above current offer
+    } else if (priceDirection === 'decreasing') {
+      // Buyer backing down - can be more aggressive
+      lowerBound = buyerOfferPrice * 1.08; // 8% above minimum
+    }
+    
+    // Apply bounds
+    nashPrice = Math.max(lowerBound, Math.min(upperBound, nashPrice));
+    
+    // Calculate confidence based on information quality and history
     const informationQuality = Math.max(0.3, 1 - (Math.abs(marketValue - estimatedBuyerMax) / marketValue));
-    const roundAdjustment = Math.max(0.7, 1 - (negotiationRound * 0.05)); // Confidence decreases with rounds
-    const confidence = informationQuality * roundAdjustment;
+    const roundAdjustment = Math.max(0.7, 1 - (negotiationRound * 0.05));
+    const historyBonus = buyerOffers.length >= 2 ? 0.1 : 0; // More confidence with history
+    const confidence = Math.min(1.0, (informationQuality * roundAdjustment) + historyBonus);
     
     // Expected profit analysis
     const expectedProfit = nashPrice - sellerTargetPrice;
     const profitMargin = expectedProfit / sellerTargetPrice;
+    
+    // Enhanced recommendation logic based on history
+    let recommendation: string;
+    const priceIncrease = ((nashPrice - buyerOfferPrice) / buyerOfferPrice) * 100;
+    
+    if (priceDirection === 'increasing' && priceIncrease <= 10) {
+      recommendation = 'COUNTER_CONSERVATIVE'; // Maintain momentum
+    } else if (priceDirection === 'increasing' && priceIncrease > 15) {
+      recommendation = 'ACCEPT'; // Don't kill positive momentum with big counter
+    } else if (nashPrice > buyerOfferPrice * 1.15) {
+      recommendation = 'COUNTER';
+    } else if (nashPrice > buyerOfferPrice * 1.05) {
+      recommendation = 'CONSIDER_COUNTER';
+    } else {
+      recommendation = 'ACCEPT';
+    }
+    
+    const historyContext = buyerOffers.length >= 2 ? 
+      `buyer trending ${priceDirection} (${buyerOffers.map(o => `$${o.price}`).join(' → ')})` : 
+      'limited history';
     
     return {
       nashEquilibriumPrice: Number(nashPrice.toFixed(2)),
@@ -71,9 +148,9 @@ export const nashEquilibriumTool = tool({
       profitMargin: Number(profitMargin.toFixed(3)),
       sellerBargainingPower: Number(sellerBargainingPower.toFixed(2)),
       buyerBargainingPower: Number(buyerBargainingPower.toFixed(2)),
-      recommendation: nashPrice > buyerOfferPrice * 1.1 ? 'COUNTER' : 
-                     nashPrice > buyerOfferPrice * 1.02 ? 'CONSIDER_COUNTER' : 'ACCEPT',
-      reasoning: `Nash equilibrium suggests ${nashPrice.toFixed(0)} based on ${negotiationRound % 2 === 1 ? 'seller' : 'buyer'} turn advantage, ${competitorCount} competitors, and ${(timeUrgency * 100).toFixed(0)}% urgency level.`
+      recommendation: recommendation,
+      priceIncrease: Number(priceIncrease.toFixed(1)),
+      reasoning: `History-aware Nash suggests $${nashPrice.toFixed(0)} (${priceIncrease.toFixed(1)}% increase) considering ${historyContext}, ${competitorCount} competitors, round ${negotiationRound}. ${priceDirection === 'increasing' ? 'Buyer showing positive momentum - use conservative counter.' : priceDirection === 'decreasing' ? 'Buyer backing down - can be more firm.' : 'Stable buyer behavior.'}`
     };
   },
 });

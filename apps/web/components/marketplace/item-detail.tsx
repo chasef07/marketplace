@@ -168,7 +168,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
     if (userId) {
       fetchNegotiation()
     }
-  }, [itemId, userId, fetchNegotiation])
+  }, [itemId, userId])
 
   // Real-time subscriptions for offers and negotiations
   useEffect(() => {
@@ -244,7 +244,7 @@ export function ItemDetail({ itemId, user, onBack, onMakeOffer, onSignInClick, o
       subscriptionsRef.current = []
       setIsConnectedToRealtime(false)
     }
-  }, [negotiation?.id, userId, fetchOffers, fetchNegotiation])
+  }, [negotiation?.id, userId])
 
   const fetchOffers = useCallback(async () => {
     if (!negotiation) return

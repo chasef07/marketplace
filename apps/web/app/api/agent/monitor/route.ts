@@ -9,15 +9,20 @@ import { nashEquilibriumTool, marketAnalysisTool } from '@/src/lib/ai-tools/game
 
 export const runtime = 'edge';
 
-const SYSTEM_PROMPT = `You are an autonomous seller agent. Analyze offers and make decisions to maximize seller profits using game theory.
+const SYSTEM_PROMPT = `You are an autonomous seller agent. Analyze offers with full negotiation context to make intelligent counter-offers that close deals.
 
-Decision Rules:
-1. ACCEPT if offer ≥ 95% of listing price OR Nash equilibrium suggests acceptance
-2. COUNTER using Nash equilibrium price, rounded to nearest $5
-3. DECLINE if offer is < 60% of listing price and no upward negotiation potential
-4. Always maximize seller profit using market analysis
+Decision Rules (In Order of Priority):
+1. ANALYZE negotiation history and buyer momentum before making decisions
+2. ACCEPT if offer ≥ 95% of listing price OR reasonable in context of negotiation progression
+3. COUNTER with incremental increases (5-15% above buyer offer) - NEVER dramatic jumps
+4. If buyer is trending UP, use smaller counters (5-10%) to maintain momentum
+5. If buyer is trending DOWN, hold firm or decline - don't chase with big counters
+6. DECLINE if offer < 60% of listing AND buyer shows no upward movement
+7. In rounds 5+, be more accepting of reasonable offers to close deals
 
-Keep reasoning brief and focus on the mathematical rationale.`;
+CRITICAL: Counter offers must respect negotiation psychology. A buyer offering $205 after $200 shows positive momentum - counter around $210-$215, NOT $250.
+
+Keep reasoning brief and justify based on negotiation context and buyer behavior patterns.`;
 
 interface AgentTask {
   queue_id: number;
@@ -95,7 +100,7 @@ export async function POST(request: NextRequest) {
         response_delay_minutes: 0
       };
 
-      // Get negotiation context
+      // Get negotiation context with full offer history
       const { data: negotiation } = await supabase
         .from('negotiations')
         .select(`
@@ -111,6 +116,36 @@ export async function POST(request: NextRequest) {
           error_msg: 'Negotiation not found'
         });
         return Response.json({ error: 'Negotiation not found' }, { status: 404 });
+      }
+
+      // Get complete negotiation history for context-aware decisions
+      const { data: negotiationHistory } = await supabase
+        .from('offers')
+        .select('*')
+        .eq('negotiation_id', task.negotiation_id)
+        .order('created_at', { ascending: true });
+
+      const offerHistory = negotiationHistory || [];
+      const currentRound = offerHistory.length;
+      
+      // Analyze negotiation momentum
+      const buyerOffers = offerHistory.filter(o => o.offer_type === 'buyer');
+      const sellerOffers = offerHistory.filter(o => o.offer_type === 'seller');
+      
+      let negotiationMomentum = 'neutral';
+      let priceDirection = 'stable';
+      
+      if (buyerOffers.length >= 2) {
+        const lastBuyerOffer = buyerOffers[buyerOffers.length - 1].price;
+        const prevBuyerOffer = buyerOffers[buyerOffers.length - 2].price;
+        
+        if (lastBuyerOffer > prevBuyerOffer) {
+          negotiationMomentum = 'positive';
+          priceDirection = 'increasing';
+        } else if (lastBuyerOffer < prevBuyerOffer) {
+          negotiationMomentum = 'negative';
+          priceDirection = 'decreasing';
+        }
       }
 
       // Check if offer is still the latest (avoid processing stale offers)
@@ -157,17 +192,27 @@ export async function POST(request: NextRequest) {
 
       const competingOffersCount = competingOffers.length;
 
-      // Enhanced AI analysis with competitive context
+      // Enhanced AI analysis with negotiation history and competitive context
+      const historyTimeline = offerHistory.map((offer, index) => 
+        `Round ${index + 1}: ${offer.offer_type} offered $${offer.price} (${new Date(offer.created_at).toLocaleString()})`
+      ).join('\n');
+
       let analysisPrompt = '';
       
       if (competingOffers.length > 0) {
         // Multi-offer competitive analysis
-        analysisPrompt = `Analyze this competitive negotiation scenario:
+        analysisPrompt = `Analyze this competitive negotiation scenario with full context:
 
 Item: ${task.furniture_type} listed at $${task.listing_price}
 
-Current Offer Analysis:
-- This offer: $${task.offer_price} (focus of decision)
+NEGOTIATION HISTORY (Critical Context):
+${historyTimeline}
+
+Current Analysis:
+- Round: ${currentRound}
+- Current offer: $${task.offer_price}
+- Momentum: ${negotiationMomentum} (buyer prices are ${priceDirection})
+- Price trajectory: ${buyerOffers.map(o => `$${o.price}`).join(' → ')}
 
 Competitive Context:
 - Total competing offers: ${competingOffersCount}
@@ -180,32 +225,44 @@ Seller Agent Settings:
 - Auto-accept threshold: ${settings.auto_accept_threshold}%
 - Min acceptable ratio: ${settings.min_acceptable_ratio}%
 
-Strategic Objectives:
-1. Leverage competitive pressure to maximize price
-2. Balance between accepting strong offers vs encouraging bidding wars
-3. Consider timing - newer offers may indicate rising interest
-4. Avoid losing all buyers by being too aggressive
+CRITICAL RULES:
+1. Counter offers should be incremental (5-15% above buyer's offer)
+2. If buyer is trending up, use smaller counters to encourage momentum
+3. If buyer is trending down, consider accepting or declining
+4. Never make dramatic price jumps that break negotiation flow
+5. Consider round fatigue - accept reasonable offers in later rounds
 
-Make strategic decision considering the full competitive landscape.`;
+Make strategic decision considering negotiation psychology and momentum.`;
       } else {
-        // Single offer analysis
-        analysisPrompt = `Analyze this single offer:
+        // Single offer analysis with history context
+        analysisPrompt = `Analyze this negotiation with full historical context:
 
 Item: ${task.furniture_type} listed at $${task.listing_price}
-Current offer: $${task.offer_price}
-Competing offers: 0 (no competition)
+
+NEGOTIATION HISTORY (Critical Context):
+${historyTimeline}
+
+Current Analysis:
+- Round: ${currentRound}
+- Current offer: $${task.offer_price}
+- Momentum: ${negotiationMomentum} (buyer prices are ${priceDirection})
+- Price trajectory: ${buyerOffers.map(o => `$${o.price}`).join(' → ')}
+- Competing offers: 0 (no competition)
 
 Seller Agent Settings:
 - Aggressiveness: ${settings.aggressiveness_level}
 - Auto-accept threshold: ${settings.auto_accept_threshold}%
 - Min acceptable ratio: ${settings.min_acceptable_ratio}%
 
-Since there's no competition, focus on:
-1. Whether offer meets minimum thresholds
-2. Encouraging higher offers through strategic countering
-3. Building negotiation momentum
+CRITICAL RULES:
+1. Counter offers should be incremental (5-15% above buyer's offer)
+2. If buyer is trending up, use SMALLER counters to encourage continued movement
+3. If buyer is trending down, hold firm or consider declining
+4. Never make dramatic price jumps that break negotiation flow
+5. In later rounds (5+), be more accepting of reasonable offers
+6. Build on negotiation momentum - don't restart price discovery
 
-Make decision to maximize seller profit while avoiding buyer loss.`;
+Make decision based on buyer's demonstrated behavior and negotiation psychology.`;
       }
 
       const decision = await generateObject({
@@ -223,34 +280,78 @@ Make decision to maximize seller profit while avoiding buyer loss.`;
           reasoning: z.string(),
           nashPrice: z.number(),
           marketValue: z.number(),
+          negotiationContext: z.object({
+            currentRound: z.number(),
+            momentum: z.string(),
+            priceDirection: z.string(),
+            historyConsidered: z.boolean(),
+          }).optional(),
         }),
       });
 
       const executionTime = Date.now() - startTime;
 
-      // Log the decision
+      // CRITICAL: Validate decision to prevent unreasonable counter offers
+      let validatedDecision = { ...decision.object };
+      let validationWarning = '';
+
+      if (validatedDecision.decision === 'COUNTER' && validatedDecision.recommendedPrice) {
+        const counterPrice = validatedDecision.recommendedPrice;
+        const offerPrice = task.offer_price;
+        const increasePercentage = ((counterPrice - offerPrice) / offerPrice) * 100;
+
+        // Prevent dramatic price jumps
+        if (increasePercentage > 25) {
+          // Cap the counter offer to a reasonable increase
+          const maxReasonableCounter = Math.min(
+            offerPrice * 1.15, // Max 15% increase
+            (offerPrice + task.listing_price) / 2 // Or split the difference
+          );
+          
+          validatedDecision.recommendedPrice = Math.round(maxReasonableCounter / 5) * 5; // Round to $5
+          validationWarning = `Original AI suggestion of $${counterPrice} (${increasePercentage.toFixed(1)}% increase) was too aggressive. Capped at $${validatedDecision.recommendedPrice}.`;
+          
+          validatedDecision.reasoning += ` [VALIDATION: Counter capped to prevent dramatic jump that could kill negotiation momentum.]`;
+        }
+
+        // If buyer is trending up, use smaller counters
+        if (negotiationMomentum === 'positive' && increasePercentage > 15) {
+          const conservativeCounter = offerPrice * 1.08; // Only 8% increase for positive momentum
+          validatedDecision.recommendedPrice = Math.round(conservativeCounter / 5) * 5;
+          validationWarning = `Buyer trending up - using smaller counter of $${validatedDecision.recommendedPrice} to maintain momentum.`;
+          
+          validatedDecision.reasoning += ` [VALIDATION: Smaller counter due to positive buyer momentum.]`;
+        }
+      }
+
+      // Log the decision with validation info
       const { data: decisionLog, error: logError } = await supabase
         .from('agent_decisions')
         .insert({
           seller_id: task.seller_id,
           negotiation_id: task.negotiation_id,
           item_id: task.item_id,
-          decision_type: decision.object.decision,
+          decision_type: validatedDecision.decision,
           original_offer_price: task.offer_price,
-          recommended_price: decision.object.recommendedPrice || task.offer_price,
+          recommended_price: validatedDecision.recommendedPrice || task.offer_price,
           listing_price: task.listing_price,
-          nash_equilibrium_price: decision.object.nashPrice,
-          confidence_score: decision.object.confidence,
-          reasoning: decision.object.reasoning,
+          nash_equilibrium_price: validatedDecision.nashPrice,
+          confidence_score: validatedDecision.confidence,
+          reasoning: validatedDecision.reasoning,
           market_conditions: {
             competingOffers: competingOffersCount || 0,
-            competingOffersData: competingOffers.slice(0, 5), // Store top 5 competing offers
+            competingOffersData: competingOffers.slice(0, 5),
             highestCompetingOffer: competingOffers.length > 0 ? Math.max(...competingOffers.map(o => o.offerPrice)) : null,
             averageCompetingOffer: competingOffers.length > 0 ? Math.round(competingOffers.reduce((sum, o) => sum + o.offerPrice, 0) / competingOffers.length) : null,
             aggressivenessLevel: settings.aggressiveness_level,
             autoAcceptThreshold: settings.auto_accept_threshold,
             minAcceptableRatio: settings.min_acceptable_ratio,
             executionTimeMs: executionTime,
+            negotiationHistory: offerHistory.length,
+            currentRound: currentRound,
+            momentum: negotiationMomentum,
+            priceDirection: priceDirection,
+            validationWarning: validationWarning || null
           },
           execution_time_ms: executionTime,
         })
@@ -261,10 +362,10 @@ Make decision to maximize seller profit while avoiding buyer loss.`;
         console.error('Failed to log decision:', logError);
       }
 
-      // Execute the decision
+      // Execute the decision using validated decision
       let actionResult: any = { success: true };
 
-      if (decision.object.decision === 'ACCEPT') {
+      if (validatedDecision.decision === 'ACCEPT') {
         // Accept the offer
         const { error: acceptError } = await supabase
           .from('negotiations')
@@ -292,9 +393,9 @@ Make decision to maximize seller profit while avoiding buyer loss.`;
           actionResult = { success: false, error: acceptError.message };
         }
 
-      } else if (decision.object.decision === 'COUNTER' && decision.object.recommendedPrice) {
-        // Create counter offer
-        const counterPrice = Math.round(decision.object.recommendedPrice / 5) * 5; // Round to $5
+      } else if (validatedDecision.decision === 'COUNTER' && validatedDecision.recommendedPrice) {
+        // Create counter offer using validated price
+        const counterPrice = Math.round(validatedDecision.recommendedPrice / 5) * 5; // Round to $5
 
         const { error: counterError } = await supabase
           .from('offers')
