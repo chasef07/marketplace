@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase'
-import { ratelimit, withRateLimit } from '@/lib/rate-limit'
+import { createSupabaseServerClient } from '@/src/lib/supabase'
+import { ratelimit, withRateLimit } from '@/src/lib/rate-limit'
 import { offerService } from '@/src/lib/services/offer-service'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
 ) {
-  return withRateLimit(request, ratelimit.api, async () => {
+  return withRateLimit(request, ratelimit.offers, async () => {
     try {
     const supabase = createSupabaseServerClient()
     const { itemId: itemIdStr } = await params
@@ -62,8 +62,8 @@ export async function POST(
       return NextResponse.json({ error: 'Item not found' }, { status: 404 })
     }
 
-    // Allow offers on active items and items under negotiation
-    const allowedStatuses = ['active', 'under_negotiation']
+    // Allow offers on active items (keeping them active during negotiations)
+    const allowedStatuses = ['active']
     if (!allowedStatuses.includes(item.item_status)) {
       console.log('❌ Item status check failed:', { 
         actualStatus: item.item_status, 
@@ -80,7 +80,15 @@ export async function POST(
     // Check for existing active negotiation
     let { data: negotiation } = await supabase
       .from('negotiations')
-      .select('*')
+      .select(`
+        *,
+        offers (
+          id,
+          offer_type,
+          price,
+          created_at
+        )
+      `)
       .eq('item_id', itemId)
       .eq('buyer_id', user.id)
       .eq('status', 'active')
@@ -106,13 +114,20 @@ export async function POST(
       negotiation = newNegotiation
     }
 
-    // Use unified offer service
+    // Always create new offers (including counter-offers) to ensure proper agent queuing
+    // This ensures each buyer counter-offer triggers the agent processing queue
+
+    // Check if this is a counter-offer (buyer has made previous offers)
+    const existingBuyerOffers = negotiation.offers?.filter((offer: { offer_type: string }) => offer.offer_type === 'buyer') || []
+    const isCounterOffer = existingBuyerOffers.length > 0
+
+    // Use unified offer service for new offers
     const result = await offerService.createOffer({
       negotiationId: negotiation.id,
       offerType: 'buyer',
       price: body.price,
       message: body.message || '',
-      isCounterOffer: false,
+      isCounterOffer: isCounterOffer,
       isMessageOnly: false,
       agentGenerated: false,
       userId: user.id
@@ -131,8 +146,24 @@ export async function POST(
       offer: result.offer
     })
     } catch (error) {
-      console.error('Create offer error:', error)
-      return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+      console.error('🔥 CREATE OFFER ERROR - Full Details:', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        itemId: parseInt((await params).itemId),
+        timestamp: new Date().toISOString(),
+        userAgent: request.headers.get('user-agent'),
+        ip: request.headers.get('x-forwarded-for') || 'unknown'
+      })
+      
+      // Return more specific error message for debugging
+      const errorMessage = error instanceof Error ? error.message : 'Internal server error'
+      return NextResponse.json({ 
+        error: errorMessage,
+        debug: process.env.NODE_ENV === 'development' ? {
+          stack: error instanceof Error ? error.stack : undefined,
+          timestamp: new Date().toISOString()
+        } : undefined
+      }, { status: 500 })
     }
   })
 }

@@ -1,9 +1,6 @@
-import { createSupabaseServerClient } from '@/lib/supabase'
-import { Database } from '@/src/lib/database.types'
+import { createSupabaseServerClient } from '@/src/lib/supabase'
 
 type OfferType = 'buyer' | 'seller'
-type NegotiationStatus = 'active' | 'deal_pending' | 'completed' | 'cancelled' | 'picked_up'
-type ItemStatus = 'active' | 'under_negotiation' | 'sold_pending' | 'sold' | 'paused' | 'archived'
 
 interface CreateOfferParams {
   negotiationId: number
@@ -23,9 +20,21 @@ interface ValidationResult {
 }
 
 interface OfferValidationContext {
-  negotiation: any
-  item: any
-  latestOffer: any
+  negotiation: {
+    status: string
+    expires_at?: string
+    seller_id: string
+    buyer_id: string
+  }
+  item: {
+    starting_price: number
+    item_status: string
+  }
+  latestOffer?: {
+    offer_type: string
+    price: number
+    round_number: number
+  }
   userRole: 'seller' | 'buyer'
 }
 
@@ -101,9 +110,22 @@ export class OfferService {
       }
 
     } catch (error) {
-      console.error('🔄 OfferService.createOffer - Error:', error)
+      console.error('🔄 OfferService.createOffer - Error Details:', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        params: {
+          negotiationId,
+          offerType,
+          price,
+          userId,
+          isCounterOffer,
+          agentGenerated
+        },
+        timestamp: new Date().toISOString()
+      })
       
       // Fallback to individual validation if transaction function doesn't exist
+      console.log('🔄 Attempting fallback offer creation method...')
       return this.createOfferFallback(params)
     }
   }
@@ -252,8 +274,14 @@ export class OfferService {
     }
 
     // Validate turn-based system (unless agent-generated)
+    // Allow buyers to update their offers, but maintain turn-based for seller responses
     if (!params.agentGenerated && latestOffer && latestOffer.offer_type === offerType) {
-      return { isValid: false, error: 'Not your turn - wait for the other party to respond' }
+      // Only block if it's a seller trying to make consecutive offers
+      // Buyers should be allowed to update their offers
+      if (offerType === 'seller') {
+        return { isValid: false, error: 'Not your turn - wait for the buyer to respond' }
+      }
+      // For buyers, we'll handle offer updates in the API route instead of blocking here
     }
 
     // Price validation based on offer type
@@ -267,7 +295,7 @@ export class OfferService {
   /**
    * Validate seller counter offers
    */
-  private validateSellerOffer(price: number, item: any, latestOffer: any, isCounterOffer: boolean): ValidationResult {
+  private validateSellerOffer(price: number, item: { starting_price: number }, latestOffer: { price: number; offer_type: string } | null, isCounterOffer: boolean): ValidationResult {
     const startingPrice = parseFloat(item.starting_price)
 
     // Seller can't offer above 125% of starting price (prevents unreasonable counters)
@@ -307,7 +335,7 @@ export class OfferService {
   /**
    * Validate buyer offers
    */
-  private validateBuyerOffer(price: number, item: any, latestOffer: any): ValidationResult {
+  private validateBuyerOffer(price: number, item: { starting_price: number }): ValidationResult {
     const startingPrice = parseFloat(item.starting_price)
 
     // Buyers can't offer above starting price
@@ -334,14 +362,9 @@ export class OfferService {
    * Update negotiation status based on offer activity
    */
   private async updateNegotiationStatus(negotiationId: number, context: OfferValidationContext) {
-    // Update item status to under_negotiation if it's currently active
-    if (context.item.item_status === 'active') {
-      await this.supabase
-        .from('items')
-        .update({ item_status: 'under_negotiation' })
-        .eq('id', context.item.id)
-    }
-
+    // Keep items as 'active' during negotiations for better UX
+    // Only change status when deal is actually pending or sold
+    
     // Update negotiation expiration (72 hours from now)
     const expirationTime = new Date()
     expirationTime.setHours(expirationTime.getHours() + 72)

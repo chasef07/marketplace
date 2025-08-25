@@ -17,10 +17,10 @@ const redis = hasRedisConfig ? Redis.fromEnv() : null;
 
 // Create different rate limiters for different endpoints
 export const ratelimit = {
-  // General API endpoints - 30 requests per minute
+  // General API endpoints - 60 requests per minute (increased for offers)
   api: redis ? new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(30, "1 m"),
+    limiter: Ratelimit.slidingWindow(60, "1 m"),
     analytics: true,
     prefix: "@upstash/ratelimit/api",
   }) : null,
@@ -55,6 +55,14 @@ export const ratelimit = {
     limiter: Ratelimit.slidingWindow(5, "1 m"),
     analytics: true,
     prefix: "@upstash/ratelimit/auth",
+  }) : null,
+  
+  // Offer endpoints - 100 requests per minute (high limit for negotiations)
+  offers: redis ? new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(100, "1 m"),
+    analytics: true,
+    prefix: "@upstash/ratelimit/offers",
   }) : null,
 };
 

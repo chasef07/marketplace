@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Bot, Settings, Eye, MessageSquare, TrendingUp, BarChart3, Power, Package } from 'lucide-react'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/src/lib/supabase'
 import { AgentNotifications } from './AgentNotifications'
 import { NegotiationTimeline } from './NegotiationTimeline'
 import type { RealtimeChannel } from '@supabase/supabase-js'
@@ -96,13 +96,13 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
       try {
         const { data } = await supabase
           .from('seller_agent_profile')
-          .select('agent_enabled')
+          .select('enabled')
           .eq('seller_id', user.id)
           .single()
         sellerAgentProfile = data
       } catch (err) {
         // seller_agent_profile table may not exist yet
-        console.log('Seller agent profile not found, defaulting to agent disabled')
+        console.log('Seller agent profile not found, defaulting to agent enabled')
       }
 
       // Process items data
@@ -111,8 +111,8 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
         const offers = negotiations.flatMap((n: any) => n.offers || [])
         const buyerOffers = offers.filter((o: any) => o.offer_type === 'buyer')
         
-        // Default agent to disabled for now since column may not exist
-        const agentEnabled = sellerAgentProfile?.agent_enabled || false
+        // Default agent to enabled (opt-out feature)
+        const agentEnabled = sellerAgentProfile?.enabled ?? true
         
         return {
           ...item,

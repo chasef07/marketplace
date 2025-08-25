@@ -4,14 +4,14 @@ import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Settings, Save, RotateCcw, Info } from 'lucide-react'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/src/lib/supabase'
 
 interface AgentSettings {
   aggressiveness_level: number
   auto_accept_threshold: number
   min_acceptable_ratio: number
   response_delay_minutes: number
-  agent_enabled: boolean
+  enabled: boolean
 }
 
 interface User {
@@ -30,7 +30,7 @@ export function AgentSettings({ user, onClose }: AgentSettingsProps) {
     auto_accept_threshold: 0.95,
     min_acceptable_ratio: 0.75,
     response_delay_minutes: 0,
-    agent_enabled: true
+    enabled: true
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -46,20 +46,15 @@ export function AgentSettings({ user, onClose }: AgentSettingsProps) {
     try {
       setLoading(true)
       
-      // Load existing agent settings
-      const { data: existingSettings } = await supabase
-        .from('seller_agent_profile')
-        .select('*')
-        .eq('seller_id', user.id)
-        .single()
-
-      if (existingSettings) {
+      const response = await fetch('/api/seller/agent/profile')
+      if (response.ok) {
+        const profileData = await response.json()
         setSettings({
-          aggressiveness_level: existingSettings.aggressiveness_level || 0.5,
-          auto_accept_threshold: existingSettings.auto_accept_threshold || 0.95,
-          min_acceptable_ratio: existingSettings.min_acceptable_ratio || 0.75,
-          response_delay_minutes: existingSettings.response_delay_minutes || 0,
-          agent_enabled: existingSettings.agent_enabled ?? true
+          aggressiveness_level: profileData.aggressiveness_level || 0.5,
+          auto_accept_threshold: profileData.auto_accept_threshold || 0.95,
+          min_acceptable_ratio: profileData.min_acceptable_ratio || 0.75,
+          response_delay_minutes: profileData.response_delay_minutes || 0,
+          enabled: profileData.enabled ?? true
         })
       }
     } catch (error) {
@@ -78,25 +73,23 @@ export function AgentSettings({ user, onClose }: AgentSettingsProps) {
     try {
       setSaving(true)
 
-      // Upsert agent settings
-      const { error } = await supabase
-        .from('seller_agent_profile')
-        .upsert({
-          seller_id: user.id,
-          ...settings,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'seller_id'
-        })
+      const response = await fetch('/api/seller/agent/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings),
+      })
 
-      if (error) {
+      if (response.ok) {
+        setHasChanges(false)
+        alert('Settings saved successfully!')
+        if (onClose) onClose()
+      } else {
+        const error = await response.json()
         console.error('Error saving settings:', error)
         alert('Failed to save settings. Please try again.')
-        return
       }
-
-      setHasChanges(false)
-      alert('Settings saved successfully!')
       
     } catch (error) {
       console.error('Error saving agent settings:', error)
@@ -112,7 +105,7 @@ export function AgentSettings({ user, onClose }: AgentSettingsProps) {
       auto_accept_threshold: 0.95,
       min_acceptable_ratio: 0.75,
       response_delay_minutes: 0,
-      agent_enabled: true
+      enabled: true
     })
     setHasChanges(true)
   }
@@ -175,8 +168,8 @@ export function AgentSettings({ user, onClose }: AgentSettingsProps) {
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                checked={settings.agent_enabled}
-                onChange={(e) => handleSettingChange('agent_enabled', e.target.checked)}
+                checked={settings.enabled}
+                onChange={(e) => handleSettingChange('enabled', e.target.checked)}
                 className="sr-only peer"
               />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>

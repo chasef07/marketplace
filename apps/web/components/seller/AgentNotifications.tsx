@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Bell, CheckCircle, X, DollarSign, TrendingUp, Clock, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 
 interface AgentNotification {
   id: string
@@ -32,11 +33,15 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
   const [notifications, setNotifications] = useState<AgentNotification[]>([])
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<number | null>(null)
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     loadNotifications()
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(loadNotifications, 30000)
+    
+    // Set up real-time subscription for immediate updates
+    // Poll less frequently as backup (every 2 minutes)
+    const interval = setInterval(loadNotifications, 120000)
+    
     return () => clearInterval(interval)
   }, [])
 
@@ -45,7 +50,16 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
       const response = await fetch('/api/agent/notifications')
       if (response.ok) {
         const data = await response.json()
-        setNotifications(data.notifications || [])
+        const notificationList = data.notifications || []
+        setNotifications(notificationList)
+        
+        // Calculate unread count (notifications from last 24 hours are considered new)
+        const now = new Date()
+        const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+        const unread = notificationList.filter((notification: AgentNotification) => 
+          new Date(notification.createdAt) > oneDayAgo
+        ).length
+        setUnreadCount(unread)
       }
     } catch (error) {
       console.error('Error loading notifications:', error)
@@ -80,7 +94,17 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
         
         // Remove notification from list for most actions
         if (action !== 'counter' || result.success) {
-          setNotifications(prev => prev.filter(n => n.id !== notificationId))
+          setNotifications(prev => {
+            const filtered = prev.filter(n => n.id !== notificationId)
+            // Recalculate unread count
+            const now = new Date()
+            const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+            const unread = filtered.filter(notification => 
+              new Date(notification.createdAt) > oneDayAgo
+            ).length
+            setUnreadCount(unread)
+            return filtered
+          })
         }
         
         if (result.action === 'offer_accepted') {
@@ -165,16 +189,41 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
 
   if (notifications.length === 0) {
     return (
-      <div className={`text-center py-6 ${className}`}>
-        <Bell className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-        <p className="text-gray-600">No agent recommendations</p>
-        <p className="text-sm text-gray-500">Your AI agent will notify you when it recommends accepting offers</p>
+      <div className={`${className}`}>
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+            <Bell className="w-5 h-5 mr-2" />
+            Agent Recommendations
+            {unreadCount > 0 && (
+              <Badge variant="destructive" className="ml-2">
+                {unreadCount}
+              </Badge>
+            )}
+          </h3>
+        </div>
+        <div className="text-center py-6">
+          <Bell className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+          <p className="text-gray-600">No agent recommendations</p>
+          <p className="text-sm text-gray-500">Your AI agent will notify you when it recommends accepting offers</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className={`space-y-3 ${className}`}>
+    <div className={`${className}`}>
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+          <Bell className="w-5 h-5 mr-2" />
+          Agent Recommendations
+          {unreadCount > 0 && (
+            <Badge variant="destructive" className="ml-2">
+              {unreadCount}
+            </Badge>
+          )}
+        </h3>
+      </div>
+      <div className="space-y-3">
       {notifications.map((notification) => (
         <Card key={notification.id} className={`p-4 ${getPriorityColor(notification.priority)}`}>
           <div className="flex items-start justify-between">
@@ -276,6 +325,7 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
           </div>
         </Card>
       ))}
+      </div>
       
       {/* Counter Offer Modal */}
       {showCounterModal && (

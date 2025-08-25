@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { openai } from '@ai-sdk/openai';
 import { generateObject } from 'ai';
 import { z } from 'zod';
-import { createSupabaseServerClient } from '@/lib/supabase';
+import { createSupabaseServerClient } from '@/src/lib/supabase';
 import { offerService } from '@/src/lib/services/offer-service';
 
 // Game theory tools (simplified for background processing)
@@ -71,6 +71,26 @@ export async function POST(request: NextRequest) {
         .update({ status: 'processing' })
         .eq('id', task.queue_id);
 
+      // Check negotiation status first - if not active, remove from queue
+      const { data: negotiationStatus } = await supabase
+        .from('negotiations')
+        .select('status')
+        .eq('id', task.negotiation_id)
+        .single();
+
+      if (!negotiationStatus || negotiationStatus.status !== 'active') {
+        await supabase.rpc('complete_agent_task', {
+          queue_id: task.queue_id,
+          error_msg: `Negotiation is ${negotiationStatus?.status || 'not found'} - removing from queue`
+        });
+        console.log(`🧹 Cleaned up queue entry for ${negotiationStatus?.status || 'missing'} negotiation ${task.negotiation_id}`);
+        return Response.json({ 
+          message: `Negotiation is ${negotiationStatus?.status || 'not found'}`, 
+          processed: 0,
+          cleaned: true 
+        });
+      }
+
       // Check if agent is enabled for this specific item
       const { data: item } = await supabase
         .from('items')
@@ -102,7 +122,7 @@ export async function POST(request: NextRequest) {
       };
 
       // Get negotiation context with full offer history
-      const { data: negotiation } = await supabase
+      const { data: fullNegotiation } = await supabase
         .from('negotiations')
         .select(`
           *,
@@ -111,7 +131,7 @@ export async function POST(request: NextRequest) {
         .eq('id', task.negotiation_id)
         .single();
 
-      if (!negotiation) {
+      if (!fullNegotiation) {
         await supabase.rpc('complete_agent_task', {
           queue_id: task.queue_id,
           error_msg: 'Negotiation not found'
@@ -150,7 +170,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check if offer is still the latest (avoid processing stale offers)
-      const latestOffer = negotiation.offers
+      const latestOffer = fullNegotiation.offers
         .filter((o: any) => o.offer_type === 'buyer')
         .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
@@ -384,7 +404,7 @@ Make decision based on buyer's demonstrated behavior and negotiation psychology.
             .update({
               item_status: 'sold',
               final_price: task.offer_price,
-              buyer_id: negotiation.buyer_id,
+              buyer_id: fullNegotiation.buyer_id,
               sold_at: new Date().toISOString(),
             })
             .eq('id', task.item_id);
@@ -398,25 +418,45 @@ Make decision based on buyer's demonstrated behavior and negotiation psychology.
         // Create counter offer using validated price
         const counterPrice = Math.round(validatedDecision.recommendedPrice / 5) * 5; // Round to $5
 
-        // Use unified offer service for agent counter offers
-        const result = await offerService.createOffer({
-          negotiationId: task.negotiation_id,
-          offerType: 'seller',
-          price: counterPrice,
-          message: `Counter offer: $${counterPrice}`,
-          isCounterOffer: true,
-          isMessageOnly: false,
-          agentGenerated: true,
-          agentDecisionId: decisionLog?.id,
-          userId: task.seller_id
-        });
+        // Double-check negotiation status before creating offer (race condition protection)
+        const { data: freshNegotiation } = await supabase
+          .from('negotiations')
+          .select('status')
+          .eq('id', task.negotiation_id)
+          .single();
 
-        actionResult = { 
-          success: result.success, 
-          action: 'COUNTERED', 
-          price: counterPrice,
-          error: result.success ? undefined : result.error
-        };
+        if (!freshNegotiation || freshNegotiation.status !== 'active') {
+          console.log(`🚫 Negotiation ${task.negotiation_id} status changed to ${freshNegotiation?.status || 'missing'} before counter offer creation`);
+          actionResult = { 
+            success: false, 
+            action: 'FAILED', 
+            error: `Negotiation became ${freshNegotiation?.status || 'missing'} before counter offer` 
+          };
+        } else {
+          // Use unified offer service for agent counter offers
+          const result = await offerService.createOffer({
+            negotiationId: task.negotiation_id,
+            offerType: 'seller',
+            price: counterPrice,
+            message: `Counter offer: $${counterPrice}`,
+            isCounterOffer: true,
+            isMessageOnly: false,
+            agentGenerated: true,
+            agentDecisionId: decisionLog?.id,
+            userId: task.seller_id
+          });
+
+          if (!result.success) {
+            console.error(`💥 Agent offer creation failed for negotiation ${task.negotiation_id}:`, result.error);
+          }
+
+          actionResult = { 
+            success: result.success, 
+            action: 'COUNTERED', 
+            price: counterPrice,
+            error: result.success ? undefined : result.error
+          };
+        }
 
       } else if (decision.object.decision === 'DECLINE') {
         // Decline the offer

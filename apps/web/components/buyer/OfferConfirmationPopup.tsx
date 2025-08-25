@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { CheckCircle, DollarSign, Clock, Bot } from 'lucide-react'
+import { CheckCircle, Clock, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -14,37 +13,13 @@ interface OfferConfirmationPopupProps {
     sellerUsername?: string
     isAgentEnabled?: boolean
   }
-  autoCloseDelay?: number
 }
 
 export default function OfferConfirmationPopup({ 
   isVisible, 
   onClose, 
-  offerDetails,
-  autoCloseDelay = 4000 
+  offerDetails
 }: OfferConfirmationPopupProps) {
-  const [countdown, setCountdown] = useState(autoCloseDelay / 1000)
-
-  useEffect(() => {
-    if (!isVisible) return
-
-    // Reset countdown when popup becomes visible
-    setCountdown(autoCloseDelay / 1000)
-
-    // Auto-close countdown
-    const interval = setInterval(() => {
-      setCountdown(prev => prev - 1)
-    }, 1000)
-
-    return () => clearInterval(interval)
-  }, [isVisible, autoCloseDelay])
-
-  // Separate effect to handle auto-close when countdown reaches 0
-  useEffect(() => {
-    if (countdown <= 0 && isVisible) {
-      onClose()
-    }
-  }, [countdown, isVisible, onClose])
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -138,16 +113,13 @@ export default function OfferConfirmationPopup({
                   </div>
                   <ul className="text-sm text-gray-700 space-y-1">
                     <li>• The seller will review your offer</li>
-                    <li>• You'll be notified of their response</li>
+                    <li>• You&apos;ll be notified of their response</li>
                     <li>• Check your profile for updates</li>
                   </ul>
                 </div>
 
-                {/* Auto-close countdown */}
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
-                    Auto-closing in {countdown}s
-                  </div>
+                {/* Manual close button */}
+                <div className="flex justify-end">
                   <Button
                     onClick={onClose}
                     variant="outline"

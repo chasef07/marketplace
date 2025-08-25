@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Bell, Bot, Clock, DollarSign, TrendingUp, X, Eye, MessageSquare } from 'lucide-react'
+import { Bell, Bot, Clock, DollarSign, TrendingUp, X, Eye, MessageSquare, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/src/lib/supabase'
 
 interface BuyerNotification {
   id: string
@@ -34,6 +34,10 @@ export function BuyerNotifications({ userId, className = '' }: BuyerNotification
   const [notifications, setNotifications] = useState<BuyerNotification[]>([])
   const [loading, setLoading] = useState(true)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [showCounterModal, setShowCounterModal] = useState<string | null>(null)
+  const [counterPrice, setCounterPrice] = useState<number | null>(null)
+  const [counterMessage, setCounterMessage] = useState('')
 
   const supabase = createClient()
 
@@ -96,7 +100,7 @@ export function BuyerNotifications({ userId, className = '' }: BuyerNotification
             latestOffer.offer_type === 'seller' && 
             latestOffer.is_counter_offer) {
           
-          const notificationId = `${negotiation.id}-${latestOffer.id}`
+          const notificationId = `seller_offer_${latestOffer.id}`
           const agentDecision = latestOffer.agent_decisions?.[0]
           
           const notification: BuyerNotification = {
@@ -185,6 +189,87 @@ export function BuyerNotifications({ userId, className = '' }: BuyerNotification
     const notification = notifications.find(n => n.id === notificationId)
     if (notification && !notification.read && notification.needs_attention) {
       setUnreadCount(prev => Math.max(0, prev - 1))
+    }
+  }
+
+  const acceptOffer = async (notification: BuyerNotification) => {
+    if (!notification.id.startsWith('seller_offer_')) return
+
+    setActionLoading(notification.id)
+    try {
+      const offerId = notification.id.replace('seller_offer_', '')
+      const response = await fetch(`/api/buyer/offers/${offerId}/accept`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Offer accepted:', result)
+        
+        // Remove notification and reload
+        setNotifications(prev => prev.filter(n => n.id !== notification.id))
+        setUnreadCount(prev => Math.max(0, prev - 1))
+        
+        // You might want to show a success message here
+        alert(`Successfully purchased ${notification.item_name} for ${formatCurrency(notification.offer_price)}!`)
+      } else {
+        const error = await response.json()
+        alert(`Failed to accept offer: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Accept offer error:', error)
+      alert('An error occurred while accepting the offer')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const openCounterModal = (notification: BuyerNotification) => {
+    setShowCounterModal(notification.id)
+    setCounterPrice(Math.max(notification.offer_price * 0.95, 1)) // Start 5% below their offer
+    setCounterMessage('')
+  }
+
+  const submitCounterOffer = async () => {
+    if (!showCounterModal || !counterPrice) return
+
+    const notification = notifications.find(n => n.id === showCounterModal)
+    if (!notification) return
+
+    setActionLoading(showCounterModal)
+    try {
+      const response = await fetch(`/api/negotiations/items/${notification.item_id}/offers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          price: counterPrice,
+          message: counterMessage,
+        }),
+      })
+
+      if (response.ok) {
+        // Close modal and remove notification
+        setShowCounterModal(null)
+        setCounterPrice(null)
+        setCounterMessage('')
+        setNotifications(prev => prev.filter(n => n.id !== showCounterModal))
+        setUnreadCount(prev => Math.max(0, prev - 1))
+        
+        alert('Counter offer submitted successfully!')
+      } else {
+        const error = await response.json()
+        alert(`Failed to submit counter offer: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Counter offer error:', error)
+      alert('An error occurred while submitting counter offer')
+    } finally {
+      setActionLoading(null)
     }
   }
 
@@ -318,6 +403,41 @@ export function BuyerNotifications({ userId, className = '' }: BuyerNotification
               </div>
               
               <div className="flex flex-col space-y-1 ml-4">
+                {notification.type === 'agent_counter_offer' && (
+                  <>
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        acceptOffer(notification)
+                      }}
+                      disabled={actionLoading === notification.id}
+                      className="text-xs bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {actionLoading === notification.id ? 'Accepting...' : (
+                        <>
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Accept {formatCurrency(notification.offer_price)}
+                        </>
+                      )}
+                    </Button>
+                    
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openCounterModal(notification)
+                      }}
+                      disabled={actionLoading === notification.id}
+                      className="text-xs"
+                    >
+                      <DollarSign className="w-3 h-3 mr-1" />
+                      Counter
+                    </Button>
+                  </>
+                )}
+                
                 <Button
                   size="sm"
                   variant="outline"
@@ -347,6 +467,68 @@ export function BuyerNotifications({ userId, className = '' }: BuyerNotification
           </Card>
         ))}
       </div>
+
+      {/* Counter Offer Modal */}
+      {showCounterModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Make Counter Offer</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Your Counter Offer
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    value={counterPrice || ''}
+                    onChange={(e) => setCounterPrice(parseFloat(e.target.value) || 0)}
+                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Message (optional)
+                </label>
+                <textarea
+                  value={counterMessage}
+                  onChange={(e) => setCounterMessage(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Add a note for the seller..."
+                  rows={3}
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCounterModal(null)
+                  setCounterPrice(null)
+                  setCounterMessage('')
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={submitCounterOffer}
+                disabled={!counterPrice || counterPrice <= 0 || actionLoading === showCounterModal}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {actionLoading === showCounterModal ? 'Submitting...' : 'Send Counter Offer'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

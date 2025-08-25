@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { apiClient } from '@/src/lib/api-client-new'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/src/lib/supabase'
 import { BLUR_PLACEHOLDERS } from '@/src/lib/blur-data'
 
 type OfferStatus = 'pending' | 'accepted' | 'declined' | 'superseded' | 'expired'

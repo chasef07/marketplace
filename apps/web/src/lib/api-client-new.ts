@@ -1,5 +1,5 @@
 // New Supabase-based API client
-import { createClient } from './supabase'
+import { createClient } from '@/src/lib/supabase'
 import type { Session } from '@supabase/supabase-js'
 
 export interface ImageData {
