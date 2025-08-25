@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, TrendingUp, Filter, Download, Eye } from 'lucide-react';
+import { Filter, Download, Eye } from 'lucide-react';
 
 interface Decision {
   id: number;
@@ -42,7 +42,6 @@ interface Analytics {
 export default function DecisionHistory() {
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
-  const [loading, setLoading] = useState(true);
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
   const [filters, setFilters] = useState<FilterOptions>({});
   const [page, setPage] = useState(1);

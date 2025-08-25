@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Settings } from 'lucide-react';
+import { Shield } from 'lucide-react';
 
 interface AdminAccessButtonProps {
   variant?: 'button' | 'link' | 'icon';

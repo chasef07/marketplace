@@ -151,7 +151,6 @@ export async function POST(request: NextRequest) {
       
       // Analyze negotiation momentum
       const buyerOffers = offerHistory.filter(o => o.offer_type === 'buyer');
-      const sellerOffers = offerHistory.filter(o => o.offer_type === 'seller');
       
       let negotiationMomentum = 'neutral';
       let priceDirection = 'stable';
@@ -313,7 +312,7 @@ Make decision based on buyer's demonstrated behavior and negotiation psychology.
       const executionTime = Date.now() - startTime;
 
       // CRITICAL: Validate decision to prevent unreasonable counter offers
-      let validatedDecision = { ...decision.object };
+      const validatedDecision = { ...decision.object };
       let validationWarning = '';
 
       if (validatedDecision.decision === 'COUNTER' && validatedDecision.recommendedPrice) {

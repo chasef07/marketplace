@@ -439,7 +439,7 @@ export async function POST(request: NextRequest) {
         const counterOfferType = offer.offer_type === 'buyer' ? 'seller' : 'buyer';
         
         // Create counter offer using our unified offer service
-        const { data: counterOffer, error: counterError } = await supabase
+        const { error: counterError } = await supabase
           .rpc('create_offer_transaction', {
             p_negotiation_id: offer.negotiation_id,
             p_offer_type: counterOfferType,

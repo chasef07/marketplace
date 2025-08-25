@@ -17,8 +17,6 @@ import {
   Clock,
   DollarSign,
   MessageSquare,
-  CheckCircle,
-  XCircle,
   AlertTriangle,
   Activity
 } from 'lucide-react'
@@ -130,7 +128,7 @@ export function NegotiationTimeline({ sellerId, className }: NegotiationTimeline
         if (decisions) {
           agentDecisionsData = decisions
         }
-      } catch (err) {
+      } catch {
         console.log('Agent decisions table may not exist yet, continuing without agent data')
         // Continue without agent decisions if the table doesn't exist
       }
@@ -485,7 +483,7 @@ export function NegotiationTimeline({ sellerId, className }: NegotiationTimeline
                                 
                                 {offer.message && (
                                   <p className="text-sm text-gray-600 mb-3 bg-gray-50 p-2 rounded">
-                                    "{offer.message}"
+                                    &ldquo;{offer.message}&rdquo;
                                   </p>
                                 )}
                                 

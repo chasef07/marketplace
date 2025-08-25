@@ -1,7 +1,6 @@
 'use client'
 
 import { colors, gradients } from '../home/design-system/colors'
-import { animations } from '../home/design-system/animations'
 
 interface ThemedLoadingProps {
   message?: string

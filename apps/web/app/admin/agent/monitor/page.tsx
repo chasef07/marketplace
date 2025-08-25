@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RefreshCw, AlertCircle, CheckCircle, Clock, Zap, Wifi, WifiOff } from 'lucide-react';
+import { Play, Pause, RefreshCw, AlertCircle, CheckCircle, Clock, Zap, Wifi } from 'lucide-react';
 
 interface QueueItem {
   queue_id: number;

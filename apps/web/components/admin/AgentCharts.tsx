@@ -2,9 +2,6 @@
 
 import React from 'react';
 
-interface ChartProps {
-  className?: string;
-}
 
 // Simple Progress Bar Component
 export function ProgressBar({ 

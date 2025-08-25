@@ -36,7 +36,6 @@ export function AgentSettings({ user, onClose }: AgentSettingsProps) {
   const [saving, setSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
 
-  const supabase = createClient()
 
   useEffect(() => {
     loadSettings()
@@ -327,7 +326,7 @@ export function AgentSettings({ user, onClose }: AgentSettingsProps) {
                 <li>• These settings apply to all items where the AI agent is enabled</li>
                 <li>• You can still enable/disable the agent per individual listing</li>
                 <li>• The agent uses game theory and market analysis for optimal decisions</li>
-                <li>• You'll receive notifications for all agent recommendations</li>
+                <li>• You&apos;ll receive notifications for all agent recommendations</li>
               </ul>
             </div>
           </div>

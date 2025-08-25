@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bot, Activity, Clock, CheckCircle, AlertTriangle, TrendingUp, Monitor } from 'lucide-react';
-import { ProgressBar, DecisionDistributionChart, MetricCard, LineChart } from '@/components/admin/AgentCharts';
+import { Bot, Activity, Clock, CheckCircle, Monitor } from 'lucide-react';
+import { ProgressBar, DecisionDistributionChart } from '@/components/admin/AgentCharts';
 
 interface SystemStats {
   queueStats: {
