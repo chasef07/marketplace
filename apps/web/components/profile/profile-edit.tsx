@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { User, Upload, Save, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/src/lib/supabase'
 
 interface ProfileData {
   id: string

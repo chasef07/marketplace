@@ -7,7 +7,7 @@ import { User, MapPin, Calendar, Star, Package, ShoppingBag, Edit, Bot, Clock, D
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/src/lib/supabase'
 import { colors, gradients, shadows } from '../home/design-system/colors'
 import { animations } from '../home/design-system/animations'
 import useSWR from 'swr'

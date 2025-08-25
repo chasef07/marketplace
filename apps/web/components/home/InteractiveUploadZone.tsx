@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from 'react'
 import { colors, gradients, shadows } from './design-system/colors'
 import { animations } from './design-system/animations'
 import { AIAnalysisLoading } from '../ui/ai-analysis-loading'
-import { type AIAnalysisResult } from "@/lib/api-client-new"
+import { type AIAnalysisResult } from "@/src/lib/api-client-new"
 
 interface InteractiveUploadZoneProps {
   onShowListingPreview: (analysisData: AIAnalysisResult, uploadedImages: string[]) => void

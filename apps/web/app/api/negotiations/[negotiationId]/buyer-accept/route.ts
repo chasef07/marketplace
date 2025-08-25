@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase'
-import { ratelimit, withRateLimit } from '@/lib/rate-limit'
+import { createSupabaseServerClient } from '@/src/lib/supabase'
+import { ratelimit, withRateLimit } from '@/src/lib/rate-limit'
 
 export async function POST(
   request: NextRequest,

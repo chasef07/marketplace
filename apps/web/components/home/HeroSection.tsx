@@ -7,7 +7,7 @@ import { InteractiveLivingRoom } from './InteractiveLivingRoom'
 import { AnimatedBackground } from './AnimatedBackground'
 import { colors, gradients, shadows, cssVariables } from './design-system/colors'
 import { animations, animationClasses } from './design-system/animations'
-import { type AIAnalysisResult } from "@/lib/api-client-new"
+import { type AIAnalysisResult } from "@/src/lib/api-client-new"
 import { getRotatingGreeting } from "@/lib/greetings"
 import AdminAccessButton from "../admin/AdminAccessButton"
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createSupabaseClientClient } from '@/lib/supabase';
+import { createClient } from '@/src/lib/supabase';
 import { X, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 
 interface AgentNotification {

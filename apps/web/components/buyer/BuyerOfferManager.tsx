@@ -178,6 +178,24 @@ export default function BuyerOfferManager({ userId, onOfferConfirmed, initialOff
     }
   }
 
+  const handleBuyerAccept = async (negotiationId: number) => {
+    try {
+      setSubmitting(true)
+      await apiClient.buyerAcceptOffer(negotiationId)
+      
+      // Show confirmation
+      onOfferConfirmed?.()
+      
+      // Refresh offers
+      await fetchOffers()
+    } catch (err) {
+      console.error('Failed to accept counter offer:', err)
+      alert('Failed to accept counter offer. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const getItemImageUrl = useCallback((filename?: string) => {
     if (!filename) return null
     const { data } = supabase.storage.from('furniture-images').getPublicUrl(filename)
@@ -368,7 +386,7 @@ export default function BuyerOfferManager({ userId, onOfferConfirmed, initialOff
                       <div className="flex flex-wrap gap-2">
                         <Button
                           size="sm"
-                          onClick={() => handleCounterOffer(offer.negotiation_id, offer.latest_seller_offer!.price)}
+                          onClick={() => handleBuyerAccept(offer.negotiation_id)}
                           disabled={submitting}
                           className="bg-green-600 hover:bg-green-700"
                         >

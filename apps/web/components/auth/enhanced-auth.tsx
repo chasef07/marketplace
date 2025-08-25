@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { X, Eye, EyeOff, Loader2, CheckCircle, AlertCircle, Mail } from "lucide-react"
-import { apiClient } from "@/lib/api-client-new"
+import { apiClient } from "@/src/lib/api-client-new"
 
 interface User {
   id: string

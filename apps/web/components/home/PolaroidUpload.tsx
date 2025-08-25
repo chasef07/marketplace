@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import Image from 'next/image'
 import { Camera, Loader2, X, Plus } from 'lucide-react'
-import { apiClient, type AIAnalysisResult } from "@/lib/api-client-new"
+import { apiClient, type AIAnalysisResult } from "@/src/lib/api-client-new"
 
 interface PolaroidUploadProps {
   onShowListingPreview: (analysisData: AIAnalysisResult, uploadedImages: string[]) => void

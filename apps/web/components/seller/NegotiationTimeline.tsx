@@ -22,7 +22,7 @@ import {
   AlertTriangle,
   Activity
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/src/lib/supabase'
 
 interface TimelineOffer {
   id: number

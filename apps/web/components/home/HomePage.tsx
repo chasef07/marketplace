@@ -7,7 +7,7 @@ import { ListingPreview } from './ListingPreview'
 import { Marketplace } from '../marketplace/marketplace'
 import { EnhancedAuth } from '../auth/enhanced-auth'
 import { ThemedLoading } from '../ui/themed-loading'
-import { type AIAnalysisResult, apiClient } from "@/lib/api-client-new"
+import { type AIAnalysisResult, apiClient } from "@/src/lib/api-client-new"
 
 // Lazy load heavy components
 
