@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bot, Activity, Clock, CheckCircle, Monitor } from 'lucide-react';
+import { Bot, Activity, Clock, CheckCircle, Monitor, TrendingUp } from 'lucide-react';
 import { ProgressBar, DecisionDistributionChart } from '@/components/admin/AgentCharts';
 
 interface SystemStats {
