@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Separator } from '@/components/ui/separator'
 import { 
   ShoppingBag, 
   DollarSign, 
@@ -17,6 +19,7 @@ import {
 } from 'lucide-react'
 import { apiClient } from '@/src/lib/api-client-new'
 import Image from 'next/image'
+import Link from 'next/link'
 import { createClient } from '@/src/lib/supabase'
 import { BLUR_PLACEHOLDERS } from '@/src/lib/blur-data'
 
@@ -35,7 +38,7 @@ interface BuyerOffer {
     id: number
     name: string
     starting_price: number
-    image_filename?: string
+    images?: Array<{ filename: string; order: number; is_primary: boolean }>
     agent_enabled: boolean
   }
   seller: {
@@ -95,11 +98,11 @@ export default function BuyerOfferManager({ userId, onOfferConfirmed, initialOff
               id: neg.items.id,
               name: neg.items.name,
               starting_price: neg.items.starting_price,
-              image_filename: neg.items.image_filename,
+              images: neg.items.images,
               agent_enabled: neg.items.agent_enabled || false
             },
             seller: {
-              username: neg.profiles?.username || 'Unknown'
+              username: neg.seller?.username || 'Unknown'
             },
             latest_seller_offer: latestSellerOffer ? {
               price: latestSellerOffer.price,
@@ -108,7 +111,7 @@ export default function BuyerOfferManager({ userId, onOfferConfirmed, initialOff
             negotiation_status: neg.status
           }
         })
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
       setOffers(buyerOffers)
     } catch (err) {
@@ -196,7 +199,16 @@ export default function BuyerOfferManager({ userId, onOfferConfirmed, initialOff
     }
   }
 
-  const getItemImageUrl = useCallback((filename?: string) => {
+  const getItemImageUrl = useCallback((item: BuyerOffer['item']) => {
+    // Handle images array
+    let filename = null
+    
+    if (item.images && Array.isArray(item.images) && item.images.length > 0) {
+      // Use primary image or first image from images array
+      const primaryImage = item.images.find((img: any) => img.is_primary) || item.images[0]
+      filename = primaryImage?.filename
+    }
+    
     if (!filename) return null
     const { data } = supabase.storage.from('furniture-images').getPublicUrl(filename)
     return data.publicUrl
@@ -225,7 +237,7 @@ export default function BuyerOfferManager({ userId, onOfferConfirmed, initialOff
   const getStatusBadge = (offer: BuyerOffer) => {
     switch (offer.status) {
       case 'pending':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200"><Clock className="h-3 w-3 mr-1" />Pending</Badge>
+        return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200"><Clock className="h-3 w-3 mr-1" />Pending</Badge>
       case 'accepted':
         return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200"><CheckCircle className="h-3 w-3 mr-1" />Accepted</Badge>
       case 'declined':
@@ -233,7 +245,7 @@ export default function BuyerOfferManager({ userId, onOfferConfirmed, initialOff
       case 'superseded':
         return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><TrendingUp className="h-3 w-3 mr-1" />Counter Received</Badge>
       default:
-        return <Badge variant="outline">Unknown</Badge>
+        return <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">Unknown</Badge>
     }
   }
 
@@ -258,10 +270,10 @@ export default function BuyerOfferManager({ userId, onOfferConfirmed, initialOff
       <Card className="bg-white rounded-2xl shadow-xl border border-gray-100">
         <CardHeader>
           <CardTitle className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-green-500 to-blue-600 rounded-lg">
+            <div className="p-2 bg-blue-600 rounded-lg">
               <ShoppingBag className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+            <span className="text-2xl font-bold text-gray-900">
               My Offers
             </span>
           </CardTitle>
@@ -294,14 +306,175 @@ export default function BuyerOfferManager({ userId, onOfferConfirmed, initialOff
     )
   }
 
+  // Organize offers by status
+  const activeOffers = offers.filter(offer => offer.status === 'pending' || offer.status === 'superseded')
+  const acceptedOffers = offers.filter(offer => offer.status === 'accepted')
+  const otherOffers = offers.filter(offer => !['pending', 'superseded', 'accepted'].includes(offer.status))
+
+  const renderOfferCard = (offer: BuyerOffer) => (
+    <div key={offer.id} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300">
+      <div className="flex flex-col md:flex-row gap-4">
+        {/* Item Image - Clickable */}
+        <Link href={`/marketplace/${offer.item.id}`} className="flex-shrink-0 group">
+          <div className="w-24 h-24 relative bg-gray-100 rounded-lg overflow-hidden group-hover:ring-2 group-hover:ring-blue-500 transition-all duration-200">
+            {getItemImageUrl(offer.item) ? (
+              <Image
+                src={getItemImageUrl(offer.item)!}
+                alt={offer.item.name}
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-200"
+                placeholder="blur"
+                blurDataURL={BLUR_PLACEHOLDERS.furniture}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <ShoppingBag className="h-8 w-8 text-gray-400 group-hover:text-blue-500 transition-colors" />
+              </div>
+            )}
+          </div>
+        </Link>
+
+        {/* Offer Details */}
+        <div className="flex-1 space-y-3">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <div>
+              <Link href={`/marketplace/${offer.item.id}`} className="group">
+                <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors">
+                  {offer.item.name}
+                </h3>
+              </Link>
+              <div className="flex items-center gap-2 mt-1">
+                <Link href={`/profile/${offer.seller.username}`} className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
+                  Seller: @{offer.seller.username}
+                </Link>
+                {offer.item.agent_enabled && (
+                  <span className="inline-flex items-center bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs font-medium">
+                    <Bot className="h-3 w-3 mr-1" />
+                    AI Agent
+                  </span>
+                )}
+              </div>
+            </div>
+            {getStatusBadge(offer)}
+          </div>
+
+          {/* Price Information */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <p className="text-gray-500">Listed Price</p>
+              <p className="font-semibold text-gray-900">{formatPrice(offer.item.starting_price)}</p>
+            </div>
+            <div>
+              <p className="text-gray-500">Your Offer</p>
+              <p className="font-semibold text-blue-600">{formatPrice(offer.price)}</p>
+            </div>
+            {offer.latest_seller_offer && (
+              <div>
+                <p className="text-gray-500">Counter Offer</p>
+                <p className="font-semibold text-orange-600">{formatPrice(offer.latest_seller_offer.price)}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-gray-500">Submitted</p>
+              <p className="font-semibold text-gray-900">{formatTimeAgo(offer.created_at)}</p>
+            </div>
+          </div>
+
+          {/* Actions */}
+          {offer.status === 'superseded' && offer.latest_seller_offer && (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                onClick={() => handleBuyerAccept(offer.negotiation_id)}
+                disabled={submitting}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Accept {formatPrice(offer.latest_seller_offer.price)}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowOfferForm(offer.item.id)}
+                disabled={submitting}
+              >
+                <MessageSquare className="h-4 w-4 mr-1" />
+                Counter Offer
+              </Button>
+            </div>
+          )}
+
+          {offer.status === 'pending' && (
+            <div className="flex items-center gap-2 text-sm text-yellow-600">
+              <Clock className="h-4 w-4" />
+              Waiting for seller response...
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Offer Form */}
+      {showOfferForm === offer.item.id && (
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <h4 className="font-semibold mb-3">Make a Counter Offer</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Price
+              </label>
+              <input
+                type="number"
+                value={offerPrice}
+                onChange={(e) => setOfferPrice(e.target.value)}
+                placeholder="Enter amount"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                min="0"
+                step="0.01"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Message (Optional)
+              </label>
+              <input
+                type="text"
+                value={offerMessage}
+                onChange={(e) => setOfferMessage(e.target.value)}
+                placeholder="Add a message to your offer..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <Button
+              onClick={() => handleSubmitOffer(offer.item.id)}
+              disabled={!offerPrice || submitting}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {submitting ? 'Submitting...' : 'Submit Counter Offer'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowOfferForm(null)}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <Card id="buyer-offer-manager" className="bg-white rounded-2xl shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300">
       <CardHeader>
         <CardTitle className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-r from-green-500 to-blue-600 rounded-lg">
+          <div className="p-2 bg-blue-600 rounded-lg">
             <ShoppingBag className="h-6 w-6 text-white" />
           </div>
-          <span className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+          <span className="text-2xl font-bold text-gray-900">
             My Offers ({offers.length})
           </span>
         </CardTitle>
@@ -316,157 +489,61 @@ export default function BuyerOfferManager({ userId, onOfferConfirmed, initialOff
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {offers.map((offer) => (
-              <div key={offer.id} className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6 hover:shadow-lg transition-all duration-300">
-                <div className="flex flex-col md:flex-row gap-4">
-                  {/* Item Image */}
-                  <div className="flex-shrink-0">
-                    <div className="w-24 h-24 relative bg-gray-200 rounded-lg overflow-hidden">
-                      {getItemImageUrl(offer.item.image_filename) ? (
-                        <Image
-                          src={getItemImageUrl(offer.item.image_filename)!}
-                          alt={offer.item.name}
-                          fill
-                          className="object-cover"
-                          placeholder="blur"
-                          blurDataURL={BLUR_PLACEHOLDERS.furniture}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <ShoppingBag className="h-8 w-8 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Offer Details */}
-                  <div className="flex-1 space-y-3">
-                    {/* Header */}
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-900">{offer.item.name}</h3>
-                        <p className="text-sm text-gray-600">
-                          Seller: @{offer.seller.username}
-                          {offer.item.agent_enabled && (
-                            <span className="ml-2 inline-flex items-center bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                              <Bot className="h-3 w-3 mr-1" />
-                              AI Agent
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      {getStatusBadge(offer)}
-                    </div>
-
-                    {/* Price Information */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-500">Listed Price</p>
-                        <p className="font-semibold text-gray-900">{formatPrice(offer.item.starting_price)}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Your Offer</p>
-                        <p className="font-semibold text-green-600">{formatPrice(offer.price)}</p>
-                      </div>
-                      {offer.latest_seller_offer && (
-                        <div>
-                          <p className="text-gray-500">Counter Offer</p>
-                          <p className="font-semibold text-blue-600">{formatPrice(offer.latest_seller_offer.price)}</p>
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-gray-500">Submitted</p>
-                        <p className="font-semibold text-gray-900">{formatTimeAgo(offer.created_at)}</p>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    {offer.status === 'superseded' && offer.latest_seller_offer && (
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => handleBuyerAccept(offer.negotiation_id)}
-                          disabled={submitting}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Accept {formatPrice(offer.latest_seller_offer.price)}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setShowOfferForm(offer.item.id)}
-                          disabled={submitting}
-                        >
-                          <MessageSquare className="h-4 w-4 mr-1" />
-                          Counter Offer
-                        </Button>
-                      </div>
-                    )}
-
-                    {offer.status === 'pending' && (
-                      <div className="flex items-center gap-2 text-sm text-yellow-600">
-                        <Clock className="h-4 w-4" />
-                        Waiting for seller response...
-                      </div>
-                    )}
-                  </div>
+          <Tabs defaultValue="active" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="active" className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Active ({activeOffers.length})
+              </TabsTrigger>
+              <TabsTrigger value="accepted" className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4" />
+                Accepted ({acceptedOffers.length})
+              </TabsTrigger>
+              <TabsTrigger value="other" className="flex items-center gap-2">
+                <XCircle className="h-4 w-4" />
+                Other ({otherOffers.length})
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="active" className="space-y-6 mt-6">
+              {activeOffers.length === 0 ? (
+                <div className="text-center py-8">
+                  <Clock className="mx-auto h-8 w-8 text-gray-400 mb-3" />
+                  <p className="text-gray-500">No active offers</p>
                 </div>
-
-                {/* Offer Form */}
-                {showOfferForm === offer.item.id && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <h4 className="font-semibold mb-3">Make a Counter Offer</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Price
-                        </label>
-                        <input
-                          type="number"
-                          value={offerPrice}
-                          onChange={(e) => setOfferPrice(e.target.value)}
-                          placeholder="Enter amount"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          min="0"
-                          step="0.01"
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Message (Optional)
-                        </label>
-                        <input
-                          type="text"
-                          value={offerMessage}
-                          onChange={(e) => setOfferMessage(e.target.value)}
-                          placeholder="Add a message to your offer..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-2 mt-4">
-                      <Button
-                        onClick={() => handleSubmitOffer(offer.item.id)}
-                        disabled={!offerPrice || submitting}
-                        className="bg-blue-600 hover:bg-blue-700"
-                      >
-                        {submitting ? 'Submitting...' : 'Submit Counter Offer'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowOfferForm(null)}
-                        disabled={submitting}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+              ) : (
+                <div className="space-y-4">
+                  {activeOffers.map(renderOfferCard)}
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="accepted" className="space-y-6 mt-6">
+              {acceptedOffers.length === 0 ? (
+                <div className="text-center py-8">
+                  <CheckCircle className="mx-auto h-8 w-8 text-gray-400 mb-3" />
+                  <p className="text-gray-500">No accepted offers yet</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {acceptedOffers.map(renderOfferCard)}
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="other" className="space-y-6 mt-6">
+              {otherOffers.length === 0 ? (
+                <div className="text-center py-8">
+                  <XCircle className="mx-auto h-8 w-8 text-gray-400 mb-3" />
+                  <p className="text-gray-500">No declined offers</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {otherOffers.map(renderOfferCard)}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         )}
       </CardContent>
     </Card>

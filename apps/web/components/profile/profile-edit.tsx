@@ -6,6 +6,11 @@ import { useRouter } from 'next/navigation'
 import { User, Upload, Save, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Skeleton } from '@/components/ui/skeleton'
 import { createClient } from '@/src/lib/supabase'
 
 interface ProfileData {
@@ -211,19 +216,17 @@ export default function ProfileEdit({ initialProfile }: ProfileEditProps) {
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto p-6">
-        <div className="animate-pulse">
-          <div className="bg-gray-200 h-8 w-48 mb-6 rounded"></div>
-          <Card className="p-8">
-            <div className="space-y-6">
-              <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto"></div>
-              <div className="space-y-4">
-                {[1, 2, 3, 4, 5].map(i => (
-                  <div key={i} className="h-12 bg-gray-200 rounded"></div>
-                ))}
-              </div>
+        <Skeleton className="h-8 w-48 mb-6" />
+        <Card className="p-8">
+          <div className="space-y-6">
+            <Skeleton className="h-24 w-24 rounded-full mx-auto" />
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5].map(i => (
+                <Skeleton key={i} className="h-12" />
+              ))}
             </div>
-          </Card>
-        </div>
+          </div>
+        </Card>
       </div>
     )
   }
@@ -264,27 +267,15 @@ export default function ProfileEdit({ initialProfile }: ProfileEditProps) {
           {/* Profile Picture */}
           <div className="text-center">
             <div className="relative inline-block">
-              {profileImagePreview ? (
-                <Image
-                  src={profileImagePreview}
-                  alt="Profile preview"
-                  width={96}
-                  height={96}
-                  className="rounded-full object-cover"
+              <Avatar className="h-24 w-24">
+                <AvatarImage 
+                  src={profileImagePreview || getProfileImageUrl(profile.profile_picture_filename) || undefined} 
+                  alt={profileImagePreview ? "Profile preview" : "Current profile"}
                 />
-              ) : profile.profile_picture_filename ? (
-                <Image
-                  src={getProfileImageUrl(profile.profile_picture_filename)!}
-                  alt="Current profile"
-                  width={96}
-                  height={96}
-                  className="rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center">
+                <AvatarFallback className="bg-gray-200">
                   <User className="h-8 w-8 text-gray-400" />
-                </div>
-              )}
+                </AvatarFallback>
+              </Avatar>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -307,31 +298,27 @@ export default function ProfileEdit({ initialProfile }: ProfileEditProps) {
           </div>
 
           {/* Display Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Display Name *
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="display_name">Display Name *</Label>
+            <Input
+              id="display_name"
               type="text"
               value={formData.display_name}
               onChange={(e) => handleInputChange('display_name', e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="How you want to be known"
               required
             />
           </div>
 
           {/* Bio */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Bio
-            </label>
-            <textarea
+          <div className="space-y-2">
+            <Label htmlFor="bio">Bio</Label>
+            <Textarea
+              id="bio"
               value={formData.bio}
               onChange={(e) => handleInputChange('bio', e.target.value)}
               rows={4}
               maxLength={500}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Tell others about yourself, your style preferences, or what you're looking for..."
             />
             <p className="text-sm text-gray-500 mt-1">
@@ -341,42 +328,36 @@ export default function ProfileEdit({ initialProfile }: ProfileEditProps) {
 
           {/* Location */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                City
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="city">City</Label>
+              <Input
+                id="city"
                 type="text"
                 value={formData.location_city}
                 onChange={(e) => handleInputChange('location_city', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Your city"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                State
-              </label>
-              <input
+            <div className="space-y-2">
+              <Label htmlFor="state">State</Label>
+              <Input
+                id="state"
                 type="text"
                 value={formData.location_state}
                 onChange={(e) => handleInputChange('location_state', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Your state"
               />
             </div>
           </div>
 
           {/* Zip Code */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Zip Code
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="zip_code">Zip Code</Label>
+            <Input
+              id="zip_code"
               type="text"
               value={formData.zip_code}
               onChange={(e) => handleInputChange('zip_code', e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="12345"
               pattern="[0-9]{5}(-[0-9]{4})?"
             />

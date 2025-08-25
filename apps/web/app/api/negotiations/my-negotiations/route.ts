@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
       user = sessionUser
     }
 
+    // First get negotiations
     const { data: negotiations, error } = await supabase
       .from('negotiations')
       .select(`
@@ -41,34 +42,49 @@ export async function GET(request: NextRequest) {
           starting_price,
           images
         ),
-        seller:seller_id (
-          id,
-          username,
-          email
-        ),
-        buyer:buyer_id (
-          id,
-          username,
-          email
-        ),
         offers (
           id,
           price,
           message,
           offer_type,
-          created_at
+          created_at,
+          is_counter_offer,
+          round_number
         )
       `)
       .or(`seller_id.eq.${user.id},buyer_id.eq.${user.id}`)
       .eq('status', 'active')
       .order('updated_at', { ascending: false })
-
+      
     if (error) {
       console.error('Error fetching negotiations:', error)
       return NextResponse.json({ error: 'Failed to fetch negotiations' }, { status: 500 })
     }
-
-    const response = NextResponse.json(negotiations)
+    
+    // Then get profile data for each negotiation
+    if (negotiations && negotiations.length > 0) {
+      const sellerIds = [...new Set(negotiations.map(n => n.seller_id))]
+      const buyerIds = [...new Set(negotiations.map(n => n.buyer_id))]
+      const profileIds = [...new Set([...sellerIds, ...buyerIds])]
+      
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, email')
+        .in('id', profileIds)
+        
+      // Map profiles to negotiations
+      const enrichedNegotiations = negotiations.map(negotiation => ({
+        ...negotiation,
+        seller: profiles?.find(p => p.id === negotiation.seller_id),
+        buyer: profiles?.find(p => p.id === negotiation.buyer_id)
+      }));
+      
+      const response = NextResponse.json(enrichedNegotiations)
+      response.headers.set('Cache-Control', 'private, max-age=0, no-cache, no-store, must-revalidate')
+      return response
+    }
+    
+    const response = NextResponse.json([])
     response.headers.set('Cache-Control', 'private, max-age=0, no-cache, no-store, must-revalidate')
     return response
   } catch (error) {

@@ -3,48 +3,19 @@
 import { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { User, MapPin, Calendar, Star, Package, ShoppingBag, Edit, Bot, Clock, DollarSign, CheckCircle, XCircle } from 'lucide-react'
+import { User, MapPin, Calendar, Star, Package, ShoppingBag, Edit, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Separator } from '@/components/ui/separator'
 import { createClient } from '@/src/lib/supabase'
-import { colors, gradients, shadows } from '../home/design-system/colors'
-import { animations } from '../home/design-system/animations'
-import useSWR from 'swr'
-import { apiClient } from '@/src/lib/api-client-new'
 import { getRotatingGreeting } from '@/lib/greetings'
 import { BLUR_PLACEHOLDERS } from '@/src/lib/blur-data'
-import { QuickActionsOverlay } from '../marketplace/QuickActionsOverlay'
 import { BuyerNotifications } from '../buyer/BuyerNotifications'
 import BuyerOfferManager from '../buyer/BuyerOfferManager'
 import OfferConfirmationPopup from '../buyer/OfferConfirmationPopup'
-
-type NegotiationWithItems = {
-  id: number
-  status: string
-  final_price: number | null
-  latest_offer_price: number | null
-  created_at: string
-  display_status: string
-  needs_attention: boolean
-  latest_offer: {
-    id: number
-    price: number
-    offer_type: 'buyer' | 'seller'
-    is_counter_offer: boolean
-    created_at: string
-  } | null
-  offer_count: number
-  items: {
-    id: number
-    name: string
-    image_filename?: string
-    starting_price: number
-  }
-  profiles: {
-    username: string
-  }
-}
 
 
 // ProfileData interface (shared with wrapper)
@@ -178,20 +149,18 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto p-6">
-        <div className="animate-pulse">
-          <div className="flex items-center space-x-6 mb-8">
-            <div className="w-24 h-24 bg-gray-200 rounded-full"></div>
-            <div className="space-y-3">
-              <div className="h-6 bg-gray-200 rounded w-48"></div>
-              <div className="h-4 bg-gray-200 rounded w-32"></div>
-              <div className="h-4 bg-gray-200 rounded w-64"></div>
-            </div>
+        <div className="flex items-center space-x-6 mb-8">
+          <Skeleton className="h-24 w-24 rounded-full" />
+          <div className="space-y-3">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-64" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="bg-gray-200 h-64 rounded-lg"></div>
-            ))}
-          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <Skeleton key={i} className="h-64" />
+          ))}
         </div>
       </div>
     )
@@ -213,35 +182,39 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #F7F3E9 0%, #E8DDD4 50%, #DDD1C7 100%)' }}>
       {/* Header */}
-      <header className="profile-header">
-        <div className="header-content">
-          <div className="header-inner">
-            <div className="logo">
-              <span className="logo-text">SnapNest</span>
+      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-white/80 border-b border-gray-200 shadow-sm">
+        <div className="px-4 md:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-gray-900 tracking-tight font-inter">
+                SnapNest
+              </span>
             </div>
             
-            <div className="nav-buttons">
+            <div className="flex items-center gap-4">
               {isOwnProfile && profile && (
-                <span className="welcome-text">{getRotatingGreeting(profile.id)}, {profile.display_name || profile.username}!</span>
+                <span className="hidden md:block text-sm font-medium text-blue-600">
+                  {getRotatingGreeting(profile.id)}, {profile.display_name || profile.username}!
+                </span>
               )}
               <Button 
                 variant="ghost"
                 onClick={onNavigateMarketplace}
-                className="nav-button nav-button-ghost"
+                className="font-semibold hover:bg-blue-50 hover:text-blue-600 transition-colors"
               >
                 Browse
               </Button>
               <Button 
                 variant="ghost"
                 onClick={onCreateListing}
-                className="nav-button nav-button-ghost"
+                className="font-semibold hover:bg-blue-50 hover:text-blue-600 transition-colors"
               >
                 Sell
               </Button>
               <Button 
                 variant="ghost"
                 onClick={onSignOut}
-                className="nav-button nav-button-ghost"
+                className="font-semibold hover:bg-blue-50 hover:text-blue-600 transition-colors"
               >
                 Sign Out
               </Button>
@@ -256,27 +229,16 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
         <div className="flex flex-col md:flex-row items-start md:items-center space-y-6 md:space-y-0 md:space-x-8">
           {/* Profile Picture */}
           <div className="relative">
-            {profile.profile_picture_filename ? (
-              <div className="relative">
-                <Image
-                  src={getProfileImageUrl(profile.profile_picture_filename)!}
-                  alt={`${profile.display_name}'s profile`}
-                  width={96}
-                  height={96}
-                  className="rounded-full object-cover ring-4 ring-blue-100 shadow-lg"
-                  placeholder="blur"
-                  blurDataURL={BLUR_PLACEHOLDERS.profile}
-                  quality={90}
-                  priority
-                />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-white"></div>
-              </div>
-            ) : (
-              <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center ring-4 ring-gray-100 shadow-lg">
+            <Avatar className="h-24 w-24 ring-4 ring-blue-100 shadow-lg">
+              <AvatarImage 
+                src={getProfileImageUrl(profile.profile_picture_filename) || undefined} 
+                alt={`${profile.display_name}'s profile`}
+              />
+              <AvatarFallback className="bg-gradient-to-br from-blue-100 to-purple-100">
                 <User className="h-10 w-10 text-blue-600" />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-white"></div>
-              </div>
-            )}
+              </AvatarFallback>
+            </Avatar>
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-white"></div>
             {profile.is_verified && (
               <div className="absolute -top-1 -right-1 bg-blue-500 text-white rounded-full p-1.5 shadow-lg">
                 <Star className="h-4 w-4 fill-current" />
@@ -318,25 +280,29 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
                 )}
 
                 {/* Stats */}
-                <div className="flex flex-wrap gap-8 text-sm">
-                  <div className="flex items-center bg-green-50 px-3 py-2 rounded-lg">
-                    <Package className="h-5 w-5 mr-2 text-green-600" />
-                    <span className="font-bold text-green-800">{profile.stats.total_sales}</span>
-                    <span className="text-green-600 ml-1 font-medium">sales</span>
-                  </div>
-                  <div className="flex items-center bg-blue-50 px-3 py-2 rounded-lg">
-                    <ShoppingBag className="h-5 w-5 mr-2 text-blue-600" />
-                    <span className="font-bold text-blue-800">{profile.stats.total_purchases}</span>
-                    <span className="text-blue-600 ml-1 font-medium">purchases</span>
-                  </div>
+                <div className="flex items-center flex-wrap gap-4">
+                  <Badge variant="secondary" className="bg-green-50 text-green-700 hover:bg-green-100">
+                    <Package className="mr-2 h-4 w-4" />
+                    <span className="font-bold">{profile.stats.total_sales}</span>
+                    <span className="ml-1 font-medium">sales</span>
+                  </Badge>
+                  <Separator orientation="vertical" className="h-6" />
+                  <Badge variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    <span className="font-bold">{profile.stats.total_purchases}</span>
+                    <span className="ml-1 font-medium">purchases</span>
+                  </Badge>
                   {profile.stats.rating_count > 0 && (
-                    <div className="flex items-center bg-yellow-50 px-3 py-2 rounded-lg">
-                      <Star className="h-5 w-5 mr-2 text-yellow-500 fill-current" />
-                      <span className="font-bold text-yellow-800">{profile.stats.rating_average.toFixed(1)}</span>
-                      <span className="text-yellow-600 ml-1 font-medium">
-                        ({profile.stats.rating_count} review{profile.stats.rating_count !== 1 ? 's' : ''})
-                      </span>
-                    </div>
+                    <>
+                      <Separator orientation="vertical" className="h-6" />
+                      <Badge variant="secondary" className="bg-yellow-50 text-yellow-700 hover:bg-yellow-100">
+                        <Star className="mr-2 h-4 w-4 fill-current" />
+                        <span className="font-bold">{profile.stats.rating_average.toFixed(1)}</span>
+                        <span className="ml-1 font-medium">
+                          ({profile.stats.rating_count} review{profile.stats.rating_count !== 1 ? 's' : ''})
+                        </span>
+                      </Badge>
+                    </>
                   )}
                 </div>
               </div>
@@ -475,93 +441,6 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
         offerDetails={lastOfferDetails}
       />
 
-      {/* Styles */}
-      <style jsx>{`
-        .profile-header {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          z-index: 50;
-          backdrop-filter: blur(10px);
-          background: ${colors.glass.background};
-          border-bottom: 1px solid ${colors.glass.border};
-          box-shadow: ${shadows.sm};
-        }
-
-        .header-content {
-          padding: 1rem 2rem;
-        }
-
-        .header-inner {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-
-        .logo {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-        }
-
-        .logo-text {
-          font-size: 1.5rem;
-          font-weight: 800;
-          color: ${colors.neutralDark};
-          letter-spacing: -0.025em;
-          font-family: 'Inter', -apple-system, sans-serif;
-        }
-
-        .nav-buttons {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-        }
-        
-        .welcome-text {
-          color: ${colors.primary};
-          font-size: 0.9rem;
-          font-weight: 500;
-        }
-
-        .nav-button {
-          font-weight: 600;
-          transition: all 300ms ${animations.easing.smooth};
-          border-radius: 8px;
-          font-size: 0.9rem;
-        }
-
-        .nav-button-ghost {
-          color: ${colors.neutralDark};
-          background: transparent;
-          border: none;
-        }
-
-        .nav-button-ghost:hover {
-          background: ${colors.primary}10;
-          color: ${colors.primary};
-          transform: translateY(-1px);
-        }
-
-        @media (max-width: 768px) {
-          .header-content {
-            padding: 1rem;
-          }
-
-          .nav-buttons {
-            gap: 0.5rem;
-          }
-
-          .logo-text {
-            font-size: 1.25rem;
-          }
-          
-          .welcome-text {
-            display: none;
-          }
-        }
-      `}</style>
       
     </div>
   )
