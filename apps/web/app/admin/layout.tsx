@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Bot, Monitor, History, TestTube, BarChart, Home } from 'lucide-react';
+import { Bot, Monitor, History, BarChart, Home } from 'lucide-react';
 
 export default function AdminLayout({
   children,
@@ -60,13 +60,6 @@ export default function AdminLayout({
                 <span>Decision History</span>
               </Link>
               
-              <Link 
-                href="/admin/agent/test" 
-                className="flex items-center space-x-3 px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <TestTube className="h-5 w-5" />
-                <span>Testing Playground</span>
-              </Link>
             </nav>
           </div>
         </div>
