@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
 import { Heart, MessageCircle, Eye, MapPin, Sparkles } from "lucide-react"
 import Image from "next/image"
-import { Item } from "@/src/lib/api-client-new"
+import { Item } from "@/lib/api-client-new"
 import { FURNITURE_BLUR_DATA_URL } from "@/lib/blur-data"
 import { useState } from "react"
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase'
+import { createSupabaseServerClient } from "@/lib/supabase-server"
 import { requireAuth } from '@/lib/auth-helpers'
 
 const supabase = createSupabaseServerClient()

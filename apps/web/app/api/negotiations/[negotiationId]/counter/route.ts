@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/src/lib/supabase'
-import { ratelimit, withRateLimit } from '@/src/lib/rate-limit'
-import { offerService } from '@/src/lib/services/offer-service'
+import { createSupabaseServerClient } from "@/lib/supabase-server"
+import { ratelimit, withRateLimit } from '@/lib/rate-limit'
+import { offerService } from '@/lib/services/offer-service'
 
 export async function POST(
   request: NextRequest,

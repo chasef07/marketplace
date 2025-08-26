@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/src/lib/supabase'
+import { createSupabaseServerClient } from "@/lib/supabase-server"
 import { z } from 'zod'
 
 const agentProfileSchema = z.object({

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import ProfileView from './profile-view'
-import { apiClient } from '@/src/lib/api-client-new'
+import { apiClient } from '@/lib/api-client-new'
 
 interface ProfilePageWrapperProps {
   username: string

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { User, Upload, Save, X } from 'lucide-react'
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
-import { createClient } from '@/src/lib/supabase'
+import { createClient } from '@/lib/supabase'
 
 interface ProfileData {
   id: string
@@ -39,7 +39,7 @@ export default function ProfileEdit({ initialProfile }: ProfileEditProps) {
   })
   
   // Single Supabase client instance for this component
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [profileImage, setProfileImage] = useState<File | null>(null)
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(!initialProfile)
@@ -206,12 +206,11 @@ export default function ProfileEdit({ initialProfile }: ProfileEditProps) {
     }
   }
 
-  const getProfileImageUrl = (filename?: string) => {
+  const getProfileImageUrl = useCallback((filename?: string) => {
     if (!filename) return null
-    const supabase = createClient()
     const { data } = supabase.storage.from('furniture-images').getPublicUrl(filename)
     return data.publicUrl
-  }
+  }, [supabase])
 
   if (loading) {
     return (

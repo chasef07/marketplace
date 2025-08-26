@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -17,11 +17,11 @@ import {
   TrendingUp,
   AlertCircle
 } from 'lucide-react'
-import { apiClient } from '@/src/lib/api-client-new'
+import { apiClient } from '@/lib/api-client-new'
 import Image from 'next/image'
 import Link from 'next/link'
-import { createClient } from '@/src/lib/supabase'
-import { BLUR_PLACEHOLDERS } from '@/src/lib/blur-data'
+import { createClient } from '@/lib/supabase'
+import { BLUR_PLACEHOLDERS } from '@/lib/blur-data'
 
 type OfferStatus = 'pending' | 'accepted' | 'declined' | 'superseded' | 'expired'
 
@@ -66,7 +66,7 @@ export default function BuyerOfferManager({ userId, onOfferConfirmed, initialOff
   const [offerMessage, setOfferMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const fetchOffers = useCallback(async () => {
     try {

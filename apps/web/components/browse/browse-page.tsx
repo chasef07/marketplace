@@ -6,7 +6,7 @@ import { useDebouncedCallback } from 'use-debounce'
 import { SearchHeader, SortOption, ViewMode } from './search-header'
 import { FilterSidebar, FilterOptions } from './filter-sidebar'
 import { ItemGrid } from './item-grid'
-import { Item, PaginationInfo } from "@/src/lib/api-client-new"
+import { Item, PaginationInfo } from "@/lib/api-client-new"
 import { colors, gradients } from '../home/design-system/colors'
 
 interface User {

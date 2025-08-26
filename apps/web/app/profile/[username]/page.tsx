@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import ProfilePageWrapper from '@/components/profile/profile-page-wrapper'
-import { createSupabaseServerClient } from '@/lib/supabase'
+import { createSupabaseServerClient } from "@/lib/supabase-server"
 
 interface ProfilePageProps {
   params: Promise<{

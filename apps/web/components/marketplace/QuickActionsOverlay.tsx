@@ -16,7 +16,7 @@ import {
   TrendingUp,
   Sparkles
 } from 'lucide-react'
-import { apiClient } from '@/src/lib/api-client-new'
+import { apiClient } from '@/lib/api-client-new'
 
 interface Negotiation {
   id: number

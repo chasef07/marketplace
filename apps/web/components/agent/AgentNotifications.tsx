@@ -5,25 +5,8 @@ import { Bell, CheckCircle, X, DollarSign, TrendingUp, Clock, ExternalLink } fro
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-
-interface AgentNotification {
-  id: string
-  type: string
-  title: string
-  message: string
-  offerPrice: number
-  itemName: string
-  itemId: number
-  buyerName?: string
-  sellerName?: string
-  confidence?: number
-  reasoning?: string
-  createdAt: string
-  negotiationId: number
-  offerId?: number
-  priority: 'high' | 'medium' | 'low'
-  actions: string[]
-}
+import { clientAgentService } from '@/lib/agent/client-service'
+import type { AgentNotification } from '@/lib/agent/types'
 
 interface AgentNotificationsProps {
   className?: string

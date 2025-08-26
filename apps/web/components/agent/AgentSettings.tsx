@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Settings, Save, RotateCcw, Info } from 'lucide-react'
-import { createClient } from '@/src/lib/supabase'
+import { createClient } from '@/lib/supabase'
 
 interface AgentSettings {
   aggressiveness_level: number

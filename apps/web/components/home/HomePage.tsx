@@ -7,7 +7,7 @@ import { ListingPreview } from './ListingPreview'
 import { Marketplace } from '../marketplace/marketplace'
 import { EnhancedAuth } from '../auth/enhanced-auth'
 import { ThemedLoading } from '../ui/themed-loading'
-import { type AIAnalysisResult, apiClient } from "@/src/lib/api-client-new"
+import { type AIAnalysisResult, apiClient } from "@/lib/api-client-new"
 
 // Lazy load heavy components
 
@@ -21,11 +21,11 @@ const ProfileView = dynamic(() => import('../profile/profile-view'), {
   loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
 })
 
-const SellerAgentDashboard = dynamic(() => import('../seller/SellerAgentDashboard').then(mod => ({ default: mod.SellerAgentDashboard })), {
+const SellerAgentDashboard = dynamic(() => import('../agent/SellerAgentDashboard').then(mod => ({ default: mod.SellerAgentDashboard })), {
   loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
 })
 
-const AgentSettings = dynamic(() => import('../seller/AgentSettings').then(mod => ({ default: mod.AgentSettings })), {
+const AgentSettings = dynamic(() => import('../agent/AgentSettings').then(mod => ({ default: mod.AgentSettings })), {
   loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
 })
 

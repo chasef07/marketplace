@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Bell, Bot, Clock, DollarSign, TrendingUp, X, Eye, MessageSquare, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { createClient } from '@/src/lib/supabase'
+import { createClient } from '@/lib/supabase'
 
 interface BuyerNotification {
   id: string
@@ -39,7 +39,7 @@ export function BuyerNotifications({ userId, className = '' }: BuyerNotification
   const [counterPrice, setCounterPrice] = useState<number | null>(null)
   const [counterMessage, setCounterMessage] = useState('')
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     if (userId) {

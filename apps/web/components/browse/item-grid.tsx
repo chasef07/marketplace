@@ -3,7 +3,7 @@
 import { ItemCard, ViewMode } from './item-card'
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
-import { Item, PaginationInfo } from "@/src/lib/api-client-new"
+import { Item, PaginationInfo } from "@/lib/api-client-new"
 import { ItemSkeleton } from "@/components/ui/skeleton"
 
 interface ItemGridProps {

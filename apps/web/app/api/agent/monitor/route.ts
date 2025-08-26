@@ -2,11 +2,11 @@ import { NextRequest } from 'next/server';
 import { openai } from '@ai-sdk/openai';
 import { generateObject } from 'ai';
 import { z } from 'zod';
-import { createSupabaseServerClient } from '@/src/lib/supabase';
-import { offerService } from '@/src/lib/services/offer-service';
+import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { offerService } from '@/lib/services/offer-service';
 
 // Game theory tools (simplified for background processing)
-import { nashEquilibriumTool, marketAnalysisTool } from '@/src/lib/ai-tools/game-theory/nash-equilibrium';
+import { nashEquilibriumTool, marketAnalysisTool } from '@/lib/agent/core/nash-equilibrium';
 
 export const runtime = 'edge';
 

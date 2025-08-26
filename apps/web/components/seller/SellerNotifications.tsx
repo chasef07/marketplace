@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { CheckCircle, Clock, DollarSign, Package, User, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { createClient } from '@/src/lib/supabase'
-import { apiClient } from '@/src/lib/api-client-new'
+import { createClient } from '@/lib/supabase'
+import { apiClient } from '@/lib/api-client-new'
 
 interface PendingConfirmation {
   id: number
@@ -30,7 +30,7 @@ export function SellerNotifications({ userId, className = '' }: SellerNotificati
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<number | null>(null)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     if (userId) {

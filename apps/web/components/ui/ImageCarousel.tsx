@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Image from 'next/image'
-import { ImageData } from '@/src/lib/api-client-new'
+import { ImageData } from '@/lib/api-client-new'
 import { BLUR_PLACEHOLDERS } from '@/lib/blur-data'
 
 interface ImageCarouselProps {

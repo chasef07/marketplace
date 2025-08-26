@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from '@/src/lib/supabase'
+import { createSupabaseServerClient } from "@/lib/supabase-server"
 
 type OfferType = 'buyer' | 'seller'
 

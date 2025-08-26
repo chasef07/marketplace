@@ -1,41 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Bot, Settings, Eye, MessageSquare, TrendingUp, BarChart3, Power, Package } from 'lucide-react'
-import { createClient } from '@/src/lib/supabase'
+import { createClient } from '@/lib/supabase'
+import { clientAgentService } from '@/lib/agent/client-service'
+import type { AgentEnabledItem, AgentDecision, AgentStats } from '@/lib/agent/types'
 import { AgentNotifications } from './AgentNotifications'
 import { NegotiationTimeline } from './NegotiationTimeline'
 import type { RealtimeChannel } from '@supabase/supabase-js'
-
-interface AgentEnabledItem {
-  id: number
-  name: string
-  starting_price: number
-  agent_enabled: boolean
-  item_status: string
-  views_count: number
-  created_at: string
-  images: any[]
-  negotiationsCount: number
-  offersCount: number
-  highestOffer?: number
-}
-
-interface AgentDecision {
-  id: number
-  decision_type: string
-  original_offer_price: number
-  recommended_price?: number
-  confidence_score: number
-  reasoning: string
-  created_at: string
-  market_conditions: any
-  items: {
-    name: string
-  }
-}
 
 interface User {
   id: string
@@ -62,127 +36,31 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
   const [channels, setChannels] = useState<RealtimeChannel[]>([])
   const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null)
 
-  const supabase = createClient()
+  // Create stable supabase client
+  const supabase = useMemo(() => createClient(), [])
 
   // Memoize loadData to prevent unnecessary re-renders
   const loadData = useCallback(async () => {
     try {
       setLoading(true)
 
-      // Load seller's items with negotiation counts
-      const { data: itemsData } = await supabase
-        .from('items')
-        .select(`
-          id,
-          name,
-          starting_price,
-          item_status,
-          views_count,
-          created_at,
-          images,
-          negotiations(
-            id,
-            status,
-            offers(id, price, offer_type)
-          )
-        `)
-        .eq('seller_id', user.id)
-        .in('item_status', ['active', 'under_negotiation', 'sold'])
-        .order('created_at', { ascending: false })
+      // Use client-safe agent service
+      const [itemsData, decisionsData, statsData] = await Promise.all([
+        clientAgentService.getAgentItems(user.id),
+        clientAgentService.getRecentDecisions(user.id),
+        clientAgentService.getAgentStats(user.id)
+      ])
 
-      // Try to get seller agent profile to check if agent is enabled at seller level
-      let sellerAgentProfile = null
-      try {
-        const { data } = await supabase
-          .from('seller_agent_profile')
-          .select('enabled')
-          .eq('seller_id', user.id)
-          .single()
-        sellerAgentProfile = data
-      } catch (err) {
-        // seller_agent_profile table may not exist yet
-        console.log('Seller agent profile not found, defaulting to agent enabled')
-      }
-
-      // Process items data
-      const processedItems = itemsData?.map(item => {
-        const negotiations = item.negotiations || []
-        const offers = negotiations.flatMap((n: any) => n.offers || [])
-        const buyerOffers = offers.filter((o: any) => o.offer_type === 'buyer')
-        
-        // Default agent to enabled (opt-out feature)
-        const agentEnabled = sellerAgentProfile?.enabled ?? true
-        
-        return {
-          ...item,
-          agent_enabled: agentEnabled,
-          negotiationsCount: negotiations.length,
-          offersCount: buyerOffers.length,
-          highestOffer: buyerOffers.length > 0 ? Math.max(...buyerOffers.map((o: any) => parseFloat(o.price))) : undefined
-        }
-      }) || []
-
-      setItems(processedItems)
-
-      // Try to load recent agent decisions
-      let decisionsData: any[] = []
-      try {
-        const { data } = await supabase
-          .from('agent_decisions')
-          .select('*')
-          .eq('seller_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(10)
-        
-        if (data) {
-          // Get item names for the decisions
-          const itemIds = [...new Set(data.map(d => d.item_id).filter(Boolean))]
-          let itemsMap: Record<string, any> = {}
-          
-          if (itemIds.length > 0) {
-            const { data: itemsData } = await supabase
-              .from('items')
-              .select('id, name')
-              .in('id', itemIds)
-            
-            itemsMap = itemsData?.reduce((acc, item) => ({
-              ...acc,
-              [item.id]: item
-            }), {}) || {}
-          }
-          
-          decisionsData = data.map(decision => ({
-            ...decision,
-            items: { name: itemsMap[decision.item_id]?.name || 'Unknown Item' }
-          }))
-        }
-      } catch (err) {
-        console.log('Agent decisions table may not exist yet, showing empty decisions')
-      }
-
+      setItems(itemsData)
       setRecentDecisions(decisionsData)
-
-      // Calculate stats
-      const agentEnabledItems = processedItems.filter(item => item.agent_enabled)
-      const totalDecisions = decisionsData?.length || 0
-      const avgConfidence = decisionsData?.length > 0 
-        ? decisionsData.reduce((sum, d) => sum + (d.confidence_score || 0), 0) / decisionsData.length 
-        : 0
-      const successfulDeals = processedItems.filter(item => item.item_status === 'sold' && item.agent_enabled).length
-
-      setAgentStats({
-        totalAgentItems: agentEnabledItems.length,
-        totalDecisions,
-        averageConfidence: avgConfidence,
-        successfulDeals
-      })
+      setAgentStats(statsData)
 
     } catch (error) {
       console.error('Error loading seller agent data:', error)
     } finally {
       setLoading(false)
     }
-  }, [user.id, supabase])
+  }, [user.id])
 
   // Initial data load
   useEffect(() => {

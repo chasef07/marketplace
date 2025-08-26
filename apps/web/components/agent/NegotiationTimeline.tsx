@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -20,7 +20,7 @@ import {
   AlertTriangle,
   Activity
 } from 'lucide-react'
-import { createClient } from '@/src/lib/supabase'
+import { createClient } from '@/lib/supabase'
 
 interface TimelineOffer {
   id: number
@@ -76,7 +76,7 @@ export function NegotiationTimeline({ sellerId, className }: NegotiationTimeline
   const [expandedNegotiations, setExpandedNegotiations] = useState<Set<number>>(new Set())
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const loadNegotiations = async () => {
     try {

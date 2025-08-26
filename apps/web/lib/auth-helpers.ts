@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { createSupabaseServerClient } from './supabase'
+import { createSupabaseServerClient } from './supabase-server'
 
 export interface AuthResult {
   user: {

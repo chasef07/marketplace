@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input"
 import { ArrowLeft, MapPin, User, DollarSign, Edit, Save, X, AlertCircle } from "lucide-react"
 import OfferConfirmationPopup from "@/components/buyer/OfferConfirmationPopup"
-import { apiClient, ImageData } from "@/src/lib/api-client-new"
+import { apiClient, ImageData } from "@/lib/api-client-new"
 import { FURNITURE_BLUR_DATA_URL } from "@/lib/blur-data"
 import { ItemDetailSkeleton } from "@/components/ui/skeleton"
 import { ImageCarousel } from "@/components/ui/ImageCarousel"

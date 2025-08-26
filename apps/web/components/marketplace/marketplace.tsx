@@ -8,7 +8,7 @@ import { animations } from '../home/design-system/animations'
 import { useState, useEffect, useMemo, useCallback } from "react"
 import useSWR from 'swr'
 import { useDebouncedCallback } from 'use-debounce'
-import { Item, PaginationInfo } from "@/src/lib/api-client-new"
+import { Item, PaginationInfo } from "@/lib/api-client-new"
 import { FURNITURE_BLUR_DATA_URL } from "@/lib/blur-data"
 import Image from "next/image"
 import { ItemSkeleton } from "@/components/ui/skeleton"

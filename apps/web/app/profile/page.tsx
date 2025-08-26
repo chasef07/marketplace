@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { User } from 'lucide-react'
 import { Card } from '@/components/ui/card'
-import { createClient } from '@/src/lib/supabase'
+import { createClient } from '@/lib/supabase'
 
 export default function MyProfilePage() {
   const [loading] = useState(true)

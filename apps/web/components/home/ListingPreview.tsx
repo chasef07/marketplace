@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Edit, Save, Camera, ChevronLeft, ChevronRight } from 'lucide-react'
-import { type AIAnalysisResult } from "@/src/lib/api-client-new"
+import { type AIAnalysisResult } from "@/lib/api-client-new"
 import Image from "next/image"
 
 interface User {
