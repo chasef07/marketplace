@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Search, SlidersHorizontal, Grid3x3, List, X } from "lucide-react"
-import { colors, gradients } from '../home/design-system/colors'
 
 export type SortOption = 'newest' | 'price_low' | 'price_high' | 'most_viewed'
 export type ViewMode = 'grid' | 'list'

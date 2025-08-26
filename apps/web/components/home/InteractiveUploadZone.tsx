@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { colors, gradients, shadows } from './design-system/colors'
-import { animations } from './design-system/animations'
-import { AIAnalysisLoading } from '../ui/ai-analysis-loading'
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
 import { type AIAnalysisResult } from "@/lib/api-client-new"
+import { Camera, Upload } from "lucide-react"
 
 interface InteractiveUploadZoneProps {
   onShowListingPreview: (analysisData: AIAnalysisResult, uploadedImages: string[]) => void
@@ -13,8 +14,8 @@ interface InteractiveUploadZoneProps {
 export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [isHovered, setIsHovered] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [progressMessage, setProgressMessage] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -33,34 +34,29 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
 
     setIsAnalyzing(true)
     setUploadProgress(0)
+    setProgressMessage('Uploading images...')
 
     try {
       // Simulate realistic AI analysis progress
-      let currentProgress = 0
       const progressSteps = [
-        { target: 20, duration: 800, message: "Uploading image..." },
-        { target: 35, duration: 1200, message: "Processing image..." },
-        { target: 60, duration: 1500, message: "Identifying furniture..." },
-        { target: 80, duration: 1000, message: "Analyzing style & material..." },
-        { target: 95, duration: 800, message: "Calculating price..." }
+        { progress: 20, message: "Uploading images..." },
+        { progress: 35, message: "Processing images..." },
+        { progress: 60, message: "Identifying furniture..." },
+        { progress: 80, message: "Analyzing style & material..." },
+        { progress: 95, message: "Calculating price..." }
       ]
       
       let stepIndex = 0
       const progressInterval = setInterval(() => {
         if (stepIndex < progressSteps.length) {
           const step = progressSteps[stepIndex]
-          currentProgress += Math.random() * 3 + 1
-          
-          if (currentProgress >= step.target) {
-            currentProgress = step.target
-            stepIndex++
-          }
-          
-          setUploadProgress(currentProgress)
+          setUploadProgress(step.progress)
+          setProgressMessage(step.message)
+          stepIndex++
         } else {
           clearInterval(progressInterval)
         }
-      }, 150)
+      }, 800)
 
       // Create FormData for the API call
       const formData = new FormData()
@@ -68,7 +64,7 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
         formData.append(`image${index}`, file)
       })
 
-      // Call the actual AI analysis API (multiple images endpoint)
+      // Call the actual AI analysis API
       const response = await fetch('/api/ai/analyze-images', {
         method: 'POST',
         body: formData,
@@ -76,6 +72,7 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
 
       clearInterval(progressInterval)
       setUploadProgress(100)
+      setProgressMessage('Analysis complete!')
 
       if (!response.ok) {
         throw new Error('Analysis failed')
@@ -87,6 +84,7 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
       setTimeout(() => {
         setIsAnalyzing(false)
         setUploadProgress(0)
+        setProgressMessage('')
         
         // Create image URLs for the uploaded files
         const imageUrls = imageFiles.map(file => URL.createObjectURL(file))
@@ -109,6 +107,7 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
       console.error('Upload failed:', error)
       setIsAnalyzing(false)
       setUploadProgress(0)
+      setProgressMessage('')
       alert('Upload failed. Please try again.')
     }
   }, [onShowListingPreview])
@@ -132,219 +131,81 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
   }, [handleFiles])
 
   const handleClick = () => {
+    if (isAnalyzing) return
     fileInputRef.current?.click()
   }
 
   return (
-    <div className="upload-zone-container">
-      <div 
-        className={`upload-zone ${isDragging ? 'dragging' : ''} ${isAnalyzing ? 'analyzing' : ''} ${isHovered ? 'hovered' : ''}`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        onClick={handleClick}
-      >
-        <input
-          ref={fileInputRef}
-          id="hidden-file-input"
-          type="file"
-          multiple
-          accept="image/*"
-          onChange={handleFileSelect}
-          className="file-input"
-        />
-
-        {isAnalyzing ? (
-          <AIAnalysisLoading 
-            progress={uploadProgress}
-            message="AI is analyzing your furniture..."
+    <Card className="w-full max-w-md mx-auto">
+      <CardContent className="p-6">
+        <div 
+          className={`
+            border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all
+            ${isDragging 
+              ? 'border-blue-500 bg-blue-50' 
+              : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
+            }
+            ${isAnalyzing ? 'cursor-not-allowed' : 'cursor-pointer'}
+          `}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={handleClick}
+        >
+          <input
+            ref={fileInputRef}
+            id="hidden-file-input"
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
           />
-        ) : (
-          <div className="upload-content">
-            <div className="camera-icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 2L7.17 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4H16.83L15 2H9ZM12 17C9.24 17 7 14.76 7 12S9.24 7 12 7S17 9.24 17 12S14.76 17 12 17ZM12 9C10.34 9 9 10.34 9 12S10.34 15 12 15S15 13.66 15 12S13.66 9 12 9Z" fill="currentColor"/>
-              </svg>
-            </div>
-            
-            <div className="upload-text">
-              <h3 className="upload-title">Drop photo here</h3>
-              <p className="upload-subtitle">
-                AI will analyze and create your listing
-              </p>
-            </div>
 
-            <div className="upload-features">
-              <div className="feature">
-                <span className="feature-text">Instant Analysis</span>
+          {isAnalyzing ? (
+            <div className="space-y-4">
+              <div className="w-12 h-12 mx-auto text-blue-600">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
               </div>
-              <div className="feature">
-                <span className="feature-text">Smart Pricing</span>
-              </div>
-              <div className="feature">
-                <span className="feature-text">Complete Listings</span>
+              
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                  AI Analyzing Your Furniture...
+                </h3>
+                <p className="text-sm text-slate-600 mb-4">{progressMessage}</p>
+                <Progress value={uploadProgress} className="w-full" />
+                <p className="text-xs text-slate-500 mt-2">{uploadProgress}% complete</p>
               </div>
             </div>
-
-            <div className="dashed-border"></div>
-          </div>
-        )}
-      </div>
-
-      <style jsx>{`
-        .upload-zone-container {
-          width: 100%;
-          max-width: 400px;
-        }
-
-        .upload-zone {
-          background: ${colors.glass.background};
-          border: 2px dashed ${colors.primary}40;
-          border-radius: 20px;
-          padding: 2.5rem 2rem;
-          text-align: center;
-          cursor: pointer;
-          transition: all 300ms ${animations.easing.smooth};
-          position: relative;
-          overflow: hidden;
-          backdrop-filter: blur(10px);
-          min-height: 300px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .upload-zone.analyzing {
-          border-color: ${colors.primary};
-          background: ${colors.primary}05;
-          min-height: auto;
-          padding: 1rem;
-          cursor: default;
-        }
-
-        .upload-zone::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: ${gradients.mesh};
-          opacity: 0.2;
-          transition: opacity 300ms ${animations.easing.smooth};
-        }
-
-        .upload-zone.hovered {
-          border-color: ${colors.primary};
-          transform: translateY(-2px);
-          box-shadow: ${shadows.primary};
-        }
-
-        .upload-zone.hovered::before {
-          opacity: 0.3;
-        }
-
-        .upload-zone.dragging {
-          border-color: ${colors.accent};
-          background: ${colors.accent}10;
-          transform: scale(1.02);
-        }
-
-
-        .file-input {
-          display: none;
-        }
-
-        .upload-content {
-          position: relative;
-          z-index: 2;
-          width: 100%;
-        }
-
-        .camera-icon {
-          color: ${colors.primary};
-          margin-bottom: 1.5rem;
-          transition: color 300ms ${animations.easing.smooth};
-        }
-
-        .upload-zone:hover .camera-icon {
-          color: ${colors.accent};
-        }
-
-        .upload-title {
-          font-size: 1.2rem;
-          font-weight: 700;
-          color: ${colors.neutralDark};
-          margin-bottom: 0.5rem;
-          font-family: 'Inter', -apple-system, sans-serif;
-        }
-
-        .upload-subtitle {
-          color: ${colors.primary};
-          font-size: 0.9rem;
-          margin-bottom: 2rem;
-        }
-
-
-        .upload-features {
-          display: flex;
-          justify-content: center;
-          gap: 1.5rem;
-          margin-bottom: 1.5rem;
-          flex-wrap: wrap;
-        }
-
-        .feature {
-          font-size: 0.8rem;
-          color: ${colors.neutralDark};
-          font-weight: 500;
-        }
-
-        .feature-text {
-          opacity: 0.8;
-        }
-
-        .dashed-border {
-          position: absolute;
-          top: 12px;
-          left: 12px;
-          right: 12px;
-          bottom: 12px;
-          border: 1px dashed ${colors.primary}20;
-          border-radius: 16px;
-          pointer-events: none;
-        }
-
-
-        ${animations.keyframes.fadeIn}
-
-        @media (max-width: 768px) {
-          .upload-zone {
-            padding: 2rem 1.5rem;
-            min-height: 250px;
-          }
-          
-          .camera-icon svg {
-            width: 40px;
-            height: 40px;
-          }
-          
-          .upload-features {
-            gap: 1rem;
-          }
-          
-          .feature {
-            font-size: 0.75rem;
-            text-align: center;
-          }
-          
-          .upload-title {
-            font-size: 1.1rem;
-          }
-        }
-      `}</style>
-    </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="w-12 h-12 mx-auto text-slate-400">
+                <Camera className="w-full h-full" />
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                  Drop photos here
+                </h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  AI will analyze and create your listing
+                </p>
+                
+                <Button variant="outline" className="mb-4">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Choose Files
+                </Button>
+                
+                <div className="flex justify-center space-x-4 text-xs text-slate-500">
+                  <span>✨ Instant Analysis</span>
+                  <span>💰 Smart Pricing</span>
+                  <span>📝 Complete Listings</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }

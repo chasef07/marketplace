@@ -248,20 +248,6 @@ export const HomePage = React.memo(function HomePage() {
     }
   }, [])
 
-  const handleGetStarted = useCallback(() => {
-    if (user) {
-      setCurrentView('marketplace')
-    } else {
-      setAuthMode('signin')
-      setCurrentView('auth')
-    }
-  }, [user])
-
-  const handleCreateListing = useCallback(() => {
-    // Always go to home page for listing creation
-    // User will be prompted to sign in when they submit the listing
-    setCurrentView('home')
-  }, [])
 
   const handleItemClick = useCallback((itemId: number) => {
     console.log('🔍 Clicking item:', itemId)
@@ -341,7 +327,7 @@ export const HomePage = React.memo(function HomePage() {
       <Marketplace
         key={marketplaceKey} // Force re-render when key changes
         user={user}
-        onCreateListing={handleCreateListing}
+        onCreateListing={() => setCurrentView('home')}
         onLogout={handleSignOut}
         onItemClick={handleItemClick}
         onSignInClick={() => { setAuthMode('signin'); setCurrentView('auth'); }}
@@ -431,10 +417,8 @@ export const HomePage = React.memo(function HomePage() {
     <div className="homepage-container">
       <HeroSection
         user={user}
-        onGetStarted={handleGetStarted}
         onSignIn={() => { setAuthMode('signin'); setCurrentView('auth'); }}
         onSignOut={handleSignOut}
-        onCreateListing={handleCreateListing}
         onBrowseItems={() => setCurrentView('marketplace')}
         onViewProfile={handleViewProfile}
         onShowListingPreview={handleShowListingPreview}
