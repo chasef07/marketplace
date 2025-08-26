@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         )
       `)
       .or(`seller_id.eq.${user.id},buyer_id.eq.${user.id}`)
-      .eq('status', 'active')
+      .in('status', ['active', 'buyer_accepted', 'deal_pending'])
       .order('updated_at', { ascending: false })
       
     if (error) {

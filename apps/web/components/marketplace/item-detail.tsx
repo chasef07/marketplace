@@ -15,13 +15,6 @@ import { FURNITURE_BLUR_DATA_URL } from "@/lib/blur-data"
 import { ItemDetailSkeleton } from "@/components/ui/skeleton"
 import { ImageCarousel } from "@/components/ui/ImageCarousel"
 
-// Lazy load the map component
-const LocationMap = dynamic(() => import('@/components/maps/location-map').then(mod => ({ default: mod.LocationMap })), {
-  loading: () => <div className="h-32 bg-gray-200 animate-pulse rounded-lg flex items-center justify-center">
-    <MapPin className="h-6 w-6 text-gray-400" />
-  </div>,
-  ssr: false
-})
 
 interface SellerInfo {
   id: number

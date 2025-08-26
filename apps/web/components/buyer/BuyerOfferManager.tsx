@@ -48,7 +48,7 @@ interface BuyerOffer {
     price: number
     created_at: string
   }
-  negotiation_status: 'active' | 'completed' | 'cancelled'
+  negotiation_status: 'active' | 'buyer_accepted' | 'deal_pending' | 'completed' | 'cancelled'
 }
 
 interface BuyerOfferManagerProps {
@@ -123,7 +123,10 @@ export default function BuyerOfferManager({ userId, onOfferConfirmed, initialOff
   }, [userId])
 
   const getOfferStatus = (negotiation: any, latestBuyerOffer: any, latestSellerOffer: any): OfferStatus => {
-    if (negotiation.status === 'completed') return 'accepted'
+    // Handle three-phase acceptance flow
+    if (negotiation.status === 'buyer_accepted' || negotiation.status === 'deal_pending' || negotiation.status === 'completed') {
+      return 'accepted'
+    }
     if (negotiation.status === 'cancelled') return 'declined'
     
     if (latestSellerOffer && latestBuyerOffer) {
@@ -235,6 +238,17 @@ export default function BuyerOfferManager({ userId, onOfferConfirmed, initialOff
   }
 
   const getStatusBadge = (offer: BuyerOffer) => {
+    // Show specific badge based on negotiation status for accepted offers
+    if (offer.status === 'accepted') {
+      if (offer.negotiation_status === 'buyer_accepted') {
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><CheckCircle className="h-3 w-3 mr-1" />Pending Confirmation</Badge>
+      } else if (offer.negotiation_status === 'deal_pending') {
+        return <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200"><Clock className="h-3 w-3 mr-1" />Confirmed Sale</Badge>
+      } else if (offer.negotiation_status === 'completed') {
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200"><CheckCircle className="h-3 w-3 mr-1" />Completed</Badge>
+      }
+    }
+    
     switch (offer.status) {
       case 'pending':
         return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200"><Clock className="h-3 w-3 mr-1" />Pending</Badge>

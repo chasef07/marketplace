@@ -51,68 +51,44 @@ export async function POST(
         return NextResponse.json({ error: 'Negotiation not found' }, { status: 404 })
       }
 
-      // Only buyer can accept seller counter offers
-      if (negotiation.buyer_id !== user.id) {
-        return NextResponse.json({ error: 'Only the buyer can accept seller counter offers' }, { status: 403 })
+      // Only seller can confirm the deal
+      if (negotiation.seller_id !== user.id) {
+        return NextResponse.json({ error: 'Only the seller can confirm the deal' }, { status: 403 })
       }
 
-      if (negotiation.status !== 'active') {
-        return NextResponse.json({ error: 'Negotiation is not active' }, { status: 400 })
+      // Negotiation must be in buyer_accepted status
+      if (negotiation.status !== 'buyer_accepted') {
+        return NextResponse.json({ 
+          error: 'Negotiation is not in buyer_accepted status',
+          current_status: negotiation.status 
+        }, { status: 400 })
       }
 
-      // Get the latest seller counter offer
-      const { data: latestOffer, error: offerError } = await supabase
-        .from('offers')
-        .select('*')
-        .eq('negotiation_id', negotiationId)
-        .eq('offer_type', 'seller')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-
-      if (offerError || !latestOffer) {
-        return NextResponse.json({ error: 'No seller counter offer found to accept' }, { status: 400 })
-      }
-
-      if (!latestOffer.is_counter_offer) {
-        return NextResponse.json({ error: 'Latest seller offer is not a counter offer' }, { status: 400 })
-      }
-
-      // Update negotiation status to buyer_accepted (waiting for seller confirmation)
+      // Update negotiation status to deal_pending
       const { error: updateError } = await supabase
         .from('negotiations')
         .update({
-          status: 'buyer_accepted',
-          final_price: latestOffer.price
+          status: 'deal_pending',
+          updated_at: new Date().toISOString()
         })
         .eq('id', negotiationId)
 
       if (updateError) {
         console.error('Error updating negotiation:', updateError)
-        return NextResponse.json({ error: 'Failed to accept counter offer' }, { status: 500 })
+        return NextResponse.json({ error: 'Failed to confirm deal' }, { status: 500 })
       }
 
-      // Mark item as sold_pending (awaiting seller confirmation)
-      const { error: itemUpdateError } = await supabase
-        .from('items')
-        .update({
-          item_status: 'sold_pending'
-        })
-        .eq('id', negotiation.item_id)
-
-      if (itemUpdateError) {
-        console.error('Error updating item:', itemUpdateError)
-        return NextResponse.json({ error: 'Failed to mark item as sold' }, { status: 500 })
-      }
+      // Item status remains sold_pending until final completion
+      // No need to update item status here as it should already be sold_pending
 
       return NextResponse.json({ 
-        message: 'Counter offer accepted - waiting for seller confirmation',
-        final_price: latestOffer.price,
+        message: 'Deal confirmed successfully - awaiting pickup/payment completion',
         negotiation_id: negotiationId,
-        status: 'buyer_accepted'
+        status: 'deal_pending',
+        final_price: negotiation.final_price
       })
     } catch (error) {
-      console.error('Buyer accept counter offer error:', error)
+      console.error('Seller confirm deal error:', error)
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
     }
   })

@@ -31,7 +31,7 @@ export async function GET(
         return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
       }
 
-      // Get user's active items
+      // Get user's active items with negotiation data
       const { data: items, error: itemsError } = await supabase
         .from('items')
         .select(`
@@ -42,7 +42,12 @@ export async function GET(
           starting_price,
           images,
           views_count,
-          created_at
+          created_at,
+          negotiations(
+            id,
+            status,
+            offers(price, offer_type)
+          )
         `)
         .eq('seller_id', profile.id)
         .eq('item_status', 'active')
@@ -52,6 +57,25 @@ export async function GET(
       if (itemsError) {
         console.error('Error fetching user items:', itemsError)
       }
+
+      // Process items to calculate highest buyer offers
+      const processedItems = items?.map((item: any) => {
+        const negotiations = item.negotiations || []
+        const allOffers = negotiations.flatMap((n: any) => n.offers || [])
+        const buyerOffers = allOffers.filter((offer: any) => offer.offer_type === 'buyer')
+        
+        const highestBuyerOffer = buyerOffers.length > 0 
+          ? Math.max(...buyerOffers.map((offer: any) => parseFloat(offer.price)))
+          : null
+
+        // Remove negotiations data from response (only needed for calculation)
+        const { negotiations: _, ...itemWithoutNegotiations } = item
+        
+        return {
+          ...itemWithoutNegotiations,
+          highest_buyer_offer: highestBuyerOffer
+        }
+      }) || []
 
       // Build profile response with existing fields
       const profileResponse = {
@@ -74,7 +98,7 @@ export async function GET(
         },
         member_since: profile.created_at,
         last_active: profile.last_login,
-        active_items: items || []
+        active_items: processedItems
       }
 
       const response = NextResponse.json(profileResponse)

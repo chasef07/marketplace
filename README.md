@@ -28,11 +28,12 @@ A modern, serverless full-stack marketplace application with AI-powered image an
 - **Interactive Maps** - Location visualization with radius-based browsing
 - **Performance Analytics** - View counts, engagement metrics, and insights
 
-### 🤝 **Sophisticated Negotiation System**
-- **Multi-Round Offers** - Structured negotiation with automatic status tracking
+### 🤝 **Three-Phase Negotiation System**
+- **Structured Acceptance Flow** - Buyer accepts → Seller confirms → Deal completes
+- **Action Required Notifications** - Clear alerts when seller confirmation needed
 - **Organized Offer Management** - Tabbed interface (Active/Accepted/Other)
 - **Real-time Updates** - Instant notifications via Supabase Realtime
-- **Linked Profiles** - Click-through to seller profiles and item details
+- **Highest Offer Visibility** - Green badges showing top offers on item cards
 
 ### ⚡ **Performance & Optimization**
 - **Next.js 15 with Turbopack** - Lightning-fast development and builds
@@ -195,13 +196,15 @@ PUT /api/items/[id]              // Update listing
 // Includes image arrays, metadata, and analytics
 ```
 
-### **Advanced Negotiations**
+### **Three-Phase Negotiations**
 ```typescript
-GET /api/negotiations/my-negotiations     // User's offers (organized)
-POST /api/negotiations/items/[itemId]/offers  // Create offer
-POST /api/negotiations/[negotiationId]/counter  // Counter offer
-POST /api/negotiations/[negotiationId]/accept   // Accept offer
-// Real-time updates with Supabase subscriptions
+GET /api/negotiations/my-negotiations             // User's offers (organized)
+POST /api/negotiations/items/[itemId]/offers     // Create offer
+POST /api/negotiations/[negotiationId]/counter   // Counter offer
+POST /api/negotiations/[negotiationId]/buyer-accept    // Buyer accepts (Phase 1)
+POST /api/negotiations/[negotiationId]/seller-confirm  // Seller confirms (Phase 2)
+POST /api/negotiations/[negotiationId]/accept    // Final acceptance (Phase 3)
+// Real-time updates with status progression tracking
 ```
 
 ### **Location Services**
@@ -350,7 +353,15 @@ npm run build:production   # Optimized production build
 
 ## 📝 Recent Updates
 
-### **v2.0 - Profile & Negotiation Overhaul** *(Latest)*
+### **v2.1 - Three-Phase Offer System** *(Latest)*
+- ✅ **Three-Phase Acceptance Flow** - Buyer accepts → Seller confirms → Deal completes
+- ✅ **Seller Action Notifications** - Clear alerts for pending confirmations
+- ✅ **Highest Offer Badges** - Green badges on item cards showing top offers
+- ✅ **Enhanced Status Tracking** - "Pending Confirmation" → "Confirmed Sale" → "Completed"
+- ✅ **Fixed Authentication Issues** - Seller confirm button now works properly
+- ✅ **API Enhancements** - New seller-confirm endpoint with proper validation
+
+### **v2.0 - Profile & Negotiation Overhaul**
 - ✅ **Modern shadcn/ui Components** - Complete UI refresh
 - ✅ **Enhanced Profile System** - Avatars, stats, linked navigation  
 - ✅ **Tabbed Offer Management** - Organized Active/Accepted/Other offers

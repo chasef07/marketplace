@@ -14,6 +14,7 @@ import { createClient } from '@/src/lib/supabase'
 import { getRotatingGreeting } from '@/lib/greetings'
 import { BLUR_PLACEHOLDERS } from '@/src/lib/blur-data'
 import { BuyerNotifications } from '../buyer/BuyerNotifications'
+import { SellerNotifications } from '../seller/SellerNotifications'
 import BuyerOfferManager from '../buyer/BuyerOfferManager'
 import OfferConfirmationPopup from '../buyer/OfferConfirmationPopup'
 
@@ -50,6 +51,7 @@ export interface ProfileData {
     images?: Array<{ filename: string; order: number; is_primary: boolean }>
     views_count: number
     created_at: string
+    highest_buyer_offer?: number
   }>
 }
 
@@ -390,8 +392,15 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
                         <Package className="h-16 w-16 text-gray-300" />
                       </div>
                     )}
-                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full">
-                      <span className="text-xs font-medium text-gray-600">{item.views_count} views</span>
+                    <div className="absolute top-4 right-4 flex flex-col gap-2">
+                      <div className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full">
+                        <span className="text-xs font-medium text-gray-600">{item.views_count} views</span>
+                      </div>
+                      {item.highest_buyer_offer && (
+                        <div className="bg-green-500/90 backdrop-blur-sm px-3 py-1 rounded-full">
+                          <span className="text-xs font-medium text-white">Highest: {formatPrice(item.highest_buyer_offer)}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="p-6">
@@ -425,9 +434,13 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
         </div>
       )}
 
-      {/* Buyer Notifications Section - Only for own profile */}
+      {/* Notifications Section - Only for own profile */}
       {isOwnProfile && (
-        <div className="mb-8">
+        <div className="mb-8 space-y-6">
+          {/* Seller Notifications - Action required items */}
+          <SellerNotifications userId={profile.id} />
+          
+          {/* Buyer Notifications */}
           <BuyerNotifications userId={profile.id} />
         </div>
       )}

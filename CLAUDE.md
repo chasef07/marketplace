@@ -69,10 +69,12 @@ This is a serverless AI-powered furniture marketplace built as a Next.js monorep
 ### Database Architecture (Supabase)
 - **profiles**: User data extending auth.users with personality traits, avatars, bios, and location data
 - **items**: Furniture listings with AI-analyzed metadata, pricing, and JSONB images array
-- **negotiations**: Complex offer system with round limits, status tracking, and seller/buyer relationships
+- **negotiations**: Three-phase offer system with status progression tracking:
+  - `active` → `buyer_accepted` → `deal_pending` → `completed` | `cancelled`
 - **offers**: Individual buyer/seller offers with timing, counter-offer flags, and message support
 - **RLS Policies**: Secure data access - users only see/modify their own data
 - **Database Functions**: Custom functions like `increment_views()` for atomic operations
+- **Enhanced Enums**: `negotiation_status` includes `buyer_accepted` for three-phase flow
 
 ### API Architecture
 - **RESTful endpoints** under `/api/` deployed as serverless functions
@@ -235,7 +237,25 @@ This project uses shadcn/ui as the primary component library for consistent, acc
 3. **Data Processing** → Parse and validate AI response → Store in database
 4. **Real-time Updates** → Supabase Realtime → Frontend state updates
 
-### Recent Profile & UI Enhancements (v2.0)
+### Recent Enhancements
+
+#### Three-Phase Offer System (v2.1) - Latest
+1. **Structured Acceptance Flow**: Buyer accepts → Seller confirms → Deal completes
+2. **Database Schema Updates**: Added `buyer_accepted` status to negotiation_status enum
+3. **New API Endpoints**: 
+   - `POST /api/negotiations/[negotiationId]/seller-confirm` - Seller confirmation endpoint
+   - Updated `buyer-accept` endpoint to set `buyer_accepted` status (not `completed`)
+4. **Enhanced UI Components**:
+   - **SellerNotifications** - Action required alerts for `buyer_accepted` negotiations
+   - **Status Badges** - "Pending Confirmation" → "Confirmed Sale" → "Completed"
+   - **Highest Offer Badges** - Green badges showing top buyer offers on item cards
+5. **Authentication Fixes**: Resolved 401 errors in seller-confirm by adding proper auth headers
+6. **Three-Phase Status Progression**:
+   - Phase 1: `buyer_accepted` (waiting for seller confirmation)
+   - Phase 2: `deal_pending` (awaiting pickup/payment)
+   - Phase 3: `completed` (fully done)
+
+#### Profile & UI Enhancements (v2.0)
 1. **Modern shadcn/ui Components**: Complete UI refresh with consistent, accessible components
 2. **Enhanced Profile System**: Professional avatars, stats display, linked navigation
 3. **Tabbed Offer Management**: Organized Active/Accepted/Other offers with clean UI
