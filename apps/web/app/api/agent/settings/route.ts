@@ -28,14 +28,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Get or create agent profile
-    let { data: agentProfile, error: profileError } = await supabase
+    let { data: agentProfile, error } = await supabase
       .from('seller_agent_profile')
       .select('*')
       .eq('seller_id', user.id)
       .single();
 
     // If no profile exists, create one with defaults
-    if (profileError && profileError.code === 'PGRST116') {
+    if (error && error.code === 'PGRST116') {
       const { data: newProfile, error: createError } = await supabase
         .from('seller_agent_profile')
         .insert({
@@ -57,10 +57,10 @@ export async function GET(request: NextRequest) {
       }
 
       agentProfile = newProfile;
-    } else if (profileError) {
+    } else if (error) {
       return Response.json({ 
         error: 'Failed to get agent profile',
-        details: profileError.message 
+        details: error.message 
       }, { status: 500 });
     }
 

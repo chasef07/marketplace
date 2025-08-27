@@ -6,7 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { offerService } from '@/lib/services/offer-service';
 
 // Game theory tools (simplified for background processing)
-// import { nashEquilibriumTool, marketAnalysisTool } from '@/lib/agent/core/nash-equilibrium';
+ //import { nashEquilibriumTool, marketAnalysisTool } from '@/lib/agent/core/nash-equilibrium';
 
 export const runtime = 'edge';
 
