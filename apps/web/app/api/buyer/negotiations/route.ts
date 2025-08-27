@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
       // Get latest offer for each negotiation
       const enrichedNegotiations = await Promise.all(
         (negotiations || []).map(async (negotiation) => {
-          console.log(`\n🔍 Processing negotiation ${negotiation.id} for item: ${negotiation.items?.name}`)
+          console.log(`\n🔍 Processing negotiation ${negotiation.id} for item: ${negotiation.items?.[0]?.name || 'Unknown item'}`)
           
           // Get latest offer with agent decision info
           const { data: latestOffer, error: offerError } = await supabase
