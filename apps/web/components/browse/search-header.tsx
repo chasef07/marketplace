@@ -40,7 +40,7 @@ export function SearchHeader({
   loading = false
 }: SearchHeaderProps) {
   return (
-    <div className="sticky top-0 z-10 bg-white/85 backdrop-blur-md border-b border-slate-200/20 shadow-lg">
+    <div className="sticky top-20 z-10 bg-white/85 backdrop-blur-md border-b border-slate-200/20 shadow-lg">
       <div className="max-w-7xl mx-auto p-4">
         {/* Main search and controls row */}
         <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
@@ -50,7 +50,7 @@ export function SearchHeader({
               <Search className="h-4 w-4 text-muted-foreground" />
             </div>
             <Input
-              placeholder="Search furniture..."
+              placeholder="Search home goods..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               className="pl-10 bg-white/50 border-white/30 focus:border-white/50 focus:ring-white/20"

@@ -11,6 +11,7 @@ import { FURNITURE_BLUR_DATA_URL } from "@/lib/blur-data"
 import Image from "next/image"
 import { ItemSkeleton } from "@/components/ui/skeleton"
 import { getRotatingGreeting } from "@/lib/greetings"
+import { MainNavigation } from "../navigation/MainNavigation"
 
 
 interface User {
@@ -217,46 +218,21 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
   return (
     <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="text-2xl font-bold text-slate-800">SnapNest</div>
-            
-            <div className="flex items-center space-x-4">
-              {user ? (
-                <>
-                  <span className="text-blue-600 text-sm font-medium">{getRotatingGreeting(user.id)}, {user.username}!</span>
-                  <Button variant="ghost" onClick={onCreateListing}>
-                    Sell
-                  </Button>
-                  <Button variant="ghost" onClick={onViewProfile}>
-                    Profile
-                  </Button>
-                  <Button variant="ghost" onClick={onLogout}>
-                    Sign Out
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="ghost" onClick={onCreateListing}>
-                    Sell
-                  </Button>
-                  <Button variant="ghost" onClick={onSignInClick}>
-                    Sign In
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <MainNavigation
+        user={user}
+        onCreateListing={onCreateListing}
+        onViewProfile={onViewProfile}
+        onSignIn={onSignInClick}
+        onSignOut={onLogout}
+        currentPage="marketplace"
+      />
 
       {/* Search and Category Section */}
       <section className="search-section">
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold mb-4" style={{ color: '#2C3E50' }}>
-              Browse Furniture
+              Browse Home Goods
             </h2>
           </div>
           
@@ -270,7 +246,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <input
                       type="text"
-                      placeholder="Search furniture..."
+                      placeholder="Search home goods..."
                       value={searchInput}
                       onChange={(e) => setSearchInput(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"

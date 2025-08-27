@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { InteractiveUploadZone } from './InteractiveUploadZone'
 import { type AIAnalysisResult } from "@/lib/api-client-new"
-import { getRotatingGreeting } from "@/lib/greetings"
-import AdminAccessButton from "../admin/AdminAccessButton"
+import { MainNavigation } from "../navigation/MainNavigation"
 
 interface User {
   id: string
@@ -112,55 +111,23 @@ export function HeroSection({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Navigation Header */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center space-x-2">
-              <div className="text-2xl font-bold text-slate-800">SnapNest</div>
-            </div>
-            
-            {/* Navigation Buttons */}
-            <div className="flex items-center space-x-4">
-              {user ? (
-                <>
-                  <span className="text-slate-600 font-medium">
-                    {getRotatingGreeting(user.id)}, {user.username}!
-                  </span>
-                  <Button variant="ghost" onClick={onBrowseItems}>
-                    Browse
-                  </Button>
-                  <Button variant="ghost" onClick={onViewProfile}>
-                    Profile
-                  </Button>
-                  <AdminAccessButton variant="icon" />
-                  <Button variant="ghost" onClick={onSignOut}>
-                    Sign Out
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="ghost" onClick={onBrowseItems}>
-                    Browse
-                  </Button>
-                  <Button onClick={onSignIn}>
-                    Sign In
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+      <MainNavigation
+        user={user}
+        onBrowseItems={onBrowseItems}
+        onViewProfile={onViewProfile}
+        onSignIn={onSignIn}
+        onSignOut={onSignOut}
+        currentPage="home"
+      />
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-6 py-16">
         {/* Hero Section */}
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-slate-800 mb-6">
-            Sell Your Furniture
+            Sell Your Home Goods
             <span className="text-blue-600"> in Seconds</span>
           </h1>
           
@@ -174,7 +141,7 @@ export function HeroSection({
               size="lg" 
               onClick={handleCreateListingClick}
               disabled={isAnalyzing}
-              className="text-lg px-8 py-4 h-auto"
+              className="text-lg px-8 py-4 h-auto border-2 border-blue-200 hover:border-blue-300 shadow-lg ring-2 ring-blue-100 hover:ring-blue-200 transition-all duration-200"
             >
               {isAnalyzing ? (
                 <>
@@ -221,7 +188,7 @@ export function HeroSection({
             <div className="text-4xl mb-4">🤖</div>
             <h3 className="text-lg font-semibold mb-2">AI-Powered Analysis</h3>
             <p className="text-slate-600">
-              Our AI identifies furniture type, style, and condition automatically
+              Our AI identifies home goods type, style, and condition automatically
             </p>
           </Card>
           
@@ -242,20 +209,6 @@ export function HeroSection({
           </Card>
         </div>
 
-        {/* Call to Action */}
-        <div className="text-center">
-          <Card className="p-8 max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold text-slate-800 mb-4">
-              Ready to sell your furniture?
-            </h2>
-            <p className="text-slate-600 mb-6">
-              Join thousands of sellers who've made quick sales with our AI-powered marketplace
-            </p>
-            <Button size="lg" onClick={handleCreateListingClick}>
-              Get Started Today
-            </Button>
-          </Card>
-        </div>
       </main>
     </div>
   )

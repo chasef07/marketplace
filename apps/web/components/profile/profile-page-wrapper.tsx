@@ -35,7 +35,7 @@ export default function ProfilePageWrapper({ username }: ProfilePageWrapperProps
   }
 
   const handleNavigateMarketplace = () => {
-    router.push('/marketplace')
+    router.push('/browse')
   }
 
   const handleSignOut = async () => {
@@ -52,6 +52,14 @@ export default function ProfilePageWrapper({ username }: ProfilePageWrapperProps
     router.push('/')
   }
 
+  const handleSignIn = () => {
+    router.push('/')
+  }
+
+  const handleViewProfile = () => {
+    // Already on profile page, no action needed
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -66,10 +74,13 @@ export default function ProfilePageWrapper({ username }: ProfilePageWrapperProps
     <ProfileView
       username={username}
       isOwnProfile={isOwnProfile || false}
+      currentUser={currentUser}
       onNavigateHome={handleNavigateHome}
       onNavigateMarketplace={handleNavigateMarketplace}
       onCreateListing={handleCreateListing}
       onSignOut={handleSignOut}
+      onSignIn={handleSignIn}
+      onViewProfile={handleViewProfile}
     />
   )
 }

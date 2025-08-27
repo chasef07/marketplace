@@ -11,12 +11,12 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { createClient } from '@/lib/supabase'
-import { getRotatingGreeting } from '@/lib/greetings'
 import { BLUR_PLACEHOLDERS } from '@/lib/blur-data'
 import { BuyerNotifications } from '../buyer/BuyerNotifications'
 import { SellerNotifications } from '../seller/SellerNotifications'
 import BuyerOfferManager from '../buyer/BuyerOfferManager'
 import OfferConfirmationPopup from '../buyer/OfferConfirmationPopup'
+import { MainNavigation } from '../navigation/MainNavigation'
 
 
 // ProfileData interface (shared with wrapper)
@@ -58,14 +58,17 @@ export interface ProfileData {
 interface ProfileViewProps {
   username: string
   isOwnProfile?: boolean
+  currentUser?: { id: string; username: string; email: string; seller_personality: string; buyer_personality: string; is_active: boolean; created_at: string; last_login?: string } | null
   onNavigateHome?: () => void
   onNavigateMarketplace?: () => void
   onCreateListing?: () => void
   onSignOut?: () => void
+  onSignIn?: () => void
+  onViewProfile?: () => void
   onNavigateAgentDashboard?: () => void
 }
 
-export default function ProfileView({ username, isOwnProfile = false, onNavigateHome, onNavigateMarketplace, onCreateListing, onSignOut, onNavigateAgentDashboard }: ProfileViewProps) {
+export default function ProfileView({ username, isOwnProfile = false, currentUser, onNavigateHome, onNavigateMarketplace, onCreateListing, onSignOut, onSignIn, onViewProfile, onNavigateAgentDashboard }: ProfileViewProps) {
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -150,19 +153,25 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="flex items-center space-x-6 mb-8">
-          <Skeleton className="h-24 w-24 rounded-full" />
-          <div className="space-y-3">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-4 w-64" />
+      <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="max-w-4xl mx-auto p-6">
+          <div className="bg-white rounded-2xl shadow-lg border border-slate-200/50 p-8 mb-8">
+            <div className="flex items-center space-x-6 mb-8">
+              <Skeleton className="h-24 w-24 rounded-full" />
+              <div className="space-y-3">
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-64" />
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <Skeleton key={i} className="h-64" />
-          ))}
+          <div className="bg-white rounded-2xl shadow-lg border border-slate-200/50 p-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <Skeleton key={i} className="h-64 rounded-xl" />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -170,10 +179,12 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="p-8 text-center">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Profile not found</h3>
-          <p className="text-gray-500">{error}</p>
+      <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="max-w-4xl mx-auto p-6">
+          <div className="bg-white rounded-2xl shadow-lg border border-slate-200/50 p-8 text-center">
+            <h3 className="text-lg font-medium text-slate-900 mb-2">Profile not found</h3>
+            <p className="text-slate-500">{error}</p>
+          </div>
         </div>
       </div>
     )
@@ -182,52 +193,21 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
   if (!profile) return null
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-white/80 border-b border-gray-200 shadow-sm">
-        <div className="px-4 md:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-gray-900 tracking-tight font-inter">
-                SnapNest
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              {isOwnProfile && profile && (
-                <span className="hidden md:block text-sm font-medium text-blue-600">
-                  {getRotatingGreeting(profile.id)}, {profile.display_name || profile.username}!
-                </span>
-              )}
-              <Button 
-                variant="ghost"
-                onClick={onNavigateMarketplace}
-                className="font-semibold hover:bg-blue-50 hover:text-blue-600 transition-colors"
-              >
-                Browse
-              </Button>
-              <Button 
-                variant="ghost"
-                onClick={onCreateListing}
-                className="font-semibold hover:bg-blue-50 hover:text-blue-600 transition-colors"
-              >
-                Sell
-              </Button>
-              <Button 
-                variant="ghost"
-                onClick={onSignOut}
-                className="font-semibold hover:bg-blue-50 hover:text-blue-600 transition-colors"
-              >
-                Sign Out
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Navigation Header */}
+      <MainNavigation
+        user={currentUser}
+        onBrowseItems={onNavigateMarketplace}
+        onCreateListing={onCreateListing}
+        onViewProfile={onViewProfile}
+        onSignIn={onSignIn}
+        onSignOut={onSignOut}
+        currentPage="profile"
+      />
 
-      <div className="max-w-4xl mx-auto p-6" style={{ paddingTop: '6rem' }}>
+      <div className="max-w-4xl mx-auto p-6">
       {/* Profile Header */}
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 mb-8 hover:shadow-2xl transition-all duration-300">
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-200/50 p-8 mb-8 hover:shadow-xl transition-all duration-300">
         <div className="flex flex-col md:flex-row items-start md:items-center space-y-6 md:space-y-0 md:space-x-8">
           {/* Profile Picture */}
           <div className="relative">
@@ -236,8 +216,8 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
                 src={getProfileImageUrl(profile.profile_picture_filename) || undefined} 
                 alt={`${profile.display_name}'s profile`}
               />
-              <AvatarFallback className="bg-gradient-to-br from-blue-100 to-purple-100">
-                <User className="h-10 w-10 text-blue-600" />
+              <AvatarFallback className="bg-gradient-to-br from-slate-100 to-blue-100">
+                <User className="h-10 w-10 text-slate-600" />
               </AvatarFallback>
             </Avatar>
             <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-white"></div>
@@ -252,16 +232,16 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
           <div className="flex-1">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between">
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-3">
                   {profile.display_name}
                   {profile.is_verified && (
                     <Star className="inline h-6 w-6 text-blue-500 ml-3 fill-current" />
                   )}
                 </h1>
-                <p className="text-gray-600 mb-3 font-medium">@{profile.username}</p>
+                <p className="text-slate-600 mb-3 font-medium">@{profile.username}</p>
                 
                 {/* Location & Member Info */}
-                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-4">
+                <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500 mb-4">
                   {(profile.location.city || profile.location.state) && (
                     <div className="flex items-center">
                       <MapPin className="h-4 w-4 mr-1" />
@@ -278,7 +258,7 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
 
                 {/* Bio */}
                 {profile.bio && (
-                  <p className="text-gray-700 mb-4">{profile.bio}</p>
+                  <p className="text-slate-700 mb-4">{profile.bio}</p>
                 )}
 
                 {/* Stats */}
@@ -341,21 +321,21 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
       </div>
 
       {/* Active Items */}
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 hover:shadow-2xl transition-all duration-300">
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-200/50 p-8 hover:shadow-xl transition-all duration-300">
         <div className="flex items-center gap-3 mb-8">
-          <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
+          <div className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg">
             <Package className="h-6 w-6 text-white" />
           </div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-blue-600 bg-clip-text text-transparent">
             Active Listings ({profile.active_items.length})
           </h2>
         </div>
 
         {profile.active_items.length === 0 ? (
           <div className="text-center py-12">
-            <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No active listings</h3>
-            <p className="text-gray-500">
+            <Package className="mx-auto h-12 w-12 text-slate-400 mb-4" />
+            <h3 className="text-lg font-medium text-slate-900 mb-2">No active listings</h3>
+            <p className="text-slate-500">
               {isOwnProfile 
                 ? "You haven't listed any items yet." 
                 : `${profile.display_name} doesn't have any active listings.`}
@@ -374,8 +354,8 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
                 href={`/marketplace/${item.id}`}
                 className="block group"
               >
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group">
-                  <div className="aspect-square relative bg-gradient-to-br from-gray-50 to-gray-100">
+                <div className="bg-white rounded-2xl shadow-lg border border-slate-200/50 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                  <div className="aspect-square relative bg-gradient-to-br from-slate-50 to-blue-50">
                     {getItemImageUrl(item) ? (
                       <Image
                         src={getItemImageUrl(item)!}
@@ -389,12 +369,12 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Package className="h-16 w-16 text-gray-300" />
+                        <Package className="h-16 w-16 text-slate-300" />
                       </div>
                     )}
                     <div className="absolute top-4 right-4 flex flex-col gap-2">
                       <div className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full">
-                        <span className="text-xs font-medium text-gray-600">{item.views_count} views</span>
+                        <span className="text-xs font-medium text-slate-600">{item.views_count} views</span>
                       </div>
                       {item.highest_buyer_offer && (
                         <div className="bg-green-500/90 backdrop-blur-sm px-3 py-1 rounded-full">
@@ -404,11 +384,11 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
                     </div>
                   </div>
                   <div className="p-6">
-                    <h3 className="font-bold text-gray-900 mb-3 text-lg line-clamp-1 group-hover:text-blue-600 transition-colors">
+                    <h3 className="font-bold text-slate-900 mb-3 text-lg line-clamp-1 group-hover:text-blue-600 transition-colors">
                       {item.name}
                     </h3>
                     <div className="flex items-center justify-between">
-                      <p className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                      <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-slate-700 bg-clip-text text-transparent">
                         {formatPrice(item.starting_price)}
                       </p>
                       <span className="text-sm px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium capitalize">

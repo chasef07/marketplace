@@ -7,6 +7,7 @@ import { SearchHeader, SortOption, ViewMode } from './search-header'
 import { FilterSidebar, FilterOptions } from './filter-sidebar'
 import { ItemGrid } from './item-grid'
 import { Item, PaginationInfo } from "@/lib/api-client-new"
+import { MainNavigation } from "../navigation/MainNavigation"
 
 interface User {
   id: string
@@ -256,7 +257,17 @@ export function BrowsePage({
   }, [filters])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Main Navigation Header */}
+      <MainNavigation
+        user={user}
+        onCreateListing={onCreateListing}
+        onViewProfile={onViewProfile}
+        onSignIn={onSignInClick}
+        onSignOut={onLogout}
+        currentPage="browse"
+      />
+      
       {/* Search Header */}
       <SearchHeader
         searchQuery={searchQuery}

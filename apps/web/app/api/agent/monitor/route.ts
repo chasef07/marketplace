@@ -1,12 +1,11 @@
 import { NextRequest } from 'next/server';
 import { openai } from '@ai-sdk/openai';
-import { generateObject } from 'ai';
+import { generateText, tool } from 'ai';
 import { z } from 'zod';
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { offerService } from '@/lib/services/offer-service';
 
-// Game theory tools (simplified for background processing)
- //import { nashEquilibriumTool, marketAnalysisTool } from '@/lib/agent/core/nash-equilibrium';
+// Game theory tools now implemented inline
 
 export const runtime = 'edge';
 
@@ -15,8 +14,8 @@ const SYSTEM_PROMPT = `You are an autonomous seller agent. Analyze offers with f
 Decision Rules (In Order of Priority):
 1. ANALYZE negotiation history and buyer momentum before making decisions
 2. ACCEPT if offer ≥ 95% of listing price OR reasonable in context of negotiation progression
-3. COUNTER with incremental increases (5-15% above buyer offer) - NEVER dramatic jumps
-4. If buyer is trending UP, use smaller counters (5-10%) to maintain momentum
+3. COUNTER with incremental increases based on Nash equilibrium price - NEVER dramatic jumps
+4. If buyer is trending UP, use counters to maintain momentum
 5. If buyer is trending DOWN, hold firm or decline - don't chase with big counters
 6. DECLINE if offer < 60% of listing AND buyer shows no upward movement
 7. In rounds 5+, be more accepting of reasonable offers to close deals
@@ -285,34 +284,52 @@ CRITICAL RULES:
 Make decision based on buyer's demonstrated behavior and negotiation psychology.`;
       }
 
-      const decision = await generateObject({
+      const decision = await generateText({
         model: openai('gpt-4o'),
         system: SYSTEM_PROMPT,
-        prompt: analysisPrompt,
-        // tools: {
-        //   nashEquilibrium: nashEquilibriumTool,
-        //   marketAnalysis: marketAnalysisTool,
-        // },
-        schema: z.object({
-          decision: z.enum(['ACCEPT', 'COUNTER', 'DECLINE']),
-          recommendedPrice: z.number().optional(),
-          confidence: z.number().min(0).max(1),
-          reasoning: z.string(),
-          nashPrice: z.number(),
-          marketValue: z.number(),
-          negotiationContext: z.object({
-            currentRound: z.number(),
-            momentum: z.string(),
-            priceDirection: z.string(),
-            historyConsidered: z.boolean(),
-          }).optional(),
-        }),
+        prompt: analysisPrompt + `
+
+Please respond with a JSON object containing:
+- decision: "ACCEPT", "COUNTER", or "DECLINE"
+- recommendedPrice: number (required if COUNTER)
+- confidence: number between 0 and 1
+- reasoning: string explanation
+- nashPrice: number (estimated Nash equilibrium price)
+- marketValue: number (estimated market value)
+- negotiationContext: object with currentRound, momentum, priceDirection, historyConsidered`,
+        tools: {
+          nashEquilibrium: tool({
+            description: 'Calculate Nash equilibrium price for negotiation',
+            inputSchema: z.object({
+              sellerTargetPrice: z.number(),
+              buyerOfferPrice: z.number(),
+              estimatedBuyerMax: z.number(),
+            }),
+            execute: async ({ sellerTargetPrice, buyerOfferPrice, estimatedBuyerMax }) => {
+              // Simple Nash equilibrium calculation
+              const equilibrium = (sellerTargetPrice + estimatedBuyerMax) / 2;
+              return {
+                equilibriumPrice: Math.round(equilibrium),
+                confidence: Math.abs(buyerOfferPrice - equilibrium) / equilibrium < 0.1 ? 0.8 : 0.6
+              };
+            }
+          })
+        },
       });
 
       const executionTime = Date.now() - startTime;
 
+      // Parse the JSON response from generateText
+      let parsedDecision;
+      try {
+        parsedDecision = JSON.parse(decision.text);
+      } catch (error) {
+        console.error('Failed to parse AI decision:', decision.text);
+        throw new Error('Invalid AI response format');
+      }
+
       // CRITICAL: Validate decision to prevent unreasonable counter offers
-      const validatedDecision = { ...decision.object };
+      const validatedDecision = { ...parsedDecision };
       let validationWarning = '';
 
       if (validatedDecision.decision === 'COUNTER' && validatedDecision.recommendedPrice) {
@@ -457,7 +474,7 @@ Make decision based on buyer's demonstrated behavior and negotiation psychology.
           };
         }
 
-      } else if (decision.object.decision === 'DECLINE') {
+      } else if (validatedDecision.decision === 'DECLINE') {
         // Decline the offer
         await supabase
           .from('negotiations')
@@ -482,9 +499,9 @@ Make decision based on buyer's demonstrated behavior and negotiation psychology.
         task: {
           negotiationId: task.negotiation_id,
           itemId: task.item_id,
-          decision: decision.object.decision,
-          confidence: decision.object.confidence,
-          reasoning: decision.object.reasoning,
+          decision: validatedDecision.decision,
+          confidence: validatedDecision.confidence,
+          reasoning: validatedDecision.reasoning,
           actionResult,
           executionTimeMs: executionTime,
           competitiveAnalysis: {
