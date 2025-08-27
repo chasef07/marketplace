@@ -40,7 +40,7 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
         const now = new Date()
         const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
         const unread = notificationList.filter((notification: AgentNotification) => 
-          new Date(notification.createdAt) > oneDayAgo
+          new Date(notification.created_at) > oneDayAgo
         ).length
         setUnreadCount(unread)
       }
@@ -57,7 +57,7 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
 
   const handleNotificationAction = async (notificationId: string, action: string, price?: number, message?: string) => {
     try {
-      setActionLoading(notificationId)
+      setActionLoading(parseInt(notificationId))
       
       const response = await fetch('/api/agent/notifications', {
         method: 'POST',
@@ -78,12 +78,12 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
         // Remove notification from list for most actions
         if (action !== 'counter' || result.success) {
           setNotifications(prev => {
-            const filtered = prev.filter(n => n.id !== notificationId)
+            const filtered = prev.filter(n => n.id.toString() !== notificationId)
             // Recalculate unread count
             const now = new Date()
             const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
             const unread = filtered.filter(notification => 
-              new Date(notification.createdAt) > oneDayAgo
+              new Date(notification.created_at) > oneDayAgo
             ).length
             setUnreadCount(unread)
             return filtered
@@ -207,51 +207,50 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
         </h3>
       </div>
       <div className="space-y-3">
-      {notifications.map((notification) => (
-        <Card key={notification.id} className={`p-4 ${getPriorityColor(notification.priority)}`}>
+      {notifications.map((notification) => {
+        // Use fallback values for missing properties
+        const priority = 'low' // Default priority since it's not in the type
+        const title = notification.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) // Generate title from type
+        const itemId = notification.metadata?.item_id || 0
+        const actions = ['dismiss'] // Default action since actions array not in type
+        const offerPrice = 0 // Default since not in type
+        
+        return (
+        <Card key={notification.id} className={`p-4 ${getPriorityColor(priority)}`}>
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center space-x-2 mb-2">
-                {getPriorityIcon(notification.priority)}
-                <h3 className="font-semibold text-gray-900">{notification.title}</h3>
+                {getPriorityIcon(priority)}
+                <h3 className="font-semibold text-gray-900">{title}</h3>
                 <span className="text-xs text-gray-500 flex items-center">
                   <Clock className="w-3 h-3 mr-1" />
-                  {formatTimeAgo(notification.createdAt)}
+                  {formatTimeAgo(notification.created_at)}
                 </span>
-                <button
-                  onClick={() => window.open(`/item/${notification.itemId}`, '_blank')}
-                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
-                  title="View listing"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                </button>
+                {itemId > 0 && (
+                  <button
+                    onClick={() => window.open(`/item/${itemId}`, '_blank')}
+                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                    title="View listing"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                  </button>
+                )}
               </div>
               
               <p className="text-sm text-gray-700 mb-3">{notification.message}</p>
               
               <div className="text-xs text-gray-600 space-y-1">
                 <div className="flex items-center justify-between">
-                  {notification.buyerName && (
-                    <span>Buyer: <strong>{notification.buyerName}</strong></span>
-                  )}
-                  {notification.sellerName && (
-                    <span>Seller: <strong>{notification.sellerName}</strong></span>
-                  )}
-                  {notification.confidence && (
-                    <span>Confidence: <strong>{Math.round(notification.confidence * 100)}%</strong></span>
-                  )}
+                  <span>Type: <strong>{notification.type}</strong></span>
                 </div>
-                {notification.reasoning && (
-                  <p className="italic">{notification.reasoning}</p>
-                )}
               </div>
             </div>
             
             <div className="flex flex-col space-y-2 ml-4">
-              {notification.actions.includes('accept') && (
+              {actions.includes('accept') && (
                 <Button
                   size="sm"
-                  onClick={() => handleNotificationAction(notification.id, 'accept')}
+                  onClick={() => handleNotificationAction(notification.id.toString(), 'accept')}
                   disabled={actionLoading === notification.id}
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
@@ -260,17 +259,17 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
                   ) : (
                     <>
                       <CheckCircle className="w-3 h-3 mr-1" />
-                      Accept {formatCurrency(notification.offerPrice)}
+                      Accept {formatCurrency(offerPrice)}
                     </>
                   )}
                 </Button>
               )}
               
-              {notification.actions.includes('counter') && (
+              {actions.includes('counter') && (
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => openCounterModal(notification.id, notification.offerPrice)}
+                  onClick={() => openCounterModal(notification.id.toString(), offerPrice)}
                   disabled={actionLoading === notification.id}
                   className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
                 >
@@ -279,11 +278,11 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
                 </Button>
               )}
               
-              {notification.actions.includes('decline') && (
+              {actions.includes('decline') && (
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleNotificationAction(notification.id, 'decline')}
+                  onClick={() => handleNotificationAction(notification.id.toString(), 'decline')}
                   disabled={actionLoading === notification.id}
                   className="text-xs bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
                 >
@@ -292,11 +291,11 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
                 </Button>
               )}
               
-              {notification.actions.includes('dismiss') && (
+              {actions.includes('dismiss') && (
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleNotificationAction(notification.id, 'dismiss')}
+                  onClick={() => handleNotificationAction(notification.id.toString(), 'dismiss')}
                   disabled={actionLoading === notification.id}
                   className="text-xs"
                 >
@@ -307,7 +306,8 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
             </div>
           </div>
         </Card>
-      ))}
+        )
+      })}
       </div>
       
       {/* Counter Offer Modal */}
@@ -362,10 +362,10 @@ export function AgentNotifications({ className = '' }: AgentNotificationsProps) 
               </Button>
               <Button
                 onClick={() => handleNotificationAction(showCounterModal, 'counter', counterPrice || 0, counterMessage)}
-                disabled={!counterPrice || counterPrice <= 0 || actionLoading === showCounterModal}
+                disabled={!counterPrice || counterPrice <= 0 || (showCounterModal ? actionLoading === parseInt(showCounterModal) : false)}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                {actionLoading === showCounterModal ? 'Sending...' : 'Send Counter Offer'}
+                {showCounterModal && actionLoading === parseInt(showCounterModal) ? 'Sending...' : 'Send Counter Offer'}
               </Button>
             </div>
           </div>

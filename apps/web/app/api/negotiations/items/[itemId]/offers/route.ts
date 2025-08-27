@@ -134,8 +134,8 @@ export async function POST(
     })
 
     if (!result.success) {
-      console.error('Error creating offer:', result.error)
-      return NextResponse.json({ error: result.error }, { status: 400 })
+      console.error('Error creating offer:', 'error' in result ? result.error : 'Unknown error')
+      return NextResponse.json({ error: 'error' in result ? result.error : 'Unknown error' }, { status: 400 })
     }
 
     // Note: Agent automatically queues buyer offers via database trigger
@@ -143,7 +143,7 @@ export async function POST(
 
     return NextResponse.json({
       negotiation,
-      offer: result.offer
+      offer: 'offer' in result ? result.offer : null
     })
     } catch (error) {
       console.error('🔥 CREATE OFFER ERROR - Full Details:', {

@@ -115,8 +115,9 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
           setTimeout(() => loadData(), 1000)
         }
       )
-      .on('subscribe', (status: any) => {
-        console.log('🔄 Agent decisions subscription status:', status)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'agent_decisions' }, () => {
+        console.log('🔄 Agent decisions changed, reloading...')
+        setTimeout(() => loadData(), 1000)
       })
       .subscribe()
 
@@ -148,8 +149,9 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
           }
         }
       )
-      .on('subscribe', (status: any) => {
-        console.log('🔄 Offers subscription status:', status)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'offers' }, () => {
+        console.log('🔄 Offers changed, reloading...')
+        loadData()
       })
       .subscribe()
 
@@ -177,8 +179,9 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
           ))
         }
       )
-      .on('subscribe', (status: any) => {
-        console.log('🔄 Items subscription status:', status)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => {
+        console.log('🔄 Items changed, reloading...')
+        loadData()
       })
       .subscribe()
 

@@ -26,7 +26,7 @@ interface PaginationControlsProps {
 }
 
 function PaginationControls({ pagination, onPageChange }: PaginationControlsProps) {
-  const { current_page, total_pages, has_next, has_prev } = pagination
+  const { page: current_page, total_pages, has_next, has_prev } = pagination
 
   if (total_pages <= 1) return null
 

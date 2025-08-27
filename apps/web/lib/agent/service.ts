@@ -46,9 +46,9 @@ export class AgentService {
           confidence_score: decision.confidence_score,
           reasoning: decision.reasoning,
           market_conditions: decision.market_conditions,
-          seller_id: decision.seller_id,
-          item_id: decision.item_id,
-          negotiation_id: decision.negotiation_id
+          seller_id: (decision as any).seller_id,
+          item_id: (decision as any).item_id,
+          negotiation_id: (decision as any).negotiation_id
         });
 
       if (error) {

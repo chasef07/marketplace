@@ -169,11 +169,11 @@ export const HomePage = React.memo(function HomePage() {
         image_filename: analysisData.image_filename, // Backward compatibility
         images: analysisData.images, // New multiple images support
         agent_enabled: agentEnabled, // Add agent enablement
-        // Include AI analysis details
-        style: analysisData.analysis.style,
-        material: analysisData.analysis.material,
-        brand: analysisData.analysis.brand,
-        color: analysisData.analysis.color,
+        // Include AI analysis details (using optional chaining for properties that may not exist)
+        style: (analysisData.analysis as any).style || null,
+        material: (analysisData.analysis as any).material || null,
+        brand: (analysisData.analysis as any).brand || null,
+        color: (analysisData.analysis as any).color || null,
         dimensions: analysisData.analysis.estimated_dimensions
       }
 

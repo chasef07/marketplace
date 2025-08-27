@@ -76,15 +76,15 @@ export async function POST(
     })
 
     if (!result.success) {
-      console.error('🔧 Counter API - Offer service error:', result.error)
-      return NextResponse.json({ error: result.error }, { status: 400 })
+      console.error('🔧 Counter API - Offer service error:', 'error' in result ? result.error : 'Unknown error')
+      return NextResponse.json({ error: 'error' in result ? result.error : 'Unknown error' }, { status: 400 })
     }
     
-    console.log('🔧 Counter API - Counter offer created successfully:', result.offerId)
+    console.log('🔧 Counter API - Counter offer created successfully:', 'offerId' in result ? result.offerId : 'Unknown')
 
     return NextResponse.json({
       message: 'Counter offer created successfully',
-      offer: result.offer
+      offer: 'offer' in result ? result.offer : null
     })
     } catch (error) {
       console.error('Counter offer error:', error)

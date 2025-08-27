@@ -125,7 +125,7 @@ export function NegotiationTimeline({ sellerId, className }: NegotiationTimeline
           })
           .returns<AgentDecision[]>()
         
-        if (decisions) {
+        if (decisions && Array.isArray(decisions)) {
           agentDecisionsData = decisions
         }
       } catch {
@@ -492,6 +492,7 @@ export function NegotiationTimeline({ sellerId, className }: NegotiationTimeline
                                   <div className="border-t pt-3 mt-3">
                                     {(() => {
                                       const decision = agentDecision || leadingDecision
+                                      if (!decision) return null
                                       return (
                                         <div className="space-y-2">
                                           <div className="flex items-center justify-between">

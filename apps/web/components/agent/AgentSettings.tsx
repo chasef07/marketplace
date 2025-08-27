@@ -191,7 +191,9 @@ export function AgentSettings({ user, onClose }: AgentSettingsProps) {
                   <span className="text-sm text-gray-600">
                     {getAggressivenessLabel(settings.aggressiveness_level)}
                   </span>
-                  <Info className="w-4 h-4 text-gray-400" title="How aggressive the agent is in negotiations" />
+                  <div title="How aggressive the agent is in negotiations">
+                    <Info className="w-4 h-4 text-gray-400" />
+                  </div>
                 </div>
               </div>
               <input

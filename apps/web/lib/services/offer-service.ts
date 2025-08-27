@@ -236,7 +236,7 @@ export class OfferService {
         negotiation,
         item: negotiation.items,
         latestOffer,
-        userRole
+        userRole: userRole as 'seller' | 'buyer'
       }
     }
   }
@@ -286,9 +286,9 @@ export class OfferService {
 
     // Price validation based on offer type
     if (offerType === 'seller') {
-      return this.validateSellerOffer(price, item, latestOffer, isCounterOffer)
+      return this.validateSellerOffer(price, item, latestOffer || null, isCounterOffer)
     } else {
-      return this.validateBuyerOffer(price, item, latestOffer)
+      return this.validateBuyerOffer(price, item)
     }
   }
 
@@ -296,7 +296,7 @@ export class OfferService {
    * Validate seller counter offers
    */
   private validateSellerOffer(price: number, item: { starting_price: number }, latestOffer: { price: number; offer_type: string } | null, isCounterOffer: boolean): ValidationResult {
-    const startingPrice = parseFloat(item.starting_price)
+    const startingPrice = parseFloat(item.starting_price.toString())
 
     // Seller can't offer above 125% of starting price (prevents unreasonable counters)
     const maxAllowed = startingPrice * 1.25
@@ -309,7 +309,7 @@ export class OfferService {
 
     // For counter offers, validate against buyer's last offer
     if (isCounterOffer && latestOffer && latestOffer.offer_type === 'buyer') {
-      const buyerPrice = parseFloat(latestOffer.price)
+      const buyerPrice = parseFloat(latestOffer.price.toString())
       
       // Prevent dramatic price jumps that break negotiation psychology
       const maxIncrease = buyerPrice * 1.20  // Max 20% increase over buyer offer
@@ -336,7 +336,7 @@ export class OfferService {
    * Validate buyer offers
    */
   private validateBuyerOffer(price: number, item: { starting_price: number }): ValidationResult {
-    const startingPrice = parseFloat(item.starting_price)
+    const startingPrice = parseFloat(item.starting_price.toString())
 
     // Buyers can't offer above starting price
     if (price > startingPrice) {
