@@ -89,6 +89,32 @@ export function HeroSection({
     }
   }
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length > 0) {
+      setIsAnalyzing(true)
+      handleFilesDirectly(files)
+    }
+  }
+
   const handleCreateListingClick = () => {
     // Create a temporary file input and trigger it
     const input = document.createElement('input')
@@ -123,7 +149,13 @@ export function HeroSection({
       />
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-16">
+      <main 
+        className="max-w-6xl mx-auto px-6 py-16"
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         {/* Hero Section */}
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-slate-800 mb-6">

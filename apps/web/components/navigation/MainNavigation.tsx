@@ -39,7 +39,7 @@ export function MainNavigation({
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <div className="text-2xl font-bold text-slate-800">SnapNest</div>
+          <div className="text-2xl font-bold text-slate-800">Marketplace</div>
           
           {/* Navigation Buttons */}
           <div className="flex items-center space-x-4">

@@ -1,28 +1,32 @@
 import { NextRequest } from 'next/server';
 import { openai } from '@ai-sdk/openai';
-import { generateText, tool } from 'ai';
-import { z } from 'zod';
+import { generateText } from 'ai';
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { offerService } from '@/lib/services/offer-service';
-
-// Game theory tools now implemented inline
+import { 
+  nashEquilibriumTool,
+  auctionTheoryTool,
+  marketAnalysisTool,
+  buyerBehaviorAnalysisTool
+} from '@/lib/agent/agent_tools';
 
 export const runtime = 'edge';
 
-const SYSTEM_PROMPT = `You are an autonomous seller agent. Analyze offers with full negotiation context to make intelligent counter-offers that close deals.
+const SYSTEM_PROMPT = `You are an autonomous seller agent with sophisticated analytical tools. Use the tools to gather data, then make intelligent decisions.
 
-Decision Rules (In Order of Priority):
-1. ANALYZE negotiation history and buyer momentum before making decisions
-2. ACCEPT if offer ≥ 95% of listing price OR reasonable in context of negotiation progression
-3. COUNTER with incremental increases based on Nash equilibrium price - NEVER dramatic jumps
-4. If buyer is trending UP, use counters to maintain momentum
-5. If buyer is trending DOWN, hold firm or decline - don't chase with big counters
-6. DECLINE if offer < 60% of listing AND buyer shows no upward movement
-7. In rounds 5+, be more accepting of reasonable offers to close deals
+ANALYSIS PROCESS:
+1. Use buyerBehaviorAnalysis to understand buyer patterns and estimate max willingness
+2. Use nashEquilibrium to calculate optimal game theory pricing 
+3. Use marketAnalysis to validate against market conditions
+4. IF multiple buyers exist, use auctionTheory for competitive analysis
 
-CRITICAL: Counter offers must respect negotiation psychology. A buyer offering $205 after $200 shows positive momentum - counter around $210-$215, NOT $250.
+DECISION MAKING:
+After gathering tool analysis, YOU decide the final action:
+- ACCEPT: If offer is at/near optimal price or market conditions favor acceptance
+- COUNTER: Use Nash equilibrium price as guidance, but adjust based on buyer momentum and negotiation psychology
+- DECLINE: If buyer unlikely to reach acceptable range based on behavior analysis
 
-Keep reasoning brief and justify based on negotiation context and buyer behavior patterns.`;
+The tools provide sophisticated calculations - use their insights but apply your own strategic reasoning for the final decision.`;
 
 interface AgentTask {
   queue_id: number;
@@ -289,43 +293,126 @@ Make decision based on buyer's demonstrated behavior and negotiation psychology.
         system: SYSTEM_PROMPT,
         prompt: analysisPrompt + `
 
-Please respond with a JSON object containing:
-- decision: "ACCEPT", "COUNTER", or "DECLINE"
-- recommendedPrice: number (required if COUNTER)
-- confidence: number between 0 and 1
-- reasoning: string explanation
-- nashPrice: number (estimated Nash equilibrium price)
-- marketValue: number (estimated market value)
-- negotiationContext: object with currentRound, momentum, priceDirection, historyConsidered`,
+ANALYZE THIS OFFER:
+
+1. Use buyerBehaviorAnalysis to understand the buyer's patterns
+2. Use nashEquilibrium to calculate optimal pricing with negotiation history
+3. Use marketAnalysis to validate pricing against market conditions
+
+After analyzing with the tools, make your decision and respond in this exact format:
+
+DECISION: [ACCEPT/COUNTER/DECLINE]
+PRICE: [counter price if COUNTER, otherwise original offer price]  
+CONFIDENCE: [0.0-1.0]
+REASONING: [Brief explanation of your decision based on tool analysis]
+
+Use the tool results to inform your decision but make the final choice yourself based on negotiation strategy.`,
         tools: {
-          nashEquilibrium: tool({
-            description: 'Calculate Nash equilibrium price for negotiation',
-            inputSchema: z.object({
-              sellerTargetPrice: z.number(),
-              buyerOfferPrice: z.number(),
-              estimatedBuyerMax: z.number(),
-            }),
-            execute: async ({ sellerTargetPrice, buyerOfferPrice, estimatedBuyerMax }) => {
-              // Simple Nash equilibrium calculation
-              const equilibrium = (sellerTargetPrice + estimatedBuyerMax) / 2;
-              return {
-                equilibriumPrice: Math.round(equilibrium),
-                confidence: Math.abs(buyerOfferPrice - equilibrium) / equilibrium < 0.1 ? 0.8 : 0.6
-              };
-            }
-          })
+          nashEquilibrium: nashEquilibriumTool,
+          auctionTheory: auctionTheoryTool,
+          marketAnalysis: marketAnalysisTool,
+          buyerBehaviorAnalysis: buyerBehaviorAnalysisTool
         },
       });
 
       const executionTime = Date.now() - startTime;
 
-      // Parse the JSON response from generateText
+      console.log('🤖 AI Response Length:', decision.text.length, 'chars');
+      console.log('🛠️ Tool Calls:', decision.toolCalls?.length || 0, 'tools used');
+      
+      // Debug: log which tools were actually called (condensed)
+      if (decision.toolCalls && decision.toolCalls.length > 0) {
+        const toolNames = decision.toolCalls.map(call => call.toolName).join(', ');
+        console.log(`🔧 Tools Called: ${toolNames}`);
+      }
+
+      // Parse the structured decision from AI response text
       let parsedDecision;
-      try {
-        parsedDecision = JSON.parse(decision.text);
-      } catch (error) {
-        console.error('Failed to parse AI decision:', decision.text);
-        throw new Error('Invalid AI response format');
+      
+      // Extract tool analysis results for reference
+      const nashCall = decision.toolCalls?.find(call => call.toolName === 'nashEquilibrium');
+      const marketCall = decision.toolCalls?.find(call => call.toolName === 'marketAnalysis');
+      const buyerCall = decision.toolCalls?.find(call => call.toolName === 'buyerBehaviorAnalysis');
+      
+      const nashPrice = Math.round(((nashCall?.result as any)?.nashEquilibriumPrice || task.offer_price * 1.1) * 100) / 100;
+      const marketValue = Math.round(((marketCall?.result as any)?.estimatedMarketValue || task.listing_price * 0.8) * 100) / 100;
+      const buyerMaxPrice = Math.round(((buyerCall?.result as any)?.estimatedMaxPrice || task.offer_price * 1.2) * 100) / 100;
+      
+      console.log('🧮 Tool Results Summary:');
+      console.log(`  Nash Equilibrium: $${nashPrice}`);
+      console.log(`  Market Value: $${marketValue}`);
+      console.log(`  Buyer Max: $${buyerMaxPrice}`);
+      
+      // Parse structured text response
+      const responseText = decision.text;
+      console.log('📋 Full AI Response Text:', responseText);
+      
+      const decisionMatch = responseText.match(/DECISION:\s*(\w+)/i);
+      const priceMatch = responseText.match(/PRICE:\s*(\d+)/i);
+      const confidenceMatch = responseText.match(/CONFIDENCE:\s*([\d.]+)/i);
+      // Improved regex to capture multi-line reasoning until next structured field or end
+      const reasoningMatch = responseText.match(/REASONING:\s*(.+?)(?=\n(?:DECISION|PRICE|CONFIDENCE)|$)/i);
+      
+      console.log('🔍 Parsing Results:');
+      console.log(`  Decision: ${decisionMatch?.[1] || 'NOT FOUND'}`);
+      console.log(`  Price: ${priceMatch?.[1] || 'NOT FOUND'}`);  
+      console.log(`  Confidence: ${confidenceMatch?.[1] || 'NOT FOUND'}`);
+      console.log(`  Reasoning: ${reasoningMatch?.[1]?.substring(0, 100) || 'NOT FOUND'}...`);
+      
+      if (decisionMatch) {
+        console.log('✅ Successfully parsed structured AI decision');
+        parsedDecision = {
+          decision: decisionMatch[1].toUpperCase(),
+          recommendedPrice: priceMatch ? parseInt(priceMatch[1]) : (decisionMatch[1].toUpperCase() === 'COUNTER' ? Math.round(nashPrice) : task.offer_price),
+          confidence: confidenceMatch ? parseFloat(confidenceMatch[1]) : 0.7,
+          reasoning: reasoningMatch ? reasoningMatch[1].trim() : 'AI decision based on tool analysis',
+          nashPrice,
+          marketValue
+        };
+      } else {
+        console.log('⚠️ Could not parse structured response, using intelligent fallback');
+        
+        // Intelligent fallback based on tool results
+        let intelligentDecision = 'COUNTER';
+        let intelligentPrice = Math.round(nashPrice / 5) * 5; // Use Nash price, rounded to $5
+        let confidence = 0.6;
+        
+        // Logic based on tool analysis
+        if (task.offer_price >= task.listing_price * 0.95) {
+          // Offer is 95%+ of listing price - accept
+          intelligentDecision = 'ACCEPT';
+          intelligentPrice = task.offer_price;
+          confidence = 0.8;
+        } else if (task.offer_price >= marketValue * 0.85) {
+          // Offer is reasonable relative to market value
+          intelligentDecision = 'COUNTER';
+          intelligentPrice = Math.min(nashPrice, task.offer_price * 1.15); // Conservative counter
+          confidence = 0.7;
+        } else if (task.offer_price < marketValue * 0.6) {
+          // Offer is too low
+          intelligentDecision = 'DECLINE';
+          intelligentPrice = 0;
+          confidence = 0.8;
+        }
+        
+        // Create more meaningful fallback reasoning
+        let strategicReasoning = '';
+        if (intelligentDecision === 'ACCEPT') {
+          strategicReasoning = `Accepting offer of $${task.offer_price} as it represents ${((task.offer_price / task.listing_price) * 100).toFixed(0)}% of listing price ($${task.listing_price}), which exceeds our 95% threshold for immediate acceptance.`;
+        } else if (intelligentDecision === 'COUNTER') {
+          strategicReasoning = `Countering at $${intelligentPrice} based on Nash equilibrium analysis ($${nashPrice}) and market value assessment ($${marketValue}). This represents a strategic ${(((intelligentPrice - task.offer_price) / task.offer_price) * 100).toFixed(1)}% increase to optimize seller profit while maintaining negotiation momentum.`;
+        } else {
+          strategicReasoning = `Declining offer of $${task.offer_price} as it falls significantly below market value ($${marketValue}) and represents only ${((task.offer_price / task.listing_price) * 100).toFixed(0)}% of listing price, suggesting buyer unlikely to reach acceptable range.`;
+        }
+        
+        parsedDecision = {
+          decision: intelligentDecision,
+          recommendedPrice: intelligentPrice,
+          confidence,
+          reasoning: strategicReasoning,
+          nashPrice,
+          marketValue
+        };
       }
 
       // CRITICAL: Validate decision to prevent unreasonable counter offers

@@ -86,6 +86,12 @@ export function SellerNotifications({ userId, className = '' }: SellerNotificati
   }
 
   const setupRealTimeSubscriptions = () => {
+    // Skip realtime subscriptions on localhost/HTTP to avoid WebSocket security errors
+    if (typeof window !== 'undefined' && window.location.protocol === 'http:') {
+      console.log('Skipping realtime subscriptions on HTTP connection')
+      return () => {} // Return empty cleanup function
+    }
+
     // Subscribe to new buyer_accepted negotiations
     const subscription = supabase
       .channel(`seller_confirmations_${userId}`)

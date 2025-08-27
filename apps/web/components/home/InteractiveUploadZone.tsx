@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { type AIAnalysisResult } from "@/lib/api-client-new"
-import { Camera, Upload } from "lucide-react"
+import { Camera, Upload, X } from "lucide-react"
+import Image from "next/image"
 
 interface InteractiveUploadZoneProps {
   onShowListingPreview: (analysisData: AIAnalysisResult, uploadedImages: string[]) => void
@@ -16,6 +17,7 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [progressMessage, setProgressMessage] = useState('')
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -31,6 +33,12 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
       alert('Please select image files only')
       return
     }
+
+    setSelectedFiles(imageFiles)
+  }, [])
+
+  const handleUpload = useCallback(async () => {
+    if (selectedFiles.length === 0) return
 
     setIsAnalyzing(true)
     setUploadProgress(0)
@@ -60,7 +68,7 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
 
       // Create FormData for the API call
       const formData = new FormData()
-      imageFiles.forEach((file, index) => {
+      selectedFiles.forEach((file, index) => {
         formData.append(`image${index}`, file)
       })
 
@@ -87,7 +95,7 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
         setProgressMessage('')
         
         // Create image URLs for the uploaded files
-        const imageUrls = imageFiles.map(file => URL.createObjectURL(file))
+        const imageUrls = selectedFiles.map(file => URL.createObjectURL(file))
         
         // Add the images metadata to the result for compatibility
         const enrichedResult = {
@@ -110,7 +118,15 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
       setProgressMessage('')
       alert('Upload failed. Please try again.')
     }
-  }, [onShowListingPreview])
+  }, [selectedFiles, onShowListingPreview])
+
+  const removeFile = useCallback((indexToRemove: number) => {
+    setSelectedFiles(prev => prev.filter((_, index) => index !== indexToRemove))
+  }, [])
+
+  const clearFiles = useCallback(() => {
+    setSelectedFiles([])
+  }, [])
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -128,6 +144,10 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     handleFiles(files)
+    // Reset the input so the same files can be selected again if needed
+    if (e.target) {
+      e.target.value = ''
+    }
   }, [handleFiles])
 
   const handleClick = () => {
@@ -179,29 +199,80 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="w-12 h-12 mx-auto text-slate-400">
-                <Camera className="w-full h-full" />
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold text-slate-800 mb-2">
-                  Drop photos here
-                </h3>
-                <p className="text-sm text-slate-600 mb-4">
-                  AI will analyze and create your listing
-                </p>
-                
-                <Button variant="outline" className="mb-4">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Choose Files
-                </Button>
-                
-                <div className="flex justify-center space-x-4 text-xs text-slate-500">
-                  <span>✨ Instant Analysis</span>
-                  <span>💰 Smart Pricing</span>
-                  <span>📝 Complete Listings</span>
-                </div>
-              </div>
+              {selectedFiles.length === 0 ? (
+                <>
+                  <div className="w-12 h-12 mx-auto text-slate-400">
+                    <Camera className="w-full h-full" />
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800 mb-2">
+                      Drop photos here
+                    </h3>
+                    <p className="text-sm text-slate-600 mb-4">
+                      AI will analyze and create your listing
+                    </p>
+                    
+                    <Button variant="outline" className="mb-4">
+                      <Upload className="w-4 h-4 mr-2" />
+                      Choose Files
+                    </Button>
+                    
+                    <div className="flex justify-center space-x-4 text-xs text-slate-500">
+                      <span>✨ Instant Analysis</span>
+                      <span>💰 Smart Pricing</span>
+                      <span>📝 Complete Listings</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-center mb-4">
+                    <p className="text-sm text-slate-600 mb-2">
+                      {selectedFiles.length} image{selectedFiles.length !== 1 ? 's' : ''} selected
+                    </p>
+                  </div>
+                  
+                  {/* Image Previews */}
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} className="relative aspect-square">
+                        <Image
+                          src={URL.createObjectURL(file)}
+                          alt={`Preview ${index + 1}`}
+                          fill
+                          className="object-cover rounded border"
+                          sizes="80px"
+                        />
+                        <button
+                          onClick={() => removeFile(index)}
+                          className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex space-x-2">
+                    <Button 
+                      onClick={handleUpload}
+                      className="flex-1"
+                    >
+                      <Camera className="w-4 h-4 mr-2" />
+                      Analyze Images
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={clearFiles}
+                      className="px-3"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

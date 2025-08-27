@@ -1,4 +1,4 @@
-# 🏪 SnapNest - AI-Powered Furniture Marketplace
+# 🏪 Marketplace - AI-Powered Furniture Marketplace
 
 A modern, serverless full-stack marketplace application with AI-powered image analysis, intelligent negotiations, and seamless user experience. Built with **Next.js 15**, **Supabase**, **OpenAI**, and **shadcn/ui**.
 
@@ -354,7 +354,15 @@ npm run build:production   # Optimized production build
 
 ## 📝 Recent Updates
 
-### **v2.2 - UI Modernization & Item Detail Refresh** *(Latest)*
+### **v2.3 - Enhanced Upload Experience & ListingPreview** *(Latest)*
+- ✅ **Multiple Image Upload** - Enhanced drag-and-drop with image preview and management
+- ✅ **Smart Dimensions Toggle** - Include/exclude dimensions based on item type (furniture vs clothing)
+- ✅ **Improved Price Editing** - Fixed input handling with proper value display and editing
+- ✅ **Clean Number Inputs** - Removed spinner arrows for better UX across all browsers
+- ✅ **Professional Type Badges** - Enhanced furniture type display with rounded bubble design
+- ✅ **Streamlined UI** - Removed unnecessary explanatory text for cleaner interface
+
+### **v2.2 - UI Modernization & Item Detail Refresh**
 - ✅ **Item Detail Overhaul** - Complete redesign with shadcn/ui Card components
 - ✅ **Enhanced Visual Hierarchy** - Improved spacing, typography, and layout structure
 - ✅ **Modern Form Components** - Updated inputs, selects, textareas with proper labels

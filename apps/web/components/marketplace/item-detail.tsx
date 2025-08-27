@@ -135,6 +135,7 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
     item_status: 'active'
   })
   const [saveLoading, setSaveLoading] = useState(false)
+  const [showDimensions, setShowDimensions] = useState(false)
 
   // Memoize user ID to prevent unnecessary re-fetches when user object changes
   const userId = useMemo(() => user?.id, [user?.id])

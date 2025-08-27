@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
       "premium_price": "high-end asking price in USD",
       "pricing_explanation": "brief explanation of pricing rationale based on quality and features visible in all images",
       "title": "compelling marketplace listing title",
-      "description": "detailed, appealing description for buyers highlighting features visible across the images"
+      "description": "concise, factual description (2-3 sentences max) focusing on condition and key features, written casually as if describing to a friend - avoid sales language"
     }
 
     Base pricing on apparent quality and current market trends for this type of home goods item. Consider all angles and details visible across the provided images. Be inclusive and helpful - analyze any home goods item that someone might want to buy or sell.`

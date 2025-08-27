@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft, Edit, Save, Camera, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Edit, Save, Camera, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import { type AIAnalysisResult } from "@/lib/api-client-new"
 import Image from "next/image"
 
@@ -38,16 +38,32 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isCreatingListing, setIsCreatingListing] = useState(false)
   const [agentEnabled, setAgentEnabled] = useState(false)
+  const [showDimensions, setShowDimensions] = useState(true)
+  const [includeDimensions, setIncludeDimensions] = useState(!!analysisData.analysis.estimated_dimensions)
 
   const handleSignUp = () => {
-    onSignUp(editedData)
+    const finalData = {
+      ...editedData,
+      analysis: {
+        ...editedData.analysis,
+        estimated_dimensions: includeDimensions ? editedData.analysis.estimated_dimensions : null
+      }
+    }
+    onSignUp(finalData)
   }
 
   const handleCreateListing = async () => {
     if (onCreateListing && !isCreatingListing) {
       setIsCreatingListing(true)
       try {
-        await onCreateListing(editedData, agentEnabled)
+        const finalData = {
+          ...editedData,
+          analysis: {
+            ...editedData.analysis,
+            estimated_dimensions: includeDimensions ? editedData.analysis.estimated_dimensions : null
+          }
+        }
+        await onCreateListing(finalData, agentEnabled)
       } catch (error) {
         // Error handling is done in parent component
       } finally {
@@ -84,8 +100,19 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Header */}
+    <>
+      <style jsx global>{`
+        .no-spinner::-webkit-outer-spin-button,
+        .no-spinner::-webkit-inner-spin-button {
+          -webkit-appearance: none !important;
+          margin: 0 !important;
+        }
+        .no-spinner {
+          -moz-appearance: textfield !important;
+        }
+      `}</style>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        {/* Header */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -99,7 +126,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
               <span>Back to Upload</span>
             </Button>
             
-            <div className="text-2xl font-bold text-slate-800">SnapNest</div>
+            <div className="text-2xl font-bold text-slate-800">Marketplace</div>
             
             <Button 
               variant={isEditing ? "default" : "outline"}
@@ -196,9 +223,14 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
                   {isEditing ? (
                     <Input
                       type="number"
-                      value={editedData.pricing.suggested_starting_price?.toString() || '0'}
-                      onChange={(e) => handleInputChange('suggested_starting_price', parseInt(e.target.value) || 0, 'pricing')}
-                      className="text-3xl font-bold text-center border-2"
+                      value={editedData.pricing.suggested_starting_price || ''}
+                      onChange={(e) => {
+                        const value = e.target.value === '' ? '' : parseFloat(e.target.value) || 0
+                        handleInputChange('suggested_starting_price', value, 'pricing')
+                      }}
+                      className="text-3xl font-bold text-center border-2 no-spinner"
+                      onWheel={(e) => e.target.blur()}
+                      placeholder="Enter price"
                     />
                   ) : (
                     <div className="text-3xl font-bold text-slate-800">
@@ -296,7 +328,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
                         placeholder="Furniture type..."
                       />
                     ) : (
-                      <Badge variant="secondary" className="text-sm px-3 py-1">
+                      <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 font-semibold px-4 py-2 text-sm rounded-full">
                         {editedData.listing.furniture_type}
                       </Badge>
                     )}
@@ -325,30 +357,60 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
                   )}
                 </div>
 
-                {/* Dimensions */}
+                {/* Dimensions Section */}
                 <div>
-                  <Label className="text-base font-semibold text-slate-700 mb-3 block">
-                    Dimensions
-                  </Label>
-                  <div className="grid gap-3">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <Checkbox
+                      id="include-dimensions"
+                      checked={includeDimensions}
+                      onCheckedChange={(checked) => setIncludeDimensions(!!checked)}
+                    />
+                    <Label 
+                      htmlFor="include-dimensions" 
+                      className="text-base font-semibold text-slate-700 cursor-pointer"
+                    >
+                      Include Dimensions
+                    </Label>
+                  </div>
+
+                  {includeDimensions && (
                     <div>
-                      <Label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Estimated Dimensions
-                      </Label>
-                      {isEditing ? (
-                        <Input
-                          value={editedData.analysis.estimated_dimensions || ''}
-                          onChange={(e) => handleInputChange('estimated_dimensions', e.target.value, 'analysis')}
-                          placeholder="e.g., 72 inches L x 36 inches W x 32 inches H"
-                          className="mt-1"
-                        />
-                      ) : (
-                        <div className="text-slate-700 font-medium mt-1">
-                          {editedData.analysis.estimated_dimensions || 'Not specified'}
+                      <button
+                        onClick={() => setShowDimensions(!showDimensions)}
+                        className="flex items-center gap-2 w-full text-left hover:bg-slate-50 p-2 -m-2 rounded-lg transition-colors mb-3"
+                      >
+                        <Label className="text-base font-semibold text-slate-700 cursor-pointer">
+                          Dimensions
+                        </Label>
+                        {showDimensions ? (
+                          <ChevronDown className="h-4 w-4 text-slate-500" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-slate-500" />
+                        )}
+                      </button>
+                      {showDimensions && (
+                        <div className="grid gap-3">
+                          <div>
+                            <Label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                              Estimated Dimensions
+                            </Label>
+                            {isEditing ? (
+                              <Input
+                                value={editedData.analysis.estimated_dimensions || ''}
+                                onChange={(e) => handleInputChange('estimated_dimensions', e.target.value, 'analysis')}
+                                placeholder="e.g., 72 inches L x 36 inches W x 32 inches H"
+                                className="mt-1"
+                              />
+                            ) : (
+                              <div className="text-slate-700 font-medium mt-1">
+                                {editedData.analysis.estimated_dimensions || 'Not specified'}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
-                  </div>
+                  )}
                 </div>
 
               </CardContent>
@@ -356,6 +418,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
           </div>
         </div>
       </main>
-    </div>
+      </div>
+    </>
   )
 }
