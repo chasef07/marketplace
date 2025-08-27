@@ -12,10 +12,6 @@ export interface AIAnalysisResult {
   success: boolean
   analysis: {
     furniture_type: string
-    style: string
-    material: string
-    brand: string
-    color: string
     estimated_dimensions: string
     key_features: string[]
   }
@@ -44,10 +40,6 @@ export interface CreateListingData {
   condition: string
   image_filename?: string // Backward compatibility
   images?: ImageData[] // New multiple images support
-  style?: string
-  material?: string
-  brand?: string
-  color?: string
   dimensions?: string
 }
 

@@ -189,10 +189,6 @@ export async function POST(request: NextRequest) {
 
     interface Analysis {
       furniture_type: string;
-      style: string;
-      material: string;
-      brand: string;
-      color: string;
       estimated_dimensions: string;
       key_features: string[];
     }
@@ -229,10 +225,6 @@ export async function POST(request: NextRequest) {
       success: true,
       analysis: {
         furniture_type: analysis.furniture_type,
-        style: analysis.style || 'Unknown',
-        material: analysis.material || 'Unknown',
-        brand: analysis.brand || 'Unknown',
-        color: analysis.color || 'Unknown',
         estimated_dimensions: analysis.estimated_dimensions,
         key_features: analysis.key_features,
       },

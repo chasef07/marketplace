@@ -40,14 +40,7 @@ export function SearchHeader({
   loading = false
 }: SearchHeaderProps) {
   return (
-    <div 
-      className="sticky top-0 z-10 backdrop-blur-md border-b"
-      style={{
-        background: 'rgba(255, 255, 255, 0.85)',
-        borderColor: 'rgba(255, 255, 255, 0.2)',
-        boxShadow: '0 4px 32px -8px rgba(0, 0, 0, 0.1)'
-      }}
-    >
+    <div className="sticky top-0 z-10 bg-white/85 backdrop-blur-md border-b border-slate-200/20 shadow-lg">
       <div className="max-w-7xl mx-auto p-4">
         {/* Main search and controls row */}
         <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">

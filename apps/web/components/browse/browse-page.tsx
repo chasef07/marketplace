@@ -7,7 +7,6 @@ import { SearchHeader, SortOption, ViewMode } from './search-header'
 import { FilterSidebar, FilterOptions } from './filter-sidebar'
 import { ItemGrid } from './item-grid'
 import { Item, PaginationInfo } from "@/lib/api-client-new"
-import { colors, gradients } from '../home/design-system/colors'
 
 interface User {
   id: string
@@ -257,12 +256,7 @@ export function BrowsePage({
   }, [filters])
 
   return (
-    <div 
-      className="min-h-screen"
-      style={{
-        background: gradients.background
-      }}
-    >
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Search Header */}
       <SearchHeader
         searchQuery={searchQuery}
