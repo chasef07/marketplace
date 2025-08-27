@@ -11,10 +11,11 @@ A modern, serverless full-stack marketplace application with AI-powered image an
 - **Auto-Generated Listings** - Professional titles, descriptions, and metadata from photos
 
 ### 🎨 **Modern UI/UX with shadcn/ui**
-- **Clean Design System** - Consistent, accessible components throughout
+- **Clean Design System** - Consistent blue/slate color scheme with accessible components
 - **Responsive Layout** - Mobile-first design with seamless desktop experience
 - **Interactive Animations** - Smooth transitions with Framer Motion
-- **Professional Components** - Cards, badges, tabs, avatars, and modern forms
+- **Professional Components** - Cards, badges, tabs, avatars, forms, and dialogs
+- **Enhanced Item Details** - Modernized layouts with improved typography and spacing
 
 ### 🔐 **Secure User Management**
 - **Supabase Authentication** - Email/password with optional social logins
@@ -291,8 +292,8 @@ GET /api/geocode?zipCode={zipCode}
 This project includes specialized **Claude Code subagents** for enhanced development workflows:
 
 ### **🎨 shadcn UI Expert**
-- **Auto-triggers**: UI component work, styling issues
-- **Specialties**: shadcn/ui integration, responsive design, accessibility
+- **Auto-triggers**: UI component work, styling issues, component modernization
+- **Specialties**: shadcn/ui integration, responsive design, accessibility, blue/slate theme
 - **File**: `.claude/agents/shadcn-ui-expert.md`
 
 ### **🗄️ Supabase Backend Specialist**
@@ -353,7 +354,15 @@ npm run build:production   # Optimized production build
 
 ## 📝 Recent Updates
 
-### **v2.1 - Three-Phase Offer System** *(Latest)*
+### **v2.2 - UI Modernization & Item Detail Refresh** *(Latest)*
+- ✅ **Item Detail Overhaul** - Complete redesign with shadcn/ui Card components
+- ✅ **Enhanced Visual Hierarchy** - Improved spacing, typography, and layout structure
+- ✅ **Modern Form Components** - Updated inputs, selects, textareas with proper labels
+- ✅ **Consistent Color Scheme** - Blue/slate theme throughout with better contrast
+- ✅ **Professional Avatar System** - Improved seller info display with fallback handling
+- ✅ **Responsive Error States** - Better error handling with alert components
+
+### **v2.1 - Three-Phase Offer System**
 - ✅ **Three-Phase Acceptance Flow** - Buyer accepts → Seller confirms → Deal completes
 - ✅ **Seller Action Notifications** - Clear alerts for pending confirmations
 - ✅ **Highest Offer Badges** - Green badges on item cards showing top offers

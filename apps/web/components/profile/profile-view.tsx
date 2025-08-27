@@ -182,7 +182,7 @@ export default function ProfileView({ username, isOwnProfile = false, onNavigate
   if (!profile) return null
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #F7F3E9 0%, #E8DDD4 50%, #DDD1C7 100%)' }}>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-white/80 border-b border-gray-200 shadow-sm">
         <div className="px-4 md:px-8 py-4">

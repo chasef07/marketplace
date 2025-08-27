@@ -8,6 +8,11 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
 import { ArrowLeft, MapPin, User, DollarSign, Edit, Save, X, AlertCircle } from "lucide-react"
 import OfferConfirmationPopup from "@/components/buyer/OfferConfirmationPopup"
 import { apiClient, ImageData } from "@/lib/api-client-new"
@@ -327,10 +332,13 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
 
   if (error || !item) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #F7F3E9 0%, #E8DDD4 50%, #DDD1C7 100%)' }}>
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error || 'Item not found'}</p>
-          <Button onClick={onBack} variant="outline" style={{ borderColor: '#8B4513', color: '#8B4513' }}>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center space-x-2">
+            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+            <p className="text-red-700">{error || 'Item not found'}</p>
+          </div>
+          <Button onClick={onBack} variant="outline">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Marketplace
           </Button>
@@ -340,9 +348,9 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
   }
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #F5F0E8 0%, #FAF7F2 50%, #E8DDD4 100%)' }}>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Clean Header */}
-      <header className="backdrop-blur-md border-b sticky top-0 z-50" style={{ background: 'rgba(250, 247, 242, 0.9)', borderColor: 'rgba(74, 111, 165, 0.1)' }}>
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Button onClick={onBack} variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
@@ -392,110 +400,125 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
       <div className="container mx-auto px-4 py-4">
         <div className="grid lg:grid-cols-5 gap-6 max-w-7xl mx-auto">
           {/* Image Carousel - Takes up 3 columns on large screens */}
-          <div className="lg:col-span-3 space-y-3">
-            <div className="overflow-hidden rounded-2xl" style={{ background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', boxShadow: '0 10px 40px rgba(74, 111, 165, 0.1)' }}>
-              {(() => {
-                // Prepare images array for carousel
-                let carouselImages: string[] = []
-                
-                if (item.images && item.images.length > 0) {
-                  // Use new multiple images format
-                  carouselImages = item.images.map(img => 
-                    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${img.filename}`
-                  )
-                } else if (item.image_filename) {
-                  // Use old single image format
-                  carouselImages = [`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${item.image_filename}`]
-                }
-                
-                if (carouselImages.length > 0) {
-                  return (
-                    <ImageCarousel 
-                      images={carouselImages}
-                      alt={item.name}
-                      className="h-80 lg:h-96"
-                    />
-                  )
-                } else {
-                  return (
-                    <div className="h-80 lg:h-96 flex items-center justify-center bg-gray-100">
-                      <div className="text-8xl">🪑</div>
-                    </div>
-                  )
-                }
-              })()}
-            </div>
+          <div className="lg:col-span-3 space-y-6">
+            <Card className="overflow-hidden">
+              <CardContent className="p-0">
+                {(() => {
+                  // Prepare images array for carousel
+                  let carouselImages: string[] = []
+                  
+                  if (item.images && item.images.length > 0) {
+                    // Use new multiple images format
+                    carouselImages = item.images.map(img => 
+                      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${img.filename}`
+                    )
+                  } else if (item.image_filename) {
+                    // Use old single image format
+                    carouselImages = [`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/furniture-images/${item.image_filename}`]
+                  }
+                  
+                  if (carouselImages.length > 0) {
+                    return (
+                      <ImageCarousel 
+                        images={carouselImages}
+                        alt={item.name}
+                        className="h-80 lg:h-96"
+                      />
+                    )
+                  } else {
+                    return (
+                      <div className="h-80 lg:h-96 flex items-center justify-center bg-slate-100">
+                        <div className="text-8xl">🪑</div>
+                      </div>
+                    )
+                  }
+                })()}
+              </CardContent>
+            </Card>
             
             {/* Item Title & Basic Info - Mobile Only */}
-            <div className="lg:hidden mb-4">
-              <h1 className="text-2xl font-bold mb-2" style={{ color: '#2C3E50' }}>{item.name}</h1>
+            <div className="lg:hidden mb-6">
+              <h1 className="text-2xl font-bold mb-2 text-slate-800">{item.name}</h1>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-3xl font-bold" style={{ color: '#7CB342' }}>${item.starting_price}</p>
+                <div className="text-3xl font-bold text-green-600">${item.starting_price}</div>
                 {item.agent_enabled && (
-                  <div className="flex items-center bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
                     🤖 AI Agent
-                  </div>
+                  </Badge>
                 )}
               </div>
-              <p className="text-sm" style={{ color: '#6B7280' }}>Listed {formatTimeAgo(item.created_at)}</p>
+              <p className="text-sm text-slate-500">Listed {formatTimeAgo(item.created_at)}</p>
             </div>
 
             {/* Description - Under Photo */}
-            <div className="rounded-xl p-3" style={{ background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', boxShadow: '0 6px 24px rgba(74, 111, 165, 0.1)' }}>
-              <h3 className="text-base font-semibold mb-2" style={{ color: '#2C3E50' }}>Description</h3>
-              {isEditing ? (
-                <textarea
-                  value={editForm.description}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-700"
-                  rows={3}
-                  placeholder="Enter item description..."
-                />
-              ) : (
-                <div className="whitespace-pre-wrap leading-snug text-sm" style={{ color: '#4A6FA5' }}>
-                  <p>{item.description || 'No description provided.'}</p>
-                  {item.dimensions && (
-                    <p className="mt-1 pt-1 border-t font-medium text-sm" style={{ borderColor: 'rgba(74, 111, 165, 0.1)', color: '#2C3E50' }}>
-                      <span className="font-semibold" style={{ color: '#E89A5C' }}>Dimensions: </span>
-                      {item.dimensions}
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-4 text-slate-800">Description</h3>
+                {isEditing ? (
+                  <Textarea
+                    value={editForm.description}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                    rows={4}
+                    placeholder="Enter item description..."
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-slate-600 leading-relaxed">
+                      {item.description || 'No description provided.'}
                     </p>
-                  )}
-                </div>
-              )}
-            </div>
+                    {item.dimensions && (
+                      <>
+                        <Separator />
+                        <div className="text-sm">
+                          <Label className="font-medium text-slate-700">Dimensions:</Label>
+                          <p className="text-slate-600 mt-1">{item.dimensions}</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar - Details & Actions */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2 space-y-6">
             {/* Price and Actions Card */}
-            <div className="rounded-2xl p-5" style={{ background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', boxShadow: '0 10px 40px rgba(74, 111, 165, 0.1)' }}>
+            <Card>
+              <CardContent className="p-6">
                 {/* Title - Desktop Only */}
-                <div className="hidden lg:block mb-5">
-                  <h1 className="text-2xl font-bold mb-1" style={{ color: '#2C3E50' }}>{item.name}</h1>
-                  <p className="text-sm" style={{ color: '#6B7280' }}>Listed {formatTimeAgo(item.created_at)}</p>
+                <div className="hidden lg:block mb-6">
+                  <h1 className="text-2xl font-bold mb-2 text-slate-800">{item.name}</h1>
+                  <p className="text-sm text-slate-500">Listed {formatTimeAgo(item.created_at)}</p>
                 </div>
                 
                 {/* Price */}
-                <div className="mb-5">
+                <div className="mb-6">
                   {isEditing ? (
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-3xl font-bold text-gray-900">$</span>
-                      <input
-                        type="number"
-                        value={editForm.starting_price}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, starting_price: e.target.value }))}
-                        className="text-4xl font-bold pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-full"
-                        step="0.01"
-                        min="0"
-                      />
+                    <div>
+                      <Label htmlFor="price-input" className="text-sm font-medium text-slate-700 mb-2 block">
+                        Starting Price
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-2xl font-bold text-slate-900">$</span>
+                        <Input
+                          id="price-input"
+                          type="number"
+                          value={editForm.starting_price}
+                          onChange={(e) => setEditForm(prev => ({ ...prev, starting_price: e.target.value }))}
+                          className="text-2xl font-bold pl-8 h-16"
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center justify-between">
-                      <p className="text-4xl font-bold" style={{ color: '#7CB342' }}>${item.starting_price}</p>
+                      <div className="text-4xl font-bold text-green-600">${item.starting_price}</div>
                       {item.agent_enabled && (
-                        <div className="flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
                           🤖 AI Agent
-                        </div>
+                        </Badge>
                       )}
                     </div>
                   )}
@@ -542,68 +565,88 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
                     </Button>
                   )}
                   {isOwnItem && (
-                    <div className="rounded-lg p-4 border" style={{ background: 'rgba(74, 111, 165, 0.05)', borderColor: 'rgba(74, 111, 165, 0.1)' }}>
-                      <p className="text-sm font-medium mb-2" style={{ color: '#4A6FA5' }}>This is your listing</p>
-                      
-                      {isEditing && (
-                        <label className="flex items-center">
-                          <select
-                            value={editForm.item_status}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, item_status: e.target.value as 'active' | 'paused' | 'sold' | 'archived' }))}
-                            className="rounded border-gray-300 text-sm focus:ring-blue-500 focus:border-blue-500"
-                          >
-                            <option value="active">Active (Available for sale)</option>
-                            <option value="paused">Paused (Temporarily unavailable)</option>
-                            <option value="sold">Sold</option>
-                            <option value="archived">Archived</option>
-                          </select>
-                        </label>
-                      )}
-                    </div>
+                    <Card className="bg-blue-50 border-blue-200">
+                      <CardContent className="p-4">
+                        <p className="text-sm font-medium mb-3 text-blue-800">This is your listing</p>
+                        
+                        {isEditing && (
+                          <div className="space-y-2">
+                            <Label htmlFor="status-select" className="text-sm font-medium text-slate-700">
+                              Listing Status
+                            </Label>
+                            <Select
+                              value={editForm.item_status}
+                              onValueChange={(value: 'active' | 'paused' | 'sold' | 'archived') => 
+                                setEditForm(prev => ({ ...prev, item_status: value }))
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="active">Active (Available for sale)</SelectItem>
+                                <SelectItem value="paused">Paused (Temporarily unavailable)</SelectItem>
+                                <SelectItem value="sold">Sold</SelectItem>
+                                <SelectItem value="archived">Archived</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
                   )}
                 </div>
 
+                <Separator />
+                
                 {/* Seller Info */}
-                <div className="mt-4 pt-4 border-t" style={{ borderColor: 'rgba(74, 111, 165, 0.1)' }}>
-                  <h4 className="font-semibold mb-2" style={{ color: '#2C3E50' }}>Seller Info</h4>
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-slate-800">Seller Info</h4>
                   <div 
                     onClick={() => item.seller?.username && onViewProfile?.(item.seller.username)}
-                    className={`flex items-center gap-2 mb-2 ${
+                    className={`flex items-center gap-3 ${
                       item.seller?.username && onViewProfile 
-                        ? 'cursor-pointer hover:bg-gray-50 p-1 -m-1 rounded-lg transition-colors' 
+                        ? 'cursor-pointer hover:bg-slate-50 p-2 -m-2 rounded-lg transition-colors' 
                         : ''
                     }`}
                   >
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(74, 111, 165, 0.1)' }}>
-                      <span className="text-xs font-medium" style={{ color: '#4A6FA5' }}>
+                    <Avatar>
+                      <AvatarFallback className="bg-blue-100 text-blue-700">
                         {(item.seller?.username || 'U').charAt(0).toUpperCase()}
-                      </span>
-                    </div>
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1">
-                      <p className="font-medium text-sm" style={{ color: '#2C3E50' }}>
+                      <p className="font-medium text-slate-800">
                         {item.seller?.username || 'Anonymous'}
                         {item.seller?.username && onViewProfile && (
-                          <span className="text-xs font-normal ml-1" style={{ color: '#4A6FA5' }}>View Profile →</span>
+                          <span className="text-xs font-normal ml-1 text-blue-600">View Profile →</span>
                         )}
                       </p>
-                      <div className="flex items-center gap-1 text-xs" style={{ color: '#6B7280' }}>
-                        <MapPin className="h-2 w-2" />
+                      <div className="flex items-center gap-1 text-xs text-slate-500">
+                        <MapPin className="h-3 w-3" />
                         <span>{item.seller?.zip_code ? `${item.seller.zip_code} area` : 'Local area'}</span>
                       </div>
                     </div>
                   </div>
                   
-                  {/* Location Map */}
+                  {/* Pickup Area */}
                   {item.seller?.zip_code && (
-                    <div className="space-y-2 mt-4">
-                      <p className="text-sm font-medium" style={{ color: '#4A6FA5' }}>Pickup Area</p>
-                      <div className="w-full h-48 overflow-hidden rounded-lg border border-gray-200">
-                        <LocationMap zipCode={item.seller.zip_code} />
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-blue-700">Pickup Area</Label>
+                      <div className="bg-slate-50 rounded-lg p-4 border">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-blue-600" />
+                          <span className="font-medium text-slate-700">{item.seller.zip_code} area</span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Contact seller for specific pickup location
+                        </p>
                       </div>
                     </div>
                   )}
                 </div>
-            </div>
+              </CardContent>
+            </Card>
 
             {/* Offer history section completely moved to profile page */}
 
@@ -651,23 +694,23 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
                 className={offerError ? "border-red-300 focus:border-red-500 focus:ring-red-500" : ""}
               />
               {item && (
-                <p className="text-sm text-gray-500">
-                  Asking price: ${item.starting_price.toFixed(2)}
+                <p className="text-sm text-slate-500">
+                  Asking price: ${parseFloat(item.starting_price).toFixed(2)}
                 </p>
               )}
             </div>
             
             <div className="space-y-2">
-              <label htmlFor="offer-message" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="offer-message" className="text-sm font-medium text-slate-700">
                 Message (Optional)
-              </label>
-              <textarea
+              </Label>
+              <Textarea
                 id="offer-message"
                 placeholder="Add a message to the seller..."
                 value={offerMessage}
                 onChange={(e) => setOfferMessage(e.target.value)}
                 rows={3}
-                className="flex w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                className="resize-none"
               />
             </div>
             
@@ -710,7 +753,6 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
           }
         }}
         offerDetails={submittedOfferDetails || undefined}
-        autoCloseDelay={5000}
       />
 
       {/* Offer form completely moved to profile page */}

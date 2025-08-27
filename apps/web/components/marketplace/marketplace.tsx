@@ -339,8 +339,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
               {!searchQuery && (
                 <Button 
                   onClick={onCreateListing}
-                  className="hover:opacity-90"
-                  style={{ background: 'linear-gradient(135deg, #4A6FA5, #6B8BC4)', color: '#FAF7F2' }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Be the first to sell!
@@ -460,10 +459,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                       onClick={() => changePage(pageNum)}
                       disabled={loading}
                       className="w-10 h-10 text-sm"
-                      style={pagination.page === pageNum ? {
-                        background: 'linear-gradient(135deg, #4A6FA5, #6B8BC4)',
-                        color: 'white'
-                      } : {}}
+                      className={pagination.page === pageNum ? 'bg-blue-600 text-white' : ''}
                     >
                       {pageNum}
                     </Button>

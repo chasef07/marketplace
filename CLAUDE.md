@@ -142,6 +142,8 @@ This project uses shadcn/ui as the primary component library for consistent, acc
 - **Button** - Consistent button styling with variants (default, outline, ghost, etc.)
 - **Card, CardContent, CardHeader, CardTitle** - Container components
 - **Input, Label, Textarea** - Form components with proper accessibility
+- **Select, SelectContent, SelectItem, SelectTrigger, SelectValue** - Dropdown selections
+- **Dialog, DialogContent, DialogHeader, DialogTitle** - Modal components
 - **Skeleton** - Loading state placeholders
 - **Tabs, TabsContent, TabsList, TabsTrigger** - Organized content sections
 - **Separator** - Visual content dividers
@@ -239,7 +241,16 @@ This project uses shadcn/ui as the primary component library for consistent, acc
 
 ### Recent Enhancements
 
-#### Three-Phase Offer System (v2.1) - Latest
+#### UI Modernization & Component Refresh (v2.2) - Latest
+1. **Item Detail Page Overhaul**: Complete redesign using shadcn/ui Card components
+2. **Enhanced Form Components**: Modern Select, Textarea, and Label implementations
+3. **Improved Visual Hierarchy**: Better spacing, typography, and layout organization
+4. **Professional Avatar Integration**: Enhanced seller info display with consistent fallbacks
+5. **Error State Improvements**: Better error handling with AlertCircle icons and structured messaging
+6. **Responsive Design Updates**: Mobile-first approach with improved desktop layouts
+7. **Consistent Color Theme**: Blue/slate color scheme throughout item details
+
+#### Three-Phase Offer System (v2.1)
 1. **Structured Acceptance Flow**: Buyer accepts → Seller confirms → Deal completes
 2. **Database Schema Updates**: Added `buyer_accepted` status to negotiation_status enum
 3. **New API Endpoints**: 
@@ -269,9 +280,9 @@ This project includes specialized Claude Code subagents for specific development
 
 ### shadcn UI Expert (`shadcn-ui-expert`)
 - **Purpose**: Design and implement frontend UI components using shadcn/ui
-- **Use Cases**: Component layouts, responsive design, shadcn integration, styling optimization
-- **Expertise**: Modern React patterns, TypeScript, accessibility, performance optimization
-- **Auto-triggers**: UI component work, styling issues, component architecture questions
+- **Use Cases**: Component layouts, responsive design, shadcn integration, styling optimization, component modernization
+- **Expertise**: Modern React patterns, TypeScript, accessibility, performance optimization, blue/slate theming
+- **Auto-triggers**: UI component work, styling issues, component architecture questions, visual consistency improvements
 - **File**: `.claude/agents/shadcn-ui-expert.md`
 
 ### Supabase Backend Specialist (`supabase-backend-specialist`)
