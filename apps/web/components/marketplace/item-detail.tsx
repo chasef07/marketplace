@@ -423,12 +423,12 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
                       <ImageCarousel 
                         images={carouselImages}
                         alt={item.name}
-                        className="h-80 lg:h-96"
+                        className="w-full"
                       />
                     )
                   } else {
                     return (
-                      <div className="h-80 lg:h-96 flex items-center justify-center bg-slate-100">
+                      <div className="flex items-center justify-center bg-slate-100 rounded-lg" style={{ minHeight: '300px' }}>
                         <div className="text-8xl">🪑</div>
                       </div>
                     )
@@ -541,18 +541,6 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
                         Make Offer
                       </Button>
                       
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600">
-                          View and manage your offers in your 
-                          <Button 
-                            variant="link" 
-                            className="p-0 h-auto font-semibold text-blue-600 hover:text-blue-800"
-                            onClick={() => window.location.href = `/profile/${user.username}`}
-                          >
-                            profile page
-                          </Button>
-                        </p>
-                      </div>
                     </>
                   )}
                   {!user && (

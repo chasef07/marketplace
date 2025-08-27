@@ -25,8 +25,8 @@ export function ImageCarousel({
   
   if (!images || images.length === 0) {
     return (
-      <div className={`aspect-ratio-4-3 bg-gray-200 flex items-center justify-center rounded-lg ${className}`}>
-        <span className="text-gray-500">No images available</span>
+      <div className={`bg-slate-100 flex items-center justify-center rounded-lg ${className}`} style={{ minHeight: '300px' }}>
+        <span className="text-slate-500">No images available</span>
       </div>
     )
   }
@@ -50,12 +50,12 @@ export function ImageCarousel({
 
   return (
     <div className={`image-carousel relative ${className}`}>
-      <div className="aspect-ratio-4-3 relative overflow-hidden rounded-lg">
+      <div className="relative overflow-hidden rounded-lg bg-slate-50" style={{ minHeight: '300px', maxHeight: '600px' }}>
         <Image 
           src={imageUrls[currentIndex]}
           alt={`${alt} ${currentIndex + 1}`}
           fill
-          className="object-cover transition-opacity duration-300"
+          className="object-contain transition-opacity duration-300"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           priority={currentIndex === 0}
           placeholder="blur"
@@ -111,10 +111,6 @@ export function ImageCarousel({
       <style jsx>{`
         .image-carousel {
           position: relative;
-        }
-
-        .aspect-ratio-4-3 {
-          aspect-ratio: 4/3;
         }
 
         .nav-arrow {
