@@ -54,15 +54,15 @@ export async function GET(request: NextRequest) {
         id: `agent_${notification.id}`,
         type: 'agent_recommendation',
         title: `AI recommends accepting $${notification.original_offer_price} offer`,
-        message: `Your AI agent suggests accepting the $${notification.original_offer_price} offer on "${notification.items.name}" with ${Math.round(notification.confidence_score * 100)}% confidence.`,
+        message: `Your AI agent suggests accepting the $${notification.original_offer_price} offer on "${(notification.items as any)?.name || 'item'}" with ${Math.round(notification.confidence_score * 100)}% confidence.`,
         offerPrice: notification.original_offer_price,
-        itemName: notification.items.name,
-        itemId: notification.items.id,
-        buyerName: notification.negotiations.profiles.username,
+        itemName: (notification.items as any)?.name || 'Unknown item',
+        itemId: (notification.items as any)?.id || null,
+        buyerName: (notification.negotiations as any)?.profiles?.username || 'Unknown buyer',
         confidence: notification.confidence_score,
         reasoning: notification.reasoning,
         createdAt: notification.created_at,
-        negotiationId: notification.negotiations.id,
+        negotiationId: (notification.negotiations as any)?.id || null,
         priority: notification.confidence_score > 0.9 ? 'high' : 'medium',
         actions: ['accept', 'dismiss']
       }));
@@ -103,13 +103,13 @@ export async function GET(request: NextRequest) {
         id: `offer_${offer.id}`,
         type: 'buyer_offer',
         title: `New offer: $${offer.price}`,
-        message: `${offer.negotiations.profiles.username} made an offer of $${offer.price} on "${offer.negotiations.items.name}"${offer.message ? `: "${offer.message}"` : ''}`,
+        message: `${(offer.negotiations as any)?.profiles?.username || 'Someone'} made an offer of $${offer.price} on "${(offer.negotiations as any)?.items?.name || 'item'}"${offer.message ? `: "${offer.message}"` : ''}`,
         offerPrice: parseFloat(offer.price),
-        itemName: offer.negotiations.items.name,
-        itemId: offer.negotiations.items.id,
-        buyerName: offer.negotiations.profiles.username,
+        itemName: (offer.negotiations as any)?.items?.name || 'Unknown item',
+        itemId: (offer.negotiations as any)?.items?.id || null,
+        buyerName: (offer.negotiations as any)?.profiles?.username || 'Unknown buyer',
         createdAt: offer.created_at,
-        negotiationId: offer.negotiations.id,
+        negotiationId: (offer.negotiations as any)?.id || null,
         offerId: offer.id,
         priority: 'medium',
         actions: ['accept', 'counter', 'decline']
@@ -151,13 +151,13 @@ export async function GET(request: NextRequest) {
         id: `counter_${offer.id}`,
         type: 'seller_counter',
         title: `Counter offer: $${offer.price}`,
-        message: `${offer.negotiations.profiles.username} countered with $${offer.price} on "${offer.negotiations.items.name}"${offer.message ? `: "${offer.message}"` : ''}`,
+        message: `${(offer.negotiations as any)?.profiles?.username || 'Someone'} countered with $${offer.price} on "${(offer.negotiations as any)?.items?.name || 'item'}"${offer.message ? `: "${offer.message}"` : ''}`,
         offerPrice: parseFloat(offer.price),
-        itemName: offer.negotiations.items.name,
-        itemId: offer.negotiations.items.id,
-        sellerName: offer.negotiations.profiles.username,
+        itemName: (offer.negotiations as any)?.items?.name || 'Unknown item',
+        itemId: (offer.negotiations as any)?.items?.id || null,
+        sellerName: (offer.negotiations as any)?.profiles?.username || 'Unknown seller',
         createdAt: offer.created_at,
-        negotiationId: offer.negotiations.id,
+        negotiationId: (offer.negotiations as any)?.id || null,
         offerId: offer.id,
         priority: 'medium',
         actions: ['accept', 'counter', 'decline']
@@ -268,7 +268,7 @@ export async function POST(request: NextRequest) {
             final_price: decision.original_offer_price,
             sold_at: new Date().toISOString(),
           })
-          .eq('id', decision.items.id);
+          .eq('id', (decision.items as any)?.id);
 
         // Mark notification as handled
         await supabase
@@ -313,7 +313,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Verify user is authorized (either buyer or seller)
-        if (offer.negotiations.buyer_id !== user.id && offer.negotiations.seller_id !== user.id) {
+        if ((offer.negotiations as any)?.buyer_id !== user.id && (offer.negotiations as any)?.seller_id !== user.id) {
           return Response.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
@@ -340,7 +340,7 @@ export async function POST(request: NextRequest) {
             final_price: offer.price,
             sold_at: new Date().toISOString(),
           })
-          .eq('id', offer.negotiations.items.id);
+          .eq('id', (offer.negotiations as any)?.items?.id);
 
         return Response.json({ 
           success: true, 
@@ -375,7 +375,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Verify user is authorized
-        if (offer.negotiations.buyer_id !== user.id && offer.negotiations.seller_id !== user.id) {
+        if ((offer.negotiations as any)?.buyer_id !== user.id && (offer.negotiations as any)?.seller_id !== user.id) {
           return Response.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
@@ -431,7 +431,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Verify user is authorized
-        if (offer.negotiations.buyer_id !== user.id && offer.negotiations.seller_id !== user.id) {
+        if ((offer.negotiations as any)?.buyer_id !== user.id && (offer.negotiations as any)?.seller_id !== user.id) {
           return Response.json({ error: 'Unauthorized' }, { status: 403 });
         }
 

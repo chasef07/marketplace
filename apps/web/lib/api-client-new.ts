@@ -50,18 +50,19 @@ export interface Item {
   description: string
   furniture_type: string
   starting_price: number
-  condition: string
   image_filename?: string // Backward compatibility
   images?: ImageData[] // New multiple images support
   item_status: 'draft' | 'pending_review' | 'active' | 'under_negotiation' | 'sold_pending' | 'sold' | 'paused' | 'archived' | 'flagged' | 'removed'
   views_count: number
-  style?: string
+  agent_enabled?: boolean // Match database schema
   dimensions?: string
-  material?: string
-  brand?: string
-  color?: string
   created_at: string
   updated_at: string
+  // Computed/joined fields
+  views?: number // Alias for views_count for backward compatibility
+  ai_agent_enabled?: boolean // Alias for agent_enabled
+  image_url?: string // Computed field
+  zip_code?: string // From seller profile
   seller?: {
     id: string
     username: string

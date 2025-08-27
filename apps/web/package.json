@@ -46,7 +46,10 @@
     "swr": "^2.3.4",
     "tailwind-merge": "^2.5.4",
     "use-debounce": "^10.0.5",
-    "zod": "^3.23.8"
+    "zod": "^3.25.76"
+  },
+  "overrides": {
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

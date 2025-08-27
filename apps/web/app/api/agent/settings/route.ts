@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get or create agent profile
-    const { data: agentProfile, error: profileError } = await supabase
+    let { data: agentProfile, error: profileError } = await supabase
       .from('seller_agent_profile')
       .select('*')
       .eq('seller_id', user.id)

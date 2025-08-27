@@ -44,7 +44,7 @@ export default function LiveMonitor() {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [lastResult, setLastResult] = useState<ProcessingResult | null>(null);
   const [loading, setLoading] = useState(true);
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     fetchQueue();

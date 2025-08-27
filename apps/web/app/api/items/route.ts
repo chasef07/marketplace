@@ -177,18 +177,7 @@ export async function POST(request: NextRequest) {
       }]
     }
 
-    // Log the data being inserted for debugging
-    console.log('Attempting to insert item with data:', {
-      seller_id: user.id,
-      name: body.name,
-      description: body.description,
-      furniture_type: furnitureType,
-      original_furniture_type: body.furniture_type,
-      starting_price: body.starting_price,
-      images: imagesData, // JSONB images support
-      dimensions: body.dimensions,
-      agent_enabled: body.agent_enabled || false
-    })
+    // Prepare data for insertion
 
     const { data: item, error } = await supabase
       .from('items')

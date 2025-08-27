@@ -458,8 +458,7 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                       variant={pagination.page === pageNum ? "default" : "outline"}
                       onClick={() => changePage(pageNum)}
                       disabled={loading}
-                      className="w-10 h-10 text-sm"
-                      className={pagination.page === pageNum ? 'bg-blue-600 text-white' : ''}
+                      className={`w-10 h-10 text-sm ${pagination.page === pageNum ? 'bg-blue-600 text-white' : ''}`}
                     >
                       {pageNum}
                     </Button>

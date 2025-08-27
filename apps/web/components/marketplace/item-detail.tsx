@@ -660,7 +660,7 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
           <DialogHeader>
             <DialogTitle>Make an Offer</DialogTitle>
             <DialogDescription>
-              Submit your best offer for "{item?.name}"
+              Submit your best offer for &quot;{item?.name}&quot;
             </DialogDescription>
           </DialogHeader>
           

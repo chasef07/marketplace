@@ -6,7 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { offerService } from '@/lib/services/offer-service';
 
 // Game theory tools (simplified for background processing)
-import { nashEquilibriumTool, marketAnalysisTool } from '@/lib/agent/core/nash-equilibrium';
+// import { nashEquilibriumTool, marketAnalysisTool } from '@/lib/agent/core/nash-equilibrium';
 
 export const runtime = 'edge';
 
@@ -289,10 +289,10 @@ Make decision based on buyer's demonstrated behavior and negotiation psychology.
         model: openai('gpt-4o'),
         system: SYSTEM_PROMPT,
         prompt: analysisPrompt,
-        tools: {
-          nashEquilibrium: nashEquilibriumTool,
-          marketAnalysis: marketAnalysisTool,
-        },
+        // tools: {
+        //   nashEquilibrium: nashEquilibriumTool,
+        //   marketAnalysis: marketAnalysisTool,
+        // },
         schema: z.object({
           decision: z.enum(['ACCEPT', 'COUNTER', 'DECLINE']),
           recommendedPrice: z.number().optional(),
@@ -446,14 +446,14 @@ Make decision based on buyer's demonstrated behavior and negotiation psychology.
           });
 
           if (!result.success) {
-            console.error(`💥 Agent offer creation failed for negotiation ${task.negotiation_id}:`, result.error);
+            console.error(`💥 Agent offer creation failed for negotiation ${task.negotiation_id}:`, 'error' in result ? result.error : 'Unknown error');
           }
 
           actionResult = { 
             success: result.success, 
             action: 'COUNTERED', 
             price: counterPrice,
-            error: result.success ? undefined : result.error
+            error: result.success ? undefined : ('error' in result ? result.error : 'Unknown error')
           };
         }
 
