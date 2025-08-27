@@ -28,11 +28,13 @@ export async function GET() {
     }
 
     // Get or create agent profile
-    let { data: agentProfile, error: profileError } = await supabase
+    const { data: initialProfile, error: profileError } = await supabase
       .from('seller_agent_profile')
       .select('*')
       .eq('seller_id', user.id)
       .single();
+    
+    let agentProfile = initialProfile;
 
     // If no profile exists, create one with defaults
     if (profileError && profileError.code === 'PGRST116') {
