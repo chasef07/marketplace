@@ -6,7 +6,7 @@ interface OfferAnalysis {
   offerId: string;
   assessment: 'Strong' | 'Fair' | 'Weak';
   isLowball: boolean;
-  suggestedCounter: number;
+  offerRatio: number;
   reason: string;
 }
 
@@ -46,7 +46,7 @@ export const analyzeOfferTool = tool({
       offerId,
       assessment: ratio >= 0.9 ? 'Strong' : ratio >= 0.8 ? 'Fair' : 'Weak',
       isLowball,
-      suggestedCounter: isLowball ? Math.max(offerAmount * 1.15, minAccept) : Math.max(offerAmount * 1.05, minAccept),
+      offerRatio: Math.round(ratio * 100) / 100, // Round to 2 decimal places
       reason: isLowball ? 'Offer is below 70% of listing price' : `Offer is ${Math.round(ratio * 100)}% of listing price`,
     };
   },
@@ -97,7 +97,130 @@ export const counterOfferTool = tool({
   },
 });
 
-// Tool 3: Decide Offer
+// Tool 3: Get Listing Age
+export const getListingAgeTool = tool({
+  description: 'Get how long an item has been listed and recent activity.',
+  inputSchema: z.object({
+    itemId: z.number().describe('Item ID to check listing age for'),
+  }),
+  execute: async ({ itemId }: { itemId: number }) => {
+    try {
+      const { createSupabaseServerClient } = await import('@/lib/supabase-server');
+      const supabase = createSupabaseServerClient();
+
+      // Get item listing date and recent activity
+      const { data: item } = await supabase
+        .from('items')
+        .select('created_at, updated_at, views_count')
+        .eq('id', itemId)
+        .single();
+
+      if (!item) {
+        throw new Error('Item not found');
+      }
+
+      const listingDate = new Date(item.created_at);
+      const daysOnMarket = Math.floor((Date.now() - listingDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Simple activity assessment
+      const recentActivity = item.views_count > 10 ? 'High' : item.views_count > 5 ? 'Medium' : 'Low';
+
+      return {
+        daysOnMarket,
+        listingDate: item.created_at,
+        totalViews: item.views_count || 0,
+        activityLevel: recentActivity,
+        marketStatus: daysOnMarket <= 7 ? 'Fresh' : daysOnMarket <= 21 ? 'Active' : 'Stale'
+      };
+    } catch (error) {
+      return {
+        daysOnMarket: 0,
+        listingDate: new Date().toISOString(),
+        totalViews: 0,
+        activityLevel: 'Unknown',
+        marketStatus: 'Unknown',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  },
+});
+
+// Tool 4: Get Competing Offers
+export const getCompetingOffersTool = tool({
+  description: 'Get information about competing offers on an item.',
+  inputSchema: z.object({
+    itemId: z.number().describe('Item ID to check competing offers for'),
+    currentNegotiationId: z.number().describe('Current negotiation ID to exclude'),
+  }),
+  execute: async ({ itemId, currentNegotiationId }: { itemId: number; currentNegotiationId: number }) => {
+    try {
+      const { createSupabaseServerClient } = await import('@/lib/supabase-server');
+      const supabase = createSupabaseServerClient();
+
+      // Get all active negotiations for this item (excluding current one)
+      const { data: competingNegotiations } = await supabase
+        .from('negotiations')
+        .select(`
+          id,
+          status,
+          created_at,
+          offers (
+            price,
+            created_at,
+            offer_type
+          )
+        `)
+        .eq('item_id', itemId)
+        .neq('id', currentNegotiationId)
+        .in('status', ['active', 'buyer_accepted']);
+
+      if (!competingNegotiations || competingNegotiations.length === 0) {
+        return {
+          competingOffers: 0,
+          highestCompetingOffer: 0,
+          recentOfferActivity: false,
+          competitionLevel: 'None'
+        };
+      }
+
+      // Get all buyer offers from competing negotiations
+      const allCompetingOffers = competingNegotiations
+        .flatMap(neg => neg.offers || [])
+        .filter(offer => offer.offer_type === 'buyer')
+        .map(offer => offer.price);
+
+      const highestCompetingOffer = allCompetingOffers.length > 0 ? Math.max(...allCompetingOffers) : 0;
+      
+      // Check for recent activity (last 48 hours)
+      const recent = new Date(Date.now() - 48 * 60 * 60 * 1000);
+      const hasRecentActivity = competingNegotiations.some(neg => 
+        new Date(neg.created_at) > recent
+      );
+
+      const competitionLevel = allCompetingOffers.length >= 3 ? 'High' : 
+                              allCompetingOffers.length >= 1 ? 'Medium' : 'Low';
+
+      return {
+        competingOffers: allCompetingOffers.length,
+        highestCompetingOffer,
+        recentOfferActivity: hasRecentActivity,
+        competitionLevel,
+        competingNegotiations: competingNegotiations.length
+      };
+    } catch (error) {
+      return {
+        competingOffers: 0,
+        highestCompetingOffer: 0,
+        recentOfferActivity: false,
+        competitionLevel: 'Unknown',
+        competingNegotiations: 0,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  },
+});
+
+// Tool 5: Decide Offer
 export const decideOfferTool = tool({
   description: 'Accept or reject an offer in the marketplace.',
   inputSchema: z.object({

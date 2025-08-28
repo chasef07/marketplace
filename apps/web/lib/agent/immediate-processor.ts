@@ -1,19 +1,35 @@
 import { openai } from '@ai-sdk/openai';
 import { generateText, stepCountIs } from 'ai';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
-import { analyzeOfferTool, counterOfferTool, decideOfferTool } from './agent_tools';
+import { analyzeOfferTool, counterOfferTool, decideOfferTool, getListingAgeTool, getCompetingOffersTool } from './agent_tools';
 
-// Simplified system prompt for immediate negotiation response
-const SYSTEM_PROMPT = `You are an autonomous seller agent for a marketplace. Your goal is to analyze offers, detect lowballs, and decide to accept, counter, or reject in real-time. Follow these steps:
+// Enhanced system prompt with market context and human-like negotiation
+const SYSTEM_PROMPT = `You are an autonomous seller agent for a marketplace. Negotiate like a real person would, using market context to make smart decisions.
 
-1. Use analyzeOfferTool to assess the offer (lowball if <70% of list price).
-2. Reason through the decision:
-   - Accept if offer >= 95% of list price OR meets seller's minimum acceptable ratio.
-   - Reject if lowball (<70%) or below seller's minimum acceptable threshold.
-   - Counter otherwise, using suggestedCounter from analyzeOfferTool.
-3. Use counterOfferTool or decideOfferTool to execute your decision immediately.
+NEGOTIATION STRATEGY:
+1. First, gather context:
+   - Use analyzeOfferTool to assess the offer quality (assessment, ratio, lowball status)
+   - Use getListingAgeTool to understand time on market  
+   - Use getCompetingOffersTool to see competition level
 
-Be decisive and professional in your negotiation approach.`;
+2. Think like a human seller and decide YOUR OWN counter price:
+   - Fresh listings (≤7 days) with competition: Be firm, counter closer to asking price (90-95%)
+   - Stale listings (>21 days) with no competition: Be flexible, counter more aggressively (80-87%)  
+   - High competing offers: You have leverage, don't discount much (92-96%)
+   - No competing offers: Consider reasonable counters to generate interest (82-88%)
+
+3. Counter-offer examples (decide your own price based on context):
+   - $1200 item, $900 offer (75%): Fresh + competition = counter $1080-1140 | Stale + no competition = counter $960-1044
+   - $800 item, $600 offer (75%): Fresh + competition = counter $720-760 | Stale + no competition = counter $640-696
+   - YOU decide the exact price based on all gathered context, not pre-calculated suggestions
+
+
+4. Decision guidelines:
+   - Accept: 95%+ of asking price or exceptional circumstances
+   - Counter: 50-94% of asking price, use market context for amount
+   - Reject: <50% of asking price AND no urgency to sell
+
+Use your tools for context, then negotiate strategically like a real person would.`;
 
 export interface ImmediateProcessorInput {
   negotiationId: number;
@@ -111,18 +127,30 @@ export async function processOfferImmediately(input: ImmediateProcessorInput): P
     // AI reasoning and execution with tools
     const { text, steps } = await generateText({
       model: openai('gpt-4o-mini'),
-      tools: { analyzeOfferTool, counterOfferTool, decideOfferTool },
+      tools: { analyzeOfferTool, counterOfferTool, decideOfferTool, getListingAgeTool, getCompetingOffersTool },
       system: SYSTEM_PROMPT + `\n\nYou have access to tools to execute your decisions. Use them to take action based on your analysis.`,
-      stopWhen: stepCountIs(5),
+      stopWhen: stepCountIs(8),
       prompt: `Analyze and decide on this offer for item: ${input.furnitureType}
 - Negotiation ID: ${input.negotiationId}
 - Offer ID: ${input.offerId}
+- Item ID: ${input.itemId}
 - Offer price: $${input.offerPrice}
 - Listing price: $${input.listingPrice}
 - Min acceptable ratio: ${minAcceptableRatio}
 - Seller ID: ${input.sellerId}
 
-Analyze the offer and take appropriate action (accept, counter, or reject) immediately.`,
+First, gather market context using your tools:
+1. Use getListingAgeTool to check how long this item has been on market
+2. Use getCompetingOffersTool to see if there are other buyers interested
+3. Use analyzeOfferTool to assess the offer quality and ratio
+
+Then analyze ALL the context and decide YOUR OWN counter price (if countering) based on:
+- Listing age (fresh vs stale)  
+- Competition level (high vs none)
+- Offer quality (strong vs weak vs lowball)
+- Market position and seller leverage
+
+Take appropriate action (accept, counter with YOUR chosen price, or reject) based on the full context.`,
     });
 
     const executionTime = Date.now() - startTime;
