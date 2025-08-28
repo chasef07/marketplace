@@ -40,9 +40,7 @@ interface ProcessingResult {
 
 export default function LiveMonitor() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
-  const [processing, setProcessing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [lastResult, setLastResult] = useState<ProcessingResult | null>(null);
   const [loading, setLoading] = useState(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -74,26 +72,6 @@ export default function LiveMonitor() {
     }
   };
 
-  const processNextItem = async () => {
-    setProcessing(true);
-    try {
-      const response = await fetch('/api/agent/monitor', { method: 'POST' });
-      const result = await response.json();
-      setLastResult(result);
-      
-      // Refresh queue after processing
-      setTimeout(fetchQueue, 1000);
-    } catch (error) {
-      console.error('Processing failed:', error);
-      setLastResult({
-        success: false,
-        processed: 0,
-        error: 'Processing failed'
-      });
-    } finally {
-      setProcessing(false);
-    }
-  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -137,7 +115,7 @@ export default function LiveMonitor() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Live Agent Monitor</h1>
-          <p className="text-gray-600 mt-1">Real-time processing queue and agent decisions</p>
+          <p className="text-gray-600 mt-1">Monitor immediate processing and agent decisions</p>
         </div>
         
         <div className="flex items-center space-x-4">
@@ -163,14 +141,10 @@ export default function LiveMonitor() {
             <span>Refresh</span>
           </button>
           
-          <button
-            onClick={processNextItem}
-            disabled={processing || queue.filter(q => q.status === 'pending').length === 0}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
-          >
+          <div className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-800 rounded-lg">
             <Zap className="h-4 w-4" />
-            <span>{processing ? 'Processing...' : 'Process Next'}</span>
-          </button>
+            <span>Immediate Processing Mode</span>
+          </div>
         </div>
       </div>
 
@@ -189,48 +163,11 @@ export default function LiveMonitor() {
         ))}
       </div>
 
-      {/* Last Processing Result */}
-      {lastResult && (
-        <div className={`rounded-lg p-4 ${lastResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-          <h3 className="font-semibold mb-2">Last Processing Result</h3>
-          {lastResult.success && lastResult.task ? (
-            <div className="space-y-2 text-sm">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <span className="text-gray-600">Decision:</span>
-                  <span className="ml-2 font-medium">{lastResult.task.decision}</span>
-                </div>
-                <div>
-                  <span className="text-gray-600">Confidence:</span>
-                  <span className="ml-2 font-medium">{(lastResult.task.confidence * 100).toFixed(1)}%</span>
-                </div>
-                <div>
-                  <span className="text-gray-600">Action:</span>
-                  <span className="ml-2 font-medium">{lastResult.task.actionResult.action}</span>
-                </div>
-                <div>
-                  <span className="text-gray-600">Execution:</span>
-                  <span className="ml-2 font-medium">{lastResult.task.executionTimeMs}ms</span>
-                </div>
-              </div>
-              {lastResult.task.actionResult.price && (
-                <div>
-                  <span className="text-gray-600">Price:</span>
-                  <span className="ml-2 font-medium">${lastResult.task.actionResult.price}</span>
-                </div>
-              )}
-              <div>
-                <span className="text-gray-600">Reasoning:</span>
-                <p className="mt-1 text-gray-800">{lastResult.task.reasoning}</p>
-              </div>
-            </div>
-          ) : lastResult.processed === 0 ? (
-            <p className="text-gray-600">No pending tasks to process</p>
-          ) : (
-            <p className="text-red-600">{lastResult.error || 'Processing failed'}</p>
-          )}
-        </div>
-      )}
+      {/* Immediate Processing Info */}
+      <div className="rounded-lg p-4 bg-blue-50 border border-blue-200">
+        <h3 className="font-semibold mb-2 text-blue-900">Immediate Processing Active</h3>
+        <p className="text-sm text-blue-800">Agent decisions are processed instantly when buyers submit offers. Monitor recent decisions in the Agent Dashboard.</p>
+      </div>
 
       {/* Processing Queue */}
       <div className="bg-white rounded-lg shadow">

@@ -12,25 +12,7 @@ import type {
 export class AgentService {
   private supabase = createSupabaseServerClient();
 
-  /**
-   * Get the next pending task from the agent queue
-   */
-  async getNextQueuedTask(): Promise<AgentTask | null> {
-    try {
-      const { data, error } = await this.supabase
-        .rpc('get_next_agent_task');
-      
-      if (error) {
-        console.error('Error getting next agent task:', error);
-        return null;
-      }
-      
-      return data?.[0] || null;
-    } catch (error) {
-      console.error('Failed to get next queued task:', error);
-      return null;
-    }
-  }
+  // Queue system removed - using immediate processing
 
   /**
    * Record an agent decision in the database

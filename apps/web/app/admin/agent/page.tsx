@@ -220,15 +220,7 @@ export default function AgentDashboard() {
       {/* Quick Actions */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button 
-            onClick={() => fetch('/api/agent/monitor', { method: 'POST' })}
-            className="flex items-center justify-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            <Activity className="h-4 w-4" />
-            <span>Force Process Queue</span>
-          </button>
-          
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <button 
             onClick={() => window.open('/admin/agent/monitor', '_blank')}
             className="flex items-center justify-center space-x-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
@@ -258,8 +250,8 @@ export default function AgentDashboard() {
             </span>
           </div>
           <div>
-            <span className="text-gray-600">Queue Processing:</span>
-            <span className="ml-2 font-medium">Every 30 seconds</span>
+            <span className="text-gray-600">Processing Mode:</span>
+            <span className="ml-2 font-medium">Immediate (real-time)</span>
           </div>
         </div>
       </div>

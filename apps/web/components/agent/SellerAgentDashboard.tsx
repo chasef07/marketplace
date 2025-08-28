@@ -7,7 +7,6 @@ import { Bot, Settings, Eye, MessageSquare, TrendingUp, BarChart3, Power, Packag
 import { createClient } from '@/lib/supabase'
 import { clientAgentService } from '@/lib/agent/client-service'
 import type { AgentEnabledItem, AgentDecision, AgentStats } from '@/lib/agent/types'
-import { AgentNotifications } from './AgentNotifications'
 import { NegotiationTimeline } from './NegotiationTimeline'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
@@ -206,10 +205,9 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
       
       const interval = setInterval(async () => {
         try {
-          const response = await fetch('/api/agent/cron', { 
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ maxTasks: 5 })
+          const response = await fetch('/api/agent/monitor', { 
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
           })
           
           const result = await response.json()
@@ -247,10 +245,9 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
     try {
       console.log('🔧 Manual processing started...')
       
-      const response = await fetch('/api/agent/cron', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ maxTasks: 10 })
+      const response = await fetch('/api/agent/monitor', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       })
       
       const result = await response.json()
@@ -409,13 +406,6 @@ export function SellerAgentDashboard({ user, onBack, onNavigateAgentSettings }: 
           </Card>
         </div>
 
-        {/* Agent Notifications */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">🤖 Agent Recommendations</h2>
-          </div>
-          <AgentNotifications />
-        </Card>
 
         {/* Negotiation Timeline */}
         <Card className="p-6">

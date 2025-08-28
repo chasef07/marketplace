@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from "@/lib/supabase-server"
 import { ratelimit, withRateLimit } from '@/lib/rate-limit'
 import { offerService } from '@/lib/services/offer-service'
+import { processOfferImmediately } from '@/lib/agent/immediate-processor'
 
 export async function POST(
   request: NextRequest,
@@ -138,12 +139,58 @@ export async function POST(
       return NextResponse.json({ error: 'error' in result ? result.error : 'Unknown error' }, { status: 400 })
     }
 
-    // Note: Agent automatically queues buyer offers via database trigger
-    // No manual triggering needed - the queue_offer_for_agent() function handles this
+    // Get the created offer details
+    const createdOffer = 'offer' in result ? result.offer : null;
+    
+    // Check if item has agent enabled for immediate processing
+    const { data: itemDetails } = await supabase
+      .from('items')
+      .select('agent_enabled, starting_price, furniture_type, seller_id')
+      .eq('id', itemId)
+      .single();
+
+    let agentResponse = null;
+
+    // Process offer immediately if agent is enabled
+    if (itemDetails?.agent_enabled && createdOffer) {
+      try {
+        console.log('🤖 Triggering immediate agent processing for offer:', createdOffer.id);
+        
+        agentResponse = await processOfferImmediately({
+          negotiationId: negotiation.id,
+          offerId: createdOffer.id,
+          sellerId: itemDetails.seller_id,
+          itemId: itemId,
+          listingPrice: itemDetails.starting_price,
+          offerPrice: body.price,
+          furnitureType: itemDetails.furniture_type || 'furniture'
+        });
+
+        console.log('🤖 Immediate agent processing completed:', {
+          success: agentResponse.success,
+          decision: agentResponse.decision,
+          executionTime: agentResponse.executionTimeMs
+        });
+        
+      } catch (agentError) {
+        console.error('🤖 Immediate agent processing failed:', agentError);
+        // Don't fail the offer creation, just log the agent error
+        agentResponse = {
+          success: false,
+          decision: 'error',
+          reasoning: 'Agent processing failed',
+          actionResult: { success: false, action: 'FAILED' },
+          executionTimeMs: 0,
+          toolResults: [],
+          error: agentError instanceof Error ? agentError.message : 'Unknown agent error'
+        };
+      }
+    }
 
     return NextResponse.json({
       negotiation,
-      offer: 'offer' in result ? result.offer : null
+      offer: createdOffer,
+      agentResponse
     })
     } catch (error) {
       console.error('🔥 CREATE OFFER ERROR - Full Details:', {

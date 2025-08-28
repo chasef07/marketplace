@@ -123,6 +123,18 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
     price: number
     sellerUsername?: string
     isAgentEnabled?: boolean
+    agentResponse?: {
+      success: boolean
+      decision: string
+      reasoning: string
+      actionResult: {
+        success: boolean
+        action: string
+        price?: number
+        error?: string
+      }
+      executionTimeMs: number
+    } | null
   } | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState<{
@@ -202,6 +214,11 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
 
       if (response.ok) {
         const data = await response.json()
+        console.log('🎯 Offer submitted with response:', {
+          hasAgentResponse: !!data.agentResponse,
+          agentDecision: data.agentResponse?.decision,
+          agentAction: data.agentResponse?.actionResult?.action
+        })
         
         // Close the offer overlay
         setShowOfferOverlay(false)
@@ -209,12 +226,13 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
         setOfferMessage('')
         setOfferError(null)
         
-        // Set up confirmation popup details
+        // Set up confirmation popup details with agent response
         setSubmittedOfferDetails({
           itemName: item.name,
           price: price,
           sellerUsername: item.seller?.username,
-          isAgentEnabled: item.agent_enabled
+          isAgentEnabled: item.agent_enabled,
+          agentResponse: data.agentResponse || null
         })
         
         // Show beautiful confirmation popup

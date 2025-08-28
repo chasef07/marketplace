@@ -158,14 +158,7 @@ export async function PUT(request: NextRequest) {
         }, { status: 500 });
       }
 
-      // If enabling agent, clean up any stale queue entries for this seller
-      if (settings.agentEnabled) {
-        await supabase
-          .from('agent_processing_queue')
-          .delete()
-          .eq('seller_id', user.id)
-          .eq('status', 'failed');
-      }
+      // Agent settings updated - immediate processing enabled
 
       return Response.json({
         success: true,
