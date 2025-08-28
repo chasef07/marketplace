@@ -123,18 +123,6 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
     price: number
     sellerUsername?: string
     isAgentEnabled?: boolean
-    agentResponse?: {
-      success: boolean
-      decision: string
-      reasoning: string
-      actionResult: {
-        success: boolean
-        action: string
-        price?: number
-        error?: string
-      }
-      executionTimeMs: number
-    } | null
   } | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState<{
@@ -226,13 +214,12 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
         setOfferMessage('')
         setOfferError(null)
         
-        // Set up confirmation popup details with agent response
+        // Set up confirmation popup details
         setSubmittedOfferDetails({
           itemName: item.name,
           price: price,
           sellerUsername: item.seller?.username,
-          isAgentEnabled: item.agent_enabled,
-          agentResponse: data.agentResponse || null
+          isAgentEnabled: item.agent_enabled
         })
         
         // Show beautiful confirmation popup

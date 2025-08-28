@@ -142,55 +142,36 @@ export async function POST(
     // Get the created offer details
     const createdOffer = 'offer' in result ? result.offer : null;
     
-    // Check if item has agent enabled for immediate processing
+    // Check if item has agent enabled for background processing
     const { data: itemDetails } = await supabase
       .from('items')
-      .select('agent_enabled, starting_price, furniture_type, seller_id')
+      .select('agent_enabled, seller_id, starting_price, furniture_type')
       .eq('id', itemId)
       .single();
 
-    let agentResponse = null;
-
-    // Process offer immediately if agent is enabled
+    // Process agent asynchronously without blocking response
     if (itemDetails?.agent_enabled && createdOffer) {
-      try {
-        console.log('🤖 Triggering immediate agent processing for offer:', createdOffer.id);
-        
-        agentResponse = await processOfferImmediately({
-          negotiationId: negotiation.id,
-          offerId: createdOffer.id,
-          sellerId: itemDetails.seller_id,
-          itemId: itemId,
-          listingPrice: itemDetails.starting_price,
-          offerPrice: body.price,
-          furnitureType: itemDetails.furniture_type || 'furniture'
-        });
-
-        console.log('🤖 Immediate agent processing completed:', {
-          success: agentResponse.success,
-          decision: agentResponse.decision,
-          executionTime: agentResponse.executionTimeMs
-        });
-        
-      } catch (agentError) {
-        console.error('🤖 Immediate agent processing failed:', agentError);
-        // Don't fail the offer creation, just log the agent error
-        agentResponse = {
-          success: false,
-          decision: 'error',
-          reasoning: 'Agent processing failed',
-          actionResult: { success: false, action: 'FAILED' },
-          executionTimeMs: 0,
-          toolResults: [],
-          error: agentError instanceof Error ? agentError.message : 'Unknown agent error'
-        };
-      }
+      // Fire and forget - don't await this
+      processOfferImmediately({
+        negotiationId: negotiation.id,
+        offerId: createdOffer.id,
+        sellerId: itemDetails.seller_id,
+        itemId: itemId,
+        listingPrice: itemDetails.starting_price,
+        offerPrice: body.price,
+        furnitureType: itemDetails.furniture_type || 'furniture'
+      }).then(() => {
+        console.log('✅ Background agent processing completed for offer:', createdOffer.id);
+      }).catch((agentError) => {
+        console.error('🤖 Background agent processing failed:', agentError);
+      });
+      
+      console.log('🤖 Started background agent processing for offer:', createdOffer.id);
     }
 
     return NextResponse.json({
       negotiation,
-      offer: createdOffer,
-      agentResponse
+      offer: createdOffer
     })
     } catch (error) {
       console.error('🔥 CREATE OFFER ERROR - Full Details:', {
