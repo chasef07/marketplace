@@ -11,7 +11,16 @@ interface ProfilePageWrapperProps {
 
 export default function ProfilePageWrapper({ username }: ProfilePageWrapperProps) {
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<{id: string, username: string} | null>(null)
+  const [currentUser, setCurrentUser] = useState<{
+    id: string
+    username: string
+    email: string
+    seller_personality: string
+    buyer_personality: string
+    is_active: boolean
+    created_at: string
+    last_login?: string
+  } | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -60,6 +69,10 @@ export default function ProfilePageWrapper({ username }: ProfilePageWrapperProps
     // Already on profile page, no action needed
   }
 
+  const handleNavigateAgentDashboard = () => {
+    router.push('/admin/agent')
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -81,6 +94,7 @@ export default function ProfilePageWrapper({ username }: ProfilePageWrapperProps
       onSignOut={handleSignOut}
       onSignIn={handleSignIn}
       onViewProfile={handleViewProfile}
+      onNavigateAgentDashboard={handleNavigateAgentDashboard}
     />
   )
 }

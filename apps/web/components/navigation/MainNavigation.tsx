@@ -17,16 +17,18 @@ interface User {
 
 interface MainNavigationProps {
   user: User | null
+  onNavigateHome?: () => void
   onBrowseItems?: () => void
   onCreateListing?: () => void
   onViewProfile?: () => void
   onSignIn?: () => void
   onSignOut?: () => void
-  currentPage?: 'home' | 'browse' | 'marketplace'
+  currentPage?: 'home' | 'browse' | 'marketplace' | 'profile'
 }
 
 export function MainNavigation({
   user,
+  onNavigateHome,
   onBrowseItems,
   onCreateListing,
   onViewProfile,
@@ -48,6 +50,11 @@ export function MainNavigation({
                 <span className="text-blue-600 text-sm font-medium">
                   {getRotatingGreeting(user.id)}, {user.username}!
                 </span>
+                {currentPage !== 'home' && onNavigateHome && (
+                  <Button variant="ghost" onClick={onNavigateHome}>
+                    Home
+                  </Button>
+                )}
                 {currentPage !== 'browse' && currentPage !== 'marketplace' && onBrowseItems && (
                   <Button variant="ghost" onClick={onBrowseItems}>
                     Browse
@@ -58,7 +65,7 @@ export function MainNavigation({
                     Sell
                   </Button>
                 )}
-                {onViewProfile && (
+                {currentPage !== 'profile' && onViewProfile && (
                   <Button variant="ghost" onClick={onViewProfile}>
                     Profile
                   </Button>
