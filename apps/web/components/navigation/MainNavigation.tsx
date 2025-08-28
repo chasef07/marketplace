@@ -2,18 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { getRotatingGreeting } from "@/lib/greetings"
-import AdminAccessButton from "../admin/AdminAccessButton"
-
-interface User {
-  id: string
-  username: string
-  email: string
-  seller_personality: string
-  buyer_personality: string
-  is_active: boolean
-  created_at: string
-  last_login?: string
-}
+import { User } from "@/lib/types/user"
 
 interface MainNavigationProps {
   user: User | null
@@ -70,7 +59,6 @@ export function MainNavigation({
                     Profile
                   </Button>
                 )}
-                <AdminAccessButton variant="icon" />
                 {onSignOut && (
                   <Button variant="ghost" onClick={onSignOut}>
                     Sign Out

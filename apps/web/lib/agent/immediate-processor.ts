@@ -1,35 +1,75 @@
 import { openai } from '@ai-sdk/openai';
 import { generateText, stepCountIs } from 'ai';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
-import { analyzeOfferTool, counterOfferTool, decideOfferTool, getListingAgeTool, getCompetingOffersTool } from './agent_tools';
+import { analyzeOfferTool, counterOfferTool, decideOfferTool, getListingAgeTool, getCompetingOffersTool, getNegotiationHistoryTool } from './agent_tools';
 
-// Enhanced system prompt with market context and human-like negotiation
-const SYSTEM_PROMPT = `You are an autonomous seller agent for a marketplace. Negotiate like a real person would, using market context to make smart decisions.
+// Enhanced system prompt with negotiation context and strategic reasoning
+const SYSTEM_PROMPT = `You are an autonomous seller agent for a marketplace. Negotiate like a skilled human would, using strategic thinking based on the complete context of the negotiation conversation.
 
-NEGOTIATION STRATEGY:
-1. First, gather context:
-   - Use analyzeOfferTool to assess the offer quality (assessment, ratio, lowball status)
-   - Use getListingAgeTool to understand time on market  
-   - Use getCompetingOffersTool to see competition level
+CORE NEGOTIATION PHILOSOPHY:
 
-2. Think like a human seller and decide YOUR OWN counter price:
-   - Fresh listings (≤7 days) with competition: Be firm, counter closer to asking price (90-95%)
-   - Stale listings (>21 days) with no competition: Be flexible, counter more aggressively (80-87%)  
-   - High competing offers: You have leverage, don't discount much (92-96%)
-   - No competing offers: Consider reasonable counters to generate interest (82-88%)
+You are having a CONVERSATION with the buyer, not making isolated pricing decisions. Every counter-offer should make sense as part of an ongoing dialogue and demonstrate that you understand what has happened before.
 
-3. Counter-offer examples (decide your own price based on context):
-   - $1200 item, $900 offer (75%): Fresh + competition = counter $1080-1140 | Stale + no competition = counter $960-1044
-   - $800 item, $600 offer (75%): Fresh + competition = counter $720-760 | Stale + no competition = counter $640-696
-   - YOU decide the exact price based on all gathered context, not pre-calculated suggestions
+CONTEXTUAL REASONING PROCESS:
 
+1. GATHER COMPLETE INTELLIGENCE:
+   - Use getNegotiationHistoryTool to understand the conversation flow and buyer behavior patterns
+   - Use analyzeOfferTool to assess the current offer's strength
+   - Use getListingAgeTool to understand market timing and urgency
+   - Use getCompetingOffersTool to gauge your negotiating position
 
-4. Decision guidelines:
-   - Accept: 95%+ of asking price or exceptional circumstances
-   - Counter: 50-94% of asking price, use market context for amount
-   - Reject: <50% of asking price AND no urgency to sell
+2. ANALYZE BUYER PSYCHOLOGY & PATTERNS:
+   
+   For FIRST OFFERS (Round 1):
+   - Apply market-based strategy considering listing age and competition
+   - Fresh listings with competition = stronger position, less concession needed
+   - Stale listings without competition = more flexible, generate engagement
+   
+   For ONGOING NEGOTIATIONS (Round 2+):
+   - Study the buyer's behavior pattern - what story do their offers tell?
+   - Are they genuinely engaged and moving toward a deal?
+   - Are they testing your resolve or losing interest?
+   - What does their progression suggest about their maximum budget?
 
-Use your tools for context, then negotiate strategically like a real person would.`;
+3. MOMENTUM-BASED STRATEGIC THINKING:
+   
+   When buyer shows INCREASING momentum:
+   - Recognize: This buyer is committed and actively working toward a deal
+   - Strategy: Build on their positive energy without being greedy
+   - Reasoning: Work with their trajectory to close the deal, don't ignore their progress
+   - Think: What counter-offer continues this constructive momentum?
+   
+   When buyer shows STAGNANT pattern:
+   - Recognize: Negotiation has hit a wall, buyer may be at their limit or discouraged  
+   - Strategy: Consider what concession might restart productive movement
+   - Reasoning: Sometimes a strategic concession unlocks a stalled negotiation
+   - Think: What would motivate them to engage and move forward again?
+   
+   When buyer shows DECREASING pattern:
+   - Recognize: Buyer is either testing your resolve or genuinely losing interest
+   - Strategy: Evaluate whether to hold firm, make a small concession, or address concerns
+   - Reasoning: Don't panic, but understand what's driving their behavior
+   - Think: Is this a negotiation tactic or a sign they're walking away?
+
+4. LOGICAL PROGRESSION PRINCIPLES:
+   - Never make counter-offers that ignore or contradict the buyer's positive movement
+   - Price your responses to continue a logical conversation flow
+   - Consider the buyer's highest offer as context for your counter
+   - In later rounds, focus more on closing the deal than maximizing every dollar
+   - Make each offer feel like a natural response to what they've shown you
+
+5. STRATEGIC DECISION FRAMEWORK:
+   - Accept when: Offer meets your needs OR buyer has shown strong commitment and is close to acceptable range
+   - Counter when: There's room for productive negotiation based on their behavior pattern
+   - Reject when: Buyer pattern suggests they're not serious AND offer is far below acceptable range
+
+THINK STRATEGICALLY: 
+- What does this buyer's behavior tell you about their budget and commitment level?
+- How can your counter-offer move the negotiation forward constructively?
+- What response makes sense as part of this ongoing conversation?
+- Are you building trust and momentum, or creating obstacles?
+
+Remember: Your goal is to close good deals by being a thoughtful, contextual negotiator who pays attention to the conversation flow, not to follow rigid formulas.`;
 
 export interface ImmediateProcessorInput {
   negotiationId: number;
@@ -84,6 +124,12 @@ export async function processOfferImmediately(input: ImmediateProcessorInput): P
       .eq('id', input.negotiationId)
       .single();
 
+    console.log('🔍 Agent Debug - Initial negotiation status check:', {
+      negotiationId: input.negotiationId,
+      status: negotiationStatus?.status,
+      timestamp: new Date().toISOString()
+    });
+
     if (!negotiationStatus || negotiationStatus.status !== 'active') {
       return {
         success: false,
@@ -127,30 +173,49 @@ export async function processOfferImmediately(input: ImmediateProcessorInput): P
     // AI reasoning and execution with tools
     const { text, steps } = await generateText({
       model: openai('gpt-4o-mini'),
-      tools: { analyzeOfferTool, counterOfferTool, decideOfferTool, getListingAgeTool, getCompetingOffersTool },
+      tools: { analyzeOfferTool, counterOfferTool, decideOfferTool, getListingAgeTool, getCompetingOffersTool, getNegotiationHistoryTool },
       system: SYSTEM_PROMPT + `\n\nYou have access to tools to execute your decisions. Use them to take action based on your analysis.`,
       stopWhen: stepCountIs(8),
       prompt: `Analyze and decide on this offer for item: ${input.furnitureType}
 - Negotiation ID: ${input.negotiationId}
 - Offer ID: ${input.offerId}
 - Item ID: ${input.itemId}
-- Offer price: $${input.offerPrice}
+- Current offer price: $${input.offerPrice}
 - Listing price: $${input.listingPrice}
 - Min acceptable ratio: ${minAcceptableRatio}
 - Seller ID: ${input.sellerId}
 
-First, gather market context using your tools:
-1. Use getListingAgeTool to check how long this item has been on market
-2. Use getCompetingOffersTool to see if there are other buyers interested
-3. Use analyzeOfferTool to assess the offer quality and ratio
+CRITICAL: Gather COMPLETE context using ALL your tools in this order:
 
-Then analyze ALL the context and decide YOUR OWN counter price (if countering) based on:
-- Listing age (fresh vs stale)  
-- Competition level (high vs none)
-- Offer quality (strong vs weak vs lowball)
-- Market position and seller leverage
+**ANALYSIS PHASE (gather intelligence first):**
+1. **FIRST** - Use getNegotiationHistoryTool to understand what offers have been made previously
+2. Use analyzeOfferTool to assess this specific offer quality and ratio
+3. Use getListingAgeTool to check how long this item has been on market
+4. Use getCompetingOffersTool to see if there are other buyers interested
 
-Take appropriate action (accept, counter with YOUR chosen price, or reject) based on the full context.`,
+**ACTION PHASE (execute your decision):**
+5. Use counterOfferTool to make a counter-offer with your strategically determined price
+6. Use decideOfferTool to accept or reject the offer
+
+Then analyze EVERYTHING and make a context-aware decision:
+
+**If this is Round 1** (first offer in negotiation):
+- Use traditional market-based strategy from the system prompt
+
+**If this is Round 2+** (continuing negotiation):
+- CRITICAL: Look at buyer's offer progression - are they increasing, decreasing, or stagnant?  
+- NEVER counter below their increasing offers
+- Build on their momentum logically
+- Consider their highest offer to date, not just the current one
+- Price your counter based on negotiation context, not just market conditions
+
+**Think strategically about your response**:
+- What does the buyer's pattern tell you about their commitment and budget?
+- How can your counter-offer build on the conversation flow constructively?
+- What price makes sense as a natural progression from their behavior?
+- Are you encouraging continued engagement or creating barriers?
+
+Make your decision based on strategic reasoning using ALL available context, not isolated offer analysis.`,
     });
 
     const executionTime = Date.now() - startTime;
@@ -196,7 +261,7 @@ Take appropriate action (accept, counter with YOUR chosen price, or reject) base
         seller_id: input.sellerId,
         negotiation_id: input.negotiationId,
         item_id: input.itemId,
-        decision_type: decision,
+        decision_type: decision.toUpperCase(),
         original_offer_price: input.offerPrice,
         recommended_price: actionResult.price || input.offerPrice,
         listing_price: input.listingPrice,
@@ -218,12 +283,29 @@ Take appropriate action (accept, counter with YOUR chosen price, or reject) base
       console.error('Failed to log agent decision:', logError);
     }
 
+    // Enhanced debug logging
     console.log('🤖 Immediate Agent Processing - Completed:', {
       negotiationId: input.negotiationId,
       decision,
       executionTimeMs: executionTime,
       toolsUsed: toolResults.map(tr => tr.tool)
     });
+
+    // Log detailed agent reasoning and tool results for debugging
+    console.log('🧠 Agent Reasoning:', text);
+    console.log('🔧 Tool Results:', toolResults.map(tr => ({
+      tool: tr.tool,
+      success: tr.result?.success,
+      data: tr.result
+    })));
+    
+    if (actionResult.price) {
+      console.log('💰 Counter-Offer Decision:', {
+        originalOffer: input.offerPrice,
+        counterOffer: actionResult.price,
+        reasoning: 'See full reasoning above'
+      });
+    }
 
     return {
       success: true,

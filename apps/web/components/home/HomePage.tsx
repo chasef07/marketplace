@@ -8,6 +8,7 @@ import { Marketplace } from '../marketplace/marketplace'
 import { EnhancedAuth } from '../auth/enhanced-auth'
 import { ThemedLoading } from '../ui/themed-loading'
 import { type AIAnalysisResult, apiClient } from "@/lib/api-client-new"
+import { User } from "@/lib/types/user"
 
 // Lazy load heavy components
 
@@ -21,32 +22,15 @@ const ProfileView = dynamic(() => import('../profile/profile-view'), {
   loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
 })
 
-const SellerAgentDashboard = dynamic(() => import('../agent/SellerAgentDashboard').then(mod => ({ default: mod.SellerAgentDashboard })), {
-  loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
-})
-
-const AgentSettings = dynamic(() => import('../agent/AgentSettings').then(mod => ({ default: mod.AgentSettings })), {
-  loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
-})
 
 const ProfileEdit = dynamic(() => import('../profile/profile-edit'), {
   loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
 })
 
-interface User {
-  id: string
-  username: string
-  email: string
-  seller_personality: string
-  buyer_personality: string
-  is_active: boolean
-  created_at: string
-  last_login?: string
-}
 
 export const HomePage = React.memo(function HomePage() {
   const [user, setUser] = useState<User | null>(null)
-  const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'item-detail' | 'listing-preview' | 'profile-view' | 'profile-edit' | 'seller-agent-dashboard' | 'agent-settings'>('home')
+  const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'item-detail' | 'listing-preview' | 'profile-view' | 'profile-edit'>('home')
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<{analysisData: AIAnalysisResult, uploadedImages: string[]} | null>(null)
@@ -286,13 +270,6 @@ export const HomePage = React.memo(function HomePage() {
     setCurrentView('profile-view')
   }
 
-  const handleViewAgentDashboard = () => {
-    setCurrentView('seller-agent-dashboard')
-  }
-
-  const handleViewAgentSettings = () => {
-    setCurrentView('agent-settings')
-  }
 
   // Note: Profile navigation handlers available but not used in current flow
   // const handleEditProfile = () => {
@@ -383,7 +360,6 @@ export const HomePage = React.memo(function HomePage() {
         isOwnProfile={user?.username === selectedUsername}
         onNavigateHome={() => setCurrentView('home')}
         onNavigateMarketplace={() => setCurrentView('marketplace')}
-        onNavigateAgentDashboard={handleViewAgentDashboard}
       />
     )
   }
@@ -394,24 +370,6 @@ export const HomePage = React.memo(function HomePage() {
     )
   }
 
-  if (currentView === 'seller-agent-dashboard' && user) {
-    return (
-      <SellerAgentDashboard
-        user={user}
-        onBack={() => setCurrentView('profile-view')}
-        onNavigateAgentSettings={handleViewAgentSettings}
-      />
-    )
-  }
-
-  if (currentView === 'agent-settings' && user) {
-    return (
-      <AgentSettings
-        user={user}
-        onClose={() => setCurrentView('seller-agent-dashboard')}
-      />
-    )
-  }
 
   return (
     <div className="homepage-container">

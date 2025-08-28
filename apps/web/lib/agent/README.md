@@ -9,6 +9,7 @@ The agent tools provide AI agents with the ability to:
 - **Submit counter-offers** - Make intelligent counter-offers via API
 - **Make decisions** - Accept or reject offers based on parameters
 - **Gather market context** - Check listing age and competing offers for better decisions
+- **Understand negotiation history** - Analyze price progression and buyer momentum for context-aware decisions
 
 ## Architecture
 
@@ -19,7 +20,27 @@ All tools follow **Option B architecture** - they call existing API endpoints in
 
 ## Tools
 
-### 1. analyzeOfferTool
+### 1. getNegotiationHistoryTool
+**NEW** - Analyzes complete negotiation history to understand buyer behavior and price momentum.
+
+**Parameters:**
+- `negotiationId` - Negotiation ID to get history for
+
+**Returns:**
+```typescript
+{
+  offers: Array<{price, offer_type, created_at, message, round_number}>;
+  currentRound: number;
+  priceProgression: Array<number>;
+  buyerMomentum: 'increasing' | 'decreasing' | 'stagnant' | 'new';
+  lastBuyerOffer: number;
+  negotiationStage: 'opening' | 'middle' | 'closing';
+  highestBuyerOffer: number;
+  averageBuyerOffer: number;
+}
+```
+
+### 2. analyzeOfferTool
 Analyzes offers to assess value and detect lowballs. **Provides context only - does NOT suggest prices.**
 
 **Parameters:**
@@ -190,18 +211,19 @@ The LLM uses human-like negotiation logic with market context to decide counter 
 - Counter more aggressively to generate interest  
 - AI decides exact percentage based on urgency
 
-**AI Decision Process:**
-1. **Gather Context** - Use all 5 tools to understand the situation
-2. **Analyze Holistically** - Consider listing age + competition + offer quality
-3. **Decide Price** - AI chooses counter amount based on full context, not pre-calculated formulas
-4. **Take Action** - Execute decision with human-like reasoning
+**AI Strategic Reasoning Process:**
+1. **Gather Intelligence** - Use all tools to understand the complete negotiation context
+2. **Analyze Buyer Psychology** - Study behavior patterns and commitment indicators  
+3. **Think Strategically** - Consider what response moves the negotiation forward constructively
+4. **Reason Counter-Offer** - LLM determines price using strategic thinking, not formulas
+5. **Execute Decision** - Take action based on contextual reasoning
 
-**Decision Guidelines:**
-- **Accept:** 95%+ of asking price or exceptional circumstances  
-- **Counter:** 50-94% of asking price, AI decides exact amount using context
-- **Reject:** <50% of asking price AND no urgency to sell
+**Strategic Decision Framework:**
+- **Accept:** When offer meets needs OR buyer shows strong commitment near acceptable range
+- **Counter:** When there's opportunity for productive negotiation based on buyer patterns
+- **Reject:** When buyer pattern suggests lack of seriousness AND offer is far below range
 
-**Key Principle:** Tools provide context, LLM makes all pricing decisions.
+**Key Principle:** Tools provide context and intelligence. LLM applies strategic reasoning to determine all pricing decisions. No hardcoded formulas or percentages - pure AI strategic thinking.
 
 ## Security
 

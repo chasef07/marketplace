@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import { User, MapPin, Calendar, Star, Package, ShoppingBag, Edit, Bot } from 'lucide-react'
+import { User, MapPin, Calendar, Star, Package, ShoppingBag, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -35,13 +35,11 @@ export interface ProfileData {
 interface ProfileHeaderProps {
   profile: ProfileData
   isOwnProfile?: boolean
-  onNavigateAgentDashboard?: () => void
 }
 
 export default function ProfileHeader({ 
   profile, 
-  isOwnProfile = false, 
-  onNavigateAgentDashboard 
+  isOwnProfile = false
 }: ProfileHeaderProps) {
   const supabaseClient = useMemo(() => createClient(), [])
 
@@ -149,15 +147,6 @@ export default function ProfileHeader({
             <div className="flex gap-2 mt-4 md:mt-0 flex-shrink-0">
               {isOwnProfile ? (
                 <>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={onNavigateAgentDashboard}
-                    className="flex items-center"
-                  >
-                    <Bot className="h-4 w-4 mr-1" />
-                    AI Agent
-                  </Button>
                   <Link href="/profile/edit">
                     <Button variant="outline" size="sm">
                       <Edit className="h-4 w-4 mr-1" />

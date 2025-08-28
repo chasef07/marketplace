@@ -661,10 +661,6 @@ export type Database = {
         Args: { neg_id: number }
         Returns: boolean
       }
-      is_system_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
       maintain_agent_system: {
         Args: Record<PropertyKey, never>
         Returns: undefined

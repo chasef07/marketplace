@@ -92,9 +92,6 @@ export default function ProfilePageWrapper({ username }: ProfilePageWrapperProps
     // Already on profile page, no action needed
   }
 
-  const handleNavigateAgentDashboard = () => {
-    router.push('/admin/agent')
-  }
 
   if (loading) {
     return (
@@ -117,7 +114,6 @@ export default function ProfilePageWrapper({ username }: ProfilePageWrapperProps
       onSignOut={handleSignOut}
       onSignIn={handleSignIn}
       onViewProfile={handleViewProfile}
-      onNavigateAgentDashboard={handleNavigateAgentDashboard}
     />
   )
 }

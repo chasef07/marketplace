@@ -8,17 +8,7 @@ import { FilterSidebar, FilterOptions } from './filter-sidebar'
 import { ItemGrid } from './item-grid'
 import { Item, PaginationInfo } from "@/lib/api-client-new"
 import { MainNavigation } from "../navigation/MainNavigation"
-
-interface User {
-  id: string
-  username: string
-  email: string
-  seller_personality: string
-  buyer_personality: string
-  is_active: boolean
-  created_at: string
-  last_login?: string
-}
+import { User } from "@/lib/types/user"
 
 interface BrowsePageProps {
   user: User | null

@@ -220,7 +220,116 @@ export const getCompetingOffersTool = tool({
   },
 });
 
-// Tool 5: Decide Offer
+// Tool 5: Get Negotiation History
+export const getNegotiationHistoryTool = tool({
+  description: 'Get the complete negotiation history to understand context and price progression.',
+  inputSchema: z.object({
+    negotiationId: z.number().describe('Negotiation ID to get history for'),
+  }),
+  execute: async ({ negotiationId }: { negotiationId: number }) => {
+    try {
+      const { createSupabaseServerClient } = await import('@/lib/supabase-server');
+      const supabase = createSupabaseServerClient();
+
+      // Get all offers for this negotiation, ordered chronologically
+      const { data: offers, error } = await supabase
+        .from('offers')
+        .select('price, offer_type, created_at, message, is_counter_offer')
+        .eq('negotiation_id', negotiationId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        return {
+          error: `Failed to get negotiation history: ${error.message}`,
+          offers: [],
+          currentRound: 0,
+          priceProgression: [],
+          buyerMomentum: 'unknown',
+          lastBuyerOffer: 0,
+          negotiationStage: 'unknown'
+        };
+      }
+
+      if (!offers || offers.length === 0) {
+        return {
+          offers: [],
+          currentRound: 1,
+          priceProgression: [],
+          buyerMomentum: 'new',
+          lastBuyerOffer: 0,
+          negotiationStage: 'opening'
+        };
+      }
+
+      // Process offers and add round numbers
+      const processedOffers = offers.map((offer, index) => ({
+        ...offer,
+        round_number: Math.floor(index / 2) + 1 // Each pair of buyer/seller offers is a round
+      }));
+
+      // Extract buyer offers to analyze momentum
+      const buyerOffers = processedOffers
+        .filter(offer => offer.offer_type === 'buyer')
+        .map(offer => offer.price);
+
+      const lastBuyerOffer = buyerOffers.length > 0 ? buyerOffers[buyerOffers.length - 1] : 0;
+      const currentRound = Math.ceil(offers.length / 2);
+
+      // Determine buyer momentum
+      let buyerMomentum: 'increasing' | 'decreasing' | 'stagnant' | 'new' = 'new';
+      if (buyerOffers.length >= 2) {
+        const recentOffers = buyerOffers.slice(-2);
+        if (recentOffers[1] > recentOffers[0]) {
+          buyerMomentum = 'increasing';
+        } else if (recentOffers[1] < recentOffers[0]) {
+          buyerMomentum = 'decreasing';
+        } else {
+          buyerMomentum = 'stagnant';
+        }
+      } else if (buyerOffers.length === 1) {
+        buyerMomentum = 'new';
+      }
+
+      // Determine negotiation stage
+      let negotiationStage: 'opening' | 'middle' | 'closing';
+      if (currentRound <= 1) {
+        negotiationStage = 'opening';
+      } else if (currentRound <= 3) {
+        negotiationStage = 'middle';
+      } else {
+        negotiationStage = 'closing';
+      }
+
+      // Price progression analysis
+      const priceProgression = processedOffers.map(offer => offer.price);
+
+      return {
+        offers: processedOffers,
+        currentRound,
+        priceProgression,
+        buyerMomentum,
+        lastBuyerOffer,
+        negotiationStage,
+        totalOffers: offers.length,
+        buyerOffersCount: buyerOffers.length,
+        highestBuyerOffer: buyerOffers.length > 0 ? Math.max(...buyerOffers) : 0,
+        averageBuyerOffer: buyerOffers.length > 0 ? buyerOffers.reduce((sum, price) => sum + price, 0) / buyerOffers.length : 0
+      };
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        offers: [],
+        currentRound: 0,
+        priceProgression: [],
+        buyerMomentum: 'unknown',
+        lastBuyerOffer: 0,
+        negotiationStage: 'unknown'
+      };
+    }
+  },
+});
+
+// Tool 6: Decide Offer
 export const decideOfferTool = tool({
   description: 'Accept or reject an offer in the marketplace.',
   inputSchema: z.object({

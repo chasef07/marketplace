@@ -43,7 +43,6 @@ interface ProfileViewProps {
   onSignOut?: () => void
   onSignIn?: () => void
   onViewProfile?: () => void
-  onNavigateAgentDashboard?: () => void
 }
 
 export default function ProfileView({ 
@@ -55,8 +54,7 @@ export default function ProfileView({
   onCreateListing, 
   onSignOut, 
   onSignIn, 
-  onViewProfile, 
-  onNavigateAgentDashboard 
+  onViewProfile 
 }: ProfileViewProps) {
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -198,7 +196,6 @@ export default function ProfileView({
           <ProfileHeader 
             profile={profile} 
             isOwnProfile={isOwnProfile}
-            onNavigateAgentDashboard={onNavigateAgentDashboard}
           />
 
           {/* Profile Tabs */}
