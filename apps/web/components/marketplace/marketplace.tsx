@@ -367,12 +367,6 @@ export function Marketplace({ user, onCreateListing, onLogout, onItemClick, onSi
                         <div>
                           <p className="text-2xl font-bold" style={{ color: '#2C3E50' }}>${item.starting_price.toFixed(2)}</p>
                         </div>
-                        {/* Agent Status Indicator */}
-                        {item.agent_enabled && (
-                          <div className="flex items-center bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                            🤖 AI Agent
-                          </div>
-                        )}
                       </div>
 
                       {/* Title */}

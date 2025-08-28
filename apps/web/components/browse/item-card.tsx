@@ -120,12 +120,6 @@ export function ItemCard({
                   <div className="flex gap-1">
                     {getStatusBadge()}
                     {isNewListing() && <Badge className="bg-orange-100 text-orange-700">New</Badge>}
-                    {item.ai_agent_enabled && (
-                      <Badge className="bg-purple-100 text-purple-700">
-                        <Sparkles className="h-3 w-3 mr-1" />
-                        AI
-                      </Badge>
-                    )}
                   </div>
                 </div>
               </div>
@@ -230,12 +224,6 @@ export function ItemCard({
           {/* Overlay badges */}
           <div className="absolute top-2 left-2 flex gap-1">
             {isNewListing() && <Badge className="bg-orange-100 text-orange-700 text-xs">New</Badge>}
-            {item.ai_agent_enabled && (
-              <Badge className="bg-purple-100 text-purple-700 text-xs">
-                <Sparkles className="h-3 w-3 mr-1" />
-                AI
-              </Badge>
-            )}
           </div>
 
           {/* Favorite button */}

@@ -65,6 +65,7 @@ export default function ProfileView({
   const [lastOfferDetails, setLastOfferDetails] = useState<any>(null)
   const [initialOfferItemId, setInitialOfferItemId] = useState<number | null>(null)
 
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -111,7 +112,7 @@ export default function ProfileView({
     return (
       <div className="min-h-screen bg-slate-50">
         <MainNavigation
-          user={currentUser || null}
+          user={currentUser}
           onNavigateHome={onNavigateHome}
           onBrowseItems={onNavigateMarketplace}
           onCreateListing={onCreateListing}
@@ -153,7 +154,7 @@ export default function ProfileView({
     return (
       <div className="min-h-screen bg-slate-50">
         <MainNavigation
-          user={currentUser || null}
+          user={currentUser}
           onNavigateHome={onNavigateHome}
           onBrowseItems={onNavigateMarketplace}
           onCreateListing={onCreateListing}
@@ -181,7 +182,7 @@ export default function ProfileView({
     <div className="min-h-screen bg-slate-50">
       {/* Navigation Header */}
       <MainNavigation
-        user={currentUser || null}
+        user={currentUser}
         onNavigateHome={onNavigateHome}
         onBrowseItems={onNavigateMarketplace}
         onCreateListing={onCreateListing}

@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
         starting_price: body.starting_price,
         images: imagesData, // JSONB images support
         dimensions: body.dimensions,
-        agent_enabled: body.agent_enabled || false // Default to false if not specified
+        agent_enabled: true // Default all items to AI agent enabled
       })
       .select()
       .single()

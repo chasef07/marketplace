@@ -1,7 +1,6 @@
 'use client'
 
 import { Bell, AlertCircle, CheckCircle, Clock, User } from 'lucide-react'
-import { BuyerNotifications } from '../buyer/BuyerNotifications'
 import { SellerNotifications } from '../seller/SellerNotifications'
 
 interface ActivityTabProps {
@@ -33,14 +32,6 @@ export default function ActivityTab({ userId }: ActivityTabProps) {
           <SellerNotifications userId={userId} />
         </div>
         
-        {/* Buyer Notifications */}
-        <div>
-          <h4 className="text-sm font-medium text-slate-700 mb-3 flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-green-500" />
-            Offer Updates
-          </h4>
-          <BuyerNotifications userId={userId} />
-        </div>
         
         {/* Future: Additional activity types can be added here */}
         <div className="text-center py-8 border border-dashed border-slate-200 rounded-lg">

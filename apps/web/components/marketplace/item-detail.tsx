@@ -442,11 +442,6 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
               <h1 className="text-2xl font-bold mb-2 text-slate-800">{item.name}</h1>
               <div className="flex items-center justify-between mb-2">
                 <div className="text-3xl font-bold text-green-600">${item.starting_price}</div>
-                {item.agent_enabled && (
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                    🤖 AI Agent
-                  </Badge>
-                )}
               </div>
               <p className="text-sm text-slate-500">Listed {formatTimeAgo(item.created_at)}</p>
             </div>
@@ -516,11 +511,6 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
                   ) : (
                     <div className="flex items-center justify-between">
                       <div className="text-4xl font-bold text-green-600">${item.starting_price}</div>
-                      {item.agent_enabled && (
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                          🤖 AI Agent
-                        </Badge>
-                      )}
                     </div>
                   )}
                 </div>

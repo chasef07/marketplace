@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Edit, Save, Camera, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import { type AIAnalysisResult } from "@/lib/api-client-new"
 import Image from "next/image"
@@ -29,7 +29,7 @@ interface ListingPreviewProps {
   user: User | null
   onBack: () => void
   onSignUp: (editedData: AIAnalysisResult) => void
-  onCreateListing?: (editedData: AIAnalysisResult, agentEnabled?: boolean) => void
+  onCreateListing?: (editedData: AIAnalysisResult) => void
 }
 
 export function ListingPreview({ analysisData, uploadedImages, user, onBack, onSignUp, onCreateListing }: ListingPreviewProps) {
@@ -37,7 +37,6 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
   const [editedData, setEditedData] = useState<AIAnalysisResult>(analysisData)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isCreatingListing, setIsCreatingListing] = useState(false)
-  const [agentEnabled, setAgentEnabled] = useState(false)
   const [showDimensions, setShowDimensions] = useState(true)
   const [includeDimensions, setIncludeDimensions] = useState(!!analysisData.analysis.estimated_dimensions)
 
@@ -63,7 +62,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
             estimated_dimensions: includeDimensions ? editedData.analysis.estimated_dimensions : null
           }
         }
-        await onCreateListing(finalData, agentEnabled)
+        await onCreateListing(finalData)
       } catch (error) {
         // Error handling is done in parent component
       } finally {
@@ -229,7 +228,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
                         handleInputChange('suggested_starting_price', value, 'pricing')
                       }}
                       className="text-3xl font-bold text-center border-2 no-spinner"
-                      onWheel={(e) => e.target.blur()}
+                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
                       placeholder="Enter price"
                     />
                   ) : (
@@ -247,32 +246,6 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
               </CardContent>
             </Card>
 
-            {/* AI Agent Toggle (for logged in users) */}
-            {user && (
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-start space-x-3">
-                    <Checkbox
-                      id="agent-enabled"
-                      checked={agentEnabled}
-                      onCheckedChange={(checked) => setAgentEnabled(!!checked)}
-                      className="mt-1"
-                    />
-                    <div className="space-y-1">
-                      <Label 
-                        htmlFor="agent-enabled" 
-                        className="text-sm font-medium text-slate-700 cursor-pointer"
-                      >
-                        🤖 Enable AI Agent
-                      </Label>
-                      <p className="text-xs text-slate-500">
-                        Let AI handle negotiations automatically
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Action Button */}
             <div className="space-y-2">
