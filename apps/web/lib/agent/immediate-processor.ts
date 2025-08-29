@@ -161,14 +161,8 @@ export async function processOfferImmediately(input: ImmediateProcessorInput): P
       };
     }
 
-    // Get seller agent profile for min acceptable ratio
-    const { data: agentProfile } = await supabase
-      .from('seller_agent_profile')
-      .select('min_acceptable_ratio')
-      .eq('seller_id', input.sellerId)
-      .single();
-
-    const minAcceptableRatio = input.minAcceptableRatio || agentProfile?.min_acceptable_ratio || 0.75;
+    // Use default min acceptable ratio (seller_agent_profile table was removed)
+    const minAcceptableRatio = input.minAcceptableRatio || 0.75;
 
     // AI reasoning and execution with tools
     const { text, steps } = await generateText({
@@ -193,9 +187,11 @@ CRITICAL: Gather COMPLETE context using ALL your tools in this order:
 3. Use getListingAgeTool to check how long this item has been on market
 4. Use getCompetingOffersTool to see if there are other buyers interested
 
-**ACTION PHASE (execute your decision):**
-5. Use counterOfferTool to make a counter-offer with your strategically determined price
-6. Use decideOfferTool to accept or reject the offer
+**ACTION PHASE (execute your decision - CHOOSE ONE):**
+5. **EITHER** Use counterOfferTool to make a counter-offer (this implicitly rejects the original offer but keeps negotiation active)
+6. **OR** Use decideOfferTool to accept the current offer or completely reject/cancel the negotiation
+
+**CRITICAL**: These are mutually exclusive actions. A counter-offer IS a rejection of the original offer but keeps the negotiation active. Only use decideOfferTool for final acceptance or complete negotiation cancellation.
 
 Then analyze EVERYTHING and make a context-aware decision:
 
@@ -221,18 +217,26 @@ Make your decision based on strategic reasoning using ALL available context, not
     const executionTime = Date.now() - startTime;
 
     // Extract tool results from AI execution steps
+    console.log('🔍 Debug - Raw AI execution steps:', JSON.stringify(steps, null, 2));
+    
     const toolResults = steps
       .filter((step): step is any => 'toolResults' in step && Array.isArray(step.toolResults))
       .flatMap(step => step.toolResults)
-      .map((toolResult: any) => ({
-        tool: toolResult.toolName,
-        result: toolResult.result
-      }));
+      .map((toolResult: any) => {
+        console.log('🔍 Debug - Individual tool result:', JSON.stringify(toolResult, null, 2));
+        return {
+          tool: toolResult.toolName,
+          result: toolResult.result || toolResult.output || toolResult.value
+        };
+      });
+    
+    console.log('🔍 Debug - Processed tool results:', JSON.stringify(toolResults, null, 2));
 
-    // Determine overall decision from tool results
+    // Determine overall decision from tool results with conflict prevention
     let decision = 'analyzed';
     let actionResult: any = { success: true, action: 'ANALYZED' };
 
+    // Priority 1: Counter-offer (keeps negotiation active)
     if (toolResults.some(tr => tr.tool === 'counterOfferTool')) {
       decision = 'counter';
       const counterResult = toolResults.find(tr => tr.tool === 'counterOfferTool')?.result;
@@ -242,7 +246,14 @@ Make your decision based on strategic reasoning using ALL available context, not
         price: counterResult?.counterAmount,
         error: counterResult?.error
       };
-    } else if (toolResults.some(tr => tr.tool === 'decideOfferTool')) {
+      
+      // Log warning if conflicting tools were also called
+      if (toolResults.some(tr => tr.tool === 'decideOfferTool')) {
+        console.warn('⚠️ Agent Warning: Both counterOfferTool and decideOfferTool were called. Using counter-offer only.');
+      }
+    } 
+    // Priority 2: Accept/Reject decision (only if no counter-offer was made)
+    else if (toolResults.some(tr => tr.tool === 'decideOfferTool')) {
       const decideResult = toolResults.find(tr => tr.tool === 'decideOfferTool')?.result;
       if (decideResult?.newStatus === 'Accepted') {
         decision = 'accept';

@@ -1,26 +1,69 @@
-# Agent Tools
+# AI Agent System
 
-This directory contains AI agent tools for autonomous marketplace operations using the Vercel AI SDK v5.
+This directory contains the core AI agent system for autonomous marketplace negotiations using the Vercel AI SDK v5 and OpenAI GPT-4o-mini.
 
 ## Overview
 
-The agent tools provide AI agents with the ability to:
-- **Analyze offers** - Assess offer value, detect lowballs, and suggest counter-offers
-- **Submit counter-offers** - Make intelligent counter-offers via API
-- **Make decisions** - Accept or reject offers based on parameters
-- **Gather market context** - Check listing age and competing offers for better decisions
-- **Understand negotiation history** - Analyze price progression and buyer momentum for context-aware decisions
+**Status**: ✅ **ACTIVE** - Core system working with real-time immediate processing
 
-## Architecture
+The AI agent provides autonomous seller capabilities:
+- **Real-time Processing** - Immediate offer analysis and response (no queuing)
+- **Context-Aware Decisions** - Uses negotiation history, market conditions, and competition data
+- **Strategic Reasoning** - Human-like negotiation patterns with momentum-based thinking
+- **Data-Driven Intelligence** - All decisions based on real Supabase data
 
-All tools follow **Option B architecture** - they call existing API endpoints instead of direct database access for:
-- **Security** - Proper authentication and authorization
-- **Consistency** - Same validation and business logic as the rest of the app
-- **Maintainability** - Single source of truth for operations
+## Recent Updates (v2.3)
 
-## Tools
+**✅ Fixed Critical Issues:**
+- **Tool Conflict Resolution** - Fixed agent calling both counter-offer AND reject simultaneously
+- **Tool Data Extraction** - Resolved undefined tool results, agent now receives real Supabase data
+- **Database Cleanup** - Removed references to non-existent tables (`seller_agent_profile`)
+- **Comprehensive Debugging** - Added detailed logging for tool execution and data flow
 
-### 1. getNegotiationHistoryTool
+**🔧 Current Architecture:**
+- **Immediate Processing** - Real-time offer handling via `immediate-processor.ts`
+- **6 Working Tools** - All tools now return proper data to AI reasoning
+- **Simplified Structure** - Removed broken components, focused on working core
+- **Terminal Logging** - Agent decisions logged to `agent_decisions` table
+
+## File Structure
+
+```
+/lib/agent/
+├── README.md                    # This documentation
+├── immediate-processor.ts       # Core AI processing engine
+├── agent_tools.ts              # 6 AI tools for market intelligence & actions
+└── types.ts                    # TypeScript interfaces
+
+/app/api/agent/
+└── monitor/                    # Statistics and monitoring endpoint
+```
+
+## Core Components
+
+### 1. Immediate Processor (`immediate-processor.ts`)
+**The brain of the operation** - Processes buyer offers in real-time using AI reasoning.
+
+**Features:**
+- **Strategic AI Prompt** - 72-line sophisticated negotiation strategy prompt
+- **Tool Orchestration** - Calls all 6 tools to gather complete market intelligence
+- **Conflict Prevention** - Prevents calling both counter-offer and reject tools
+- **Data Logging** - Records all decisions to `agent_decisions` table
+- **Comprehensive Debugging** - Detailed tool result extraction and logging
+
+**Process Flow:**
+1. Validate negotiation is active and agent is enabled
+2. Gather complete market intelligence using all tools
+3. AI strategic reasoning with context-aware decision making
+4. Execute single action (counter-offer OR accept/reject)
+5. Log decision with reasoning and tool results
+
+### 2. Agent Tools (`agent_tools.ts`)
+**6 working tools** that provide market intelligence and execute actions:
+
+## Tools Documentation
+
+### 1. getNegotiationHistoryTool ✅
 **NEW** - Analyzes complete negotiation history to understand buyer behavior and price momentum.
 
 **Parameters:**
@@ -40,7 +83,7 @@ All tools follow **Option B architecture** - they call existing API endpoints in
 }
 ```
 
-### 2. analyzeOfferTool
+### 2. analyzeOfferTool ✅
 Analyzes offers to assess value and detect lowballs. **Provides context only - does NOT suggest prices.**
 
 **Parameters:**
@@ -60,7 +103,7 @@ Analyzes offers to assess value and detect lowballs. **Provides context only - d
 }
 ```
 
-### 2. counterOfferTool
+### 3. counterOfferTool ✅
 Submits counter-offers using the offer service directly.
 
 **Parameters:**
@@ -71,7 +114,7 @@ Submits counter-offers using the offer service directly.
 
 **Uses:** `offerService.createOffer()` with `agentGenerated: true`
 
-### 3. decideOfferTool  
+### 4. decideOfferTool ✅
 Accepts or rejects offers by updating negotiation status.
 
 **Parameters:**
@@ -84,7 +127,7 @@ Accepts or rejects offers by updating negotiation status.
 - Accept: Updates negotiation to `completed` status with final price
 - Reject: Updates negotiation to `cancelled` status
 
-### 4. getListingAgeTool
+### 5. getListingAgeTool ✅
 Gets market timing context for better negotiation decisions.
 
 **Parameters:**
@@ -101,7 +144,7 @@ Gets market timing context for better negotiation decisions.
 }
 ```
 
-### 5. getCompetingOffersTool
+### 6. getCompetingOffersTool ✅
 Gets competitive context to understand buyer interest level.
 
 **Parameters:**
@@ -189,13 +232,33 @@ All tools include comprehensive error handling:
 - Authentication errors are handled gracefully
 - Proper TypeScript types ensure type safety
 
+## Debug & Monitoring
+
+### Terminal Logging
+The system provides comprehensive logging for debugging:
+
+```
+🔍 Debug - Raw AI execution steps: [AI SDK structure details]
+🔧 getListingAgeTool - Starting with itemId: 123
+🔧 getListingAgeTool - Supabase response: {data: {...}, error: null}
+🔧 getNegotiationHistoryTool - Success result: {offers: [...], momentum: 'increasing'}
+🤖 Immediate Agent Processing - Completed: {decision: 'counter', executionTimeMs: 14294}
+```
+
+### Monitoring Endpoint
+- **URL**: `/api/agent/monitor`
+- **Purpose**: Real-time statistics and recent decisions
+- **Data**: Last 24h activity, execution times, decision breakdown
+- **Status**: Shows 'operational' with 'immediate_processing' mode
+
 ## Integration Notes
 
-- Tools use direct Supabase access for market context and offer service for actions
-- Authentication handled via seller ID validation
-- All operations respect Row Level Security (RLS) policies  
-- Real-time updates work via Supabase Realtime subscriptions
-- Agent processing is asynchronous (fire-and-forget) for instant buyer response
+- **Database Access**: Direct Supabase queries for market intelligence
+- **Action Execution**: Uses existing `offerService` for consistency
+- **Authentication**: Seller ID validation with RLS policies  
+- **Real-time**: Supabase Realtime subscriptions for live updates
+- **Processing Model**: Immediate (fire-and-forget) for instant buyer response
+- **Error Handling**: Comprehensive logging and graceful degradation
 
 ## Negotiation Strategy
 
@@ -225,9 +288,33 @@ The LLM uses human-like negotiation logic with market context to decide counter 
 
 **Key Principle:** Tools provide context and intelligence. LLM applies strategic reasoning to determine all pricing decisions. No hardcoded formulas or percentages - pure AI strategic thinking.
 
+## Troubleshooting
+
+### Common Issues Fixed
+
+**❌ Tool Results Showing `undefined`**
+- **Cause**: Wrong property path in tool result extraction
+- **Fix**: Added fallback extraction: `toolResult.result || toolResult.output || toolResult.value`
+- **Debug**: Comprehensive JSON logging of raw AI execution steps
+
+**❌ Agent Calling Both Counter-offer AND Reject**
+- **Cause**: Conflicting prompt instructions
+- **Fix**: Made actions mutually exclusive with priority system
+- **Result**: Counter-offers now keep negotiations active
+
+**❌ References to Missing Database Tables**
+- **Cause**: `seller_agent_profile` table was removed but code still referenced it
+- **Fix**: Removed all references, use default `minAcceptableRatio: 0.75`
+
+### Debug Process
+1. Check terminal for `🔧 [ToolName] - Starting` logs to see if tools are called
+2. Look for `🔧 [ToolName] - Supabase response` to verify database queries work
+3. Check `🔍 Debug - Processed tool results` to see if data flows to AI
+4. Verify `🤖 Agent Processing - Completed` shows expected decision type
+
 ## Security
 
-- Market context tools use authenticated Supabase client with RLS policies
-- Action tools use existing offer service with proper authorization
-- All operations validate seller permissions
-- Input validation via Zod schemas
+- **Database Security**: Authenticated Supabase client with RLS policies
+- **Action Authorization**: Uses existing `offerService` with proper seller validation
+- **Input Validation**: Zod schemas prevent invalid parameters
+- **Error Boundaries**: Comprehensive error handling prevents system crashes

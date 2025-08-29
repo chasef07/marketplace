@@ -39,22 +39,27 @@ export const analyzeOfferTool = tool({
     minAccept?: number;
     offerId: string;
   }): Promise<OfferAnalysis> => {
+    console.log('🔧 analyzeOfferTool - Starting with params:', { offerAmount, listPrice, minAccept, offerId });
+    
     const ratio = offerAmount / listPrice;
     const isLowball = ratio < 0.7;
     
-    return {
+    const result = {
       offerId,
-      assessment: ratio >= 0.9 ? 'Strong' : ratio >= 0.8 ? 'Fair' : 'Weak',
+      assessment: ratio >= 0.9 ? 'Strong' : ratio >= 0.8 ? 'Fair' : 'Weak' as 'Strong' | 'Fair' | 'Weak',
       isLowball,
       offerRatio: Math.round(ratio * 100) / 100, // Round to 2 decimal places
       reason: isLowball ? 'Offer is below 70% of listing price' : `Offer is ${Math.round(ratio * 100)}% of listing price`,
     };
+
+    console.log('🔧 analyzeOfferTool - Result:', result);
+    return result;
   },
 });
 
 // Tool 2: Counter Offer
 export const counterOfferTool = tool({
-  description: 'Submit a counter-offer to the marketplace API.',
+  description: 'Submit a counter-offer to the marketplace API. This implicitly rejects the buyer\'s original offer but keeps the negotiation active for continued discussion.',
   inputSchema: z.object({
     negotiationId: z.number().describe('Negotiation ID'),
     amount: z.number().describe('Counter-offer price in USD'),
@@ -67,6 +72,7 @@ export const counterOfferTool = tool({
     message?: string;
     sellerId: string;
   }): Promise<CounterOfferResult> => {
+    console.log('🔧 counterOfferTool - Starting with params:', { negotiationId, amount, message, sellerId });
     try {
       // Use server-side offer service directly for agent operations
       const { offerService } = await import('@/lib/services/offer-service');
@@ -81,18 +87,23 @@ export const counterOfferTool = tool({
         userId: sellerId,
       });
 
-      return {
+      const successResult = {
         success: true,
         newStatus: 'Countered',
         counterAmount: amount,
       };
+
+      console.log('🔧 counterOfferTool - Success result:', successResult);
+      return successResult;
     } catch (error) {
-      return {
+      const errorResult = {
         success: false,
         newStatus: 'Failed',
         counterAmount: amount,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
+      console.error('🔧 counterOfferTool - Error result:', errorResult);
+      return errorResult;
     }
   },
 });
@@ -104,16 +115,23 @@ export const getListingAgeTool = tool({
     itemId: z.number().describe('Item ID to check listing age for'),
   }),
   execute: async ({ itemId }: { itemId: number }) => {
+    console.log('🔧 getListingAgeTool - Starting with itemId:', itemId);
     try {
       const { createSupabaseServerClient } = await import('@/lib/supabase-server');
       const supabase = createSupabaseServerClient();
 
       // Get item listing date and recent activity
-      const { data: item } = await supabase
+      const { data: item, error } = await supabase
         .from('items')
         .select('created_at, updated_at, views_count')
         .eq('id', itemId)
         .single();
+
+      console.log('🔧 getListingAgeTool - Supabase response:', { data: item, error });
+
+      if (error) {
+        throw new Error(`Database error: ${error.message}`);
+      }
 
       if (!item) {
         throw new Error('Item not found');
@@ -125,15 +143,18 @@ export const getListingAgeTool = tool({
       // Simple activity assessment
       const recentActivity = item.views_count > 10 ? 'High' : item.views_count > 5 ? 'Medium' : 'Low';
 
-      return {
+      const result = {
         daysOnMarket,
         listingDate: item.created_at,
         totalViews: item.views_count || 0,
         activityLevel: recentActivity,
         marketStatus: daysOnMarket <= 7 ? 'Fresh' : daysOnMarket <= 21 ? 'Active' : 'Stale'
       };
+
+      console.log('🔧 getListingAgeTool - Success result:', result);
+      return result;
     } catch (error) {
-      return {
+      const errorResult = {
         daysOnMarket: 0,
         listingDate: new Date().toISOString(),
         totalViews: 0,
@@ -141,6 +162,8 @@ export const getListingAgeTool = tool({
         marketStatus: 'Unknown',
         error: error instanceof Error ? error.message : 'Unknown error'
       };
+      console.error('🔧 getListingAgeTool - Error result:', errorResult);
+      return errorResult;
     }
   },
 });
@@ -172,7 +195,7 @@ export const getCompetingOffersTool = tool({
         `)
         .eq('item_id', itemId)
         .neq('id', currentNegotiationId)
-        .in('status', ['active', 'buyer_accepted']);
+        .in('status', ['active', 'deal_pending']);
 
       if (!competingNegotiations || competingNegotiations.length === 0) {
         return {
@@ -227,6 +250,7 @@ export const getNegotiationHistoryTool = tool({
     negotiationId: z.number().describe('Negotiation ID to get history for'),
   }),
   execute: async ({ negotiationId }: { negotiationId: number }) => {
+    console.log('🔧 getNegotiationHistoryTool - Starting with negotiationId:', negotiationId);
     try {
       const { createSupabaseServerClient } = await import('@/lib/supabase-server');
       const supabase = createSupabaseServerClient();
@@ -238,8 +262,10 @@ export const getNegotiationHistoryTool = tool({
         .eq('negotiation_id', negotiationId)
         .order('created_at', { ascending: true });
 
+      console.log('🔧 getNegotiationHistoryTool - Supabase response:', { offers, error });
+
       if (error) {
-        return {
+        const errorResult = {
           error: `Failed to get negotiation history: ${error.message}`,
           offers: [],
           currentRound: 0,
@@ -248,10 +274,12 @@ export const getNegotiationHistoryTool = tool({
           lastBuyerOffer: 0,
           negotiationStage: 'unknown'
         };
+        console.error('🔧 getNegotiationHistoryTool - Database error:', errorResult);
+        return errorResult;
       }
 
       if (!offers || offers.length === 0) {
-        return {
+        const emptyResult = {
           offers: [],
           currentRound: 1,
           priceProgression: [],
@@ -259,6 +287,8 @@ export const getNegotiationHistoryTool = tool({
           lastBuyerOffer: 0,
           negotiationStage: 'opening'
         };
+        console.log('🔧 getNegotiationHistoryTool - Empty offers result:', emptyResult);
+        return emptyResult;
       }
 
       // Process offers and add round numbers
@@ -303,7 +333,7 @@ export const getNegotiationHistoryTool = tool({
       // Price progression analysis
       const priceProgression = processedOffers.map(offer => offer.price);
 
-      return {
+      const successResult = {
         offers: processedOffers,
         currentRound,
         priceProgression,
@@ -315,6 +345,9 @@ export const getNegotiationHistoryTool = tool({
         highestBuyerOffer: buyerOffers.length > 0 ? Math.max(...buyerOffers) : 0,
         averageBuyerOffer: buyerOffers.length > 0 ? buyerOffers.reduce((sum, price) => sum + price, 0) / buyerOffers.length : 0
       };
+
+      console.log('🔧 getNegotiationHistoryTool - Success result:', successResult);
+      return successResult;
     } catch (error) {
       return {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -331,7 +364,7 @@ export const getNegotiationHistoryTool = tool({
 
 // Tool 6: Decide Offer
 export const decideOfferTool = tool({
-  description: 'Accept or reject an offer in the marketplace.',
+  description: 'Make a final decision to ACCEPT the current offer or completely REJECT/CANCEL the entire negotiation. Do not use this for counter-offers - use counterOfferTool instead.',
   inputSchema: z.object({
     negotiationId: z.number().describe('Negotiation ID'),
     decision: z.enum(['accept', 'reject']).describe('Accept or reject'),
