@@ -10,18 +10,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Edit, Save, Camera, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import { type AIAnalysisResult } from "@/lib/api-client-new"
+import { User } from "@/lib/types/user"
 import Image from "next/image"
 
-interface User {
-  id: string
-  username: string
-  email: string
-  seller_personality: string
-  buyer_personality: string
-  is_active: boolean
-  created_at: string
-  last_login?: string
-}
 
 interface ListingPreviewProps {
   analysisData: AIAnalysisResult

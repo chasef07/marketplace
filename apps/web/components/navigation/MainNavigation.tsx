@@ -68,7 +68,14 @@ export function MainNavigation({
                   </Button>
                 )}
                 {currentPage !== 'profile' && onViewProfile && (
-                  <Button variant="ghost" size="sm" onClick={onViewProfile}>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={onViewProfile}
+                    disabled={!user?.username}
+                    className={!user?.username ? 'opacity-50 cursor-not-allowed' : ''}
+                    title={!user?.username ? 'Loading profile...' : `View ${user.username}'s profile`}
+                  >
                     Profile
                   </Button>
                 )}
@@ -154,10 +161,12 @@ export function MainNavigation({
                       {currentPage !== 'profile' && onViewProfile && (
                         <Button 
                           variant="ghost" 
-                          className="justify-start h-12 text-base" 
+                          className={`justify-start h-12 text-base ${!user?.username ? 'opacity-50 cursor-not-allowed' : ''}`}
                           onClick={() => handleMenuClick(onViewProfile)}
+                          disabled={!user?.username}
+                          title={!user?.username ? 'Loading profile...' : `View ${user.username}'s profile`}
                         >
-                          Profile
+                          Profile {!user?.username && <span className="ml-2 text-xs">(Loading...)</span>}
                         </Button>
                       )}
                       {onSignOut && (

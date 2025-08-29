@@ -23,20 +23,16 @@ const ProfileView = dynamic(() => import('../profile/profile-view'), {
 })
 
 
-const ProfileEdit = dynamic(() => import('../profile/profile-edit'), {
-  loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
-})
 
 
 export const HomePage = React.memo(function HomePage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
-  const [currentView, setCurrentView] = useState<'home' | 'auth' | 'item-detail' | 'listing-preview' | 'profile-view' | 'profile-edit'>('home')
+  const [currentView, setCurrentView] = useState<'home' | 'auth' | 'item-detail' | 'listing-preview' | 'profile-view'>('home')
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<{analysisData: AIAnalysisResult, uploadedImages: string[]} | null>(null)
   const [isLoading, setIsLoading] = useState(true) // Add loading state
-  const [error, setError] = useState<string | null>(null)
   const [authMode, setAuthMode] = useState<'signin' | 'register' | 'reset'>('signin') // Track auth mode
 
   // Listen for navigation events from QuickActions overlay
@@ -58,7 +54,7 @@ export const HomePage = React.memo(function HomePage() {
       window.removeEventListener('navigate-to-marketplace', handleNavigateToMarketplace)
       window.removeEventListener('navigate-to-create-listing', handleNavigateToCreateListing)
     }
-  }, [user])
+  }, [user, router])
 
   // Initialize auth state with proper Supabase listener
   useEffect(() => {
@@ -153,11 +149,8 @@ export const HomePage = React.memo(function HomePage() {
         image_filename: analysisData.image_filename, // Backward compatibility
         images: analysisData.images, // New multiple images support
         agent_enabled: agentEnabled, // Add agent enablement
-        // Include AI analysis details (using optional chaining for properties that may not exist)
-        style: (analysisData.analysis as any).style || null,
-        material: (analysisData.analysis as any).material || null,
-        brand: (analysisData.analysis as any).brand || null,
-        color: (analysisData.analysis as any).color || null,
+        // AI analysis details (removed due to type incompatibility)
+        // TODO: Update AIAnalysisResult interface if these properties are needed
         dimensions: analysisData.analysis.estimated_dimensions
       }
 
@@ -174,7 +167,7 @@ export const HomePage = React.memo(function HomePage() {
       // Still navigate to browse on error
       router.push('/browse')
     }
-  }, [])
+  }, [router])
 
   const handleAuthSuccess = async (userData: User) => {
     setUser(userData)
@@ -222,7 +215,6 @@ export const HomePage = React.memo(function HomePage() {
       setSelectedItemId(null)
       setSelectedUsername(null)
       setPreviewData(null)
-      setError(null)
     } catch (error) {
       // Always clear user state even if sign out fails
       setUser(null)
@@ -231,11 +223,6 @@ export const HomePage = React.memo(function HomePage() {
   }, [])
 
 
-  const handleItemClick = useCallback((itemId: number) => {
-    console.log('🔍 Clicking item:', itemId)
-    setSelectedItemId(itemId)
-    setCurrentView('item-detail')
-  }, [])
 
 
   const handleBackToHome = () => {
@@ -258,22 +245,13 @@ export const HomePage = React.memo(function HomePage() {
     } else if (user && user.username && typeof user.username === 'string') {
       setSelectedUsername(user.username)
     } else {
-      setError('Unable to load profile - no valid username')
+      console.warn('Unable to load profile - no valid username')
       return
     }
     setCurrentView('profile-view')
   }
 
 
-  // Note: Profile navigation handlers available but not used in current flow
-  // const handleEditProfile = () => {
-  //   setCurrentView('profile-edit')
-  // }
-
-  // const handleBackFromProfile = () => {
-  //   setCurrentView('home')
-  //   setSelectedUsername(null)
-  // }
 
   const handleListingPreviewSignUp = (editedData: AIAnalysisResult) => {
     // Store the edited data and image URLs for after authentication
@@ -342,11 +320,6 @@ export const HomePage = React.memo(function HomePage() {
     )
   }
 
-  if (currentView === 'profile-edit' && user) {
-    return (
-      <ProfileEdit />
-    )
-  }
 
 
   return (

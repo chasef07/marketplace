@@ -5,17 +5,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { X, Eye, EyeOff, Loader2, CheckCircle, AlertCircle, Mail } from "lucide-react"
 import { apiClient } from "@/lib/api-client-new"
+import { User } from "@/lib/types/user"
 
-interface User {
-  id: string
-  username: string
-  email: string
-  seller_personality: string
-  buyer_personality: string
-  is_active: boolean
-  created_at: string
-  last_login?: string
-}
 
 interface EnhancedAuthProps {
   isOpen: boolean

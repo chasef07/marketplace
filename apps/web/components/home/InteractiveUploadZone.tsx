@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { type AIAnalysisResult } from "@/lib/api-client-new"
+import { useFileUpload } from "@/lib/hooks/useFileUpload"
 import { Camera, Upload, X } from "lucide-react"
 import Image from "next/image"
 
@@ -12,12 +13,13 @@ interface InteractiveUploadZoneProps {
   onShowListingPreview: (analysisData: AIAnalysisResult, uploadedImages: string[]) => void
 }
 
-export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploadZoneProps) {
+export const InteractiveUploadZone = React.memo(function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [progressMessage, setProgressMessage] = useState('')
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const { uploadAndAnalyze, isAnalyzing, uploadProgress, progressMessage } = useFileUpload({ 
+    onShowListingPreview, 
+    showProgressSteps: true 
+  })
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -39,86 +41,8 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
 
   const handleUpload = useCallback(async () => {
     if (selectedFiles.length === 0) return
-
-    setIsAnalyzing(true)
-    setUploadProgress(0)
-    setProgressMessage('Uploading images...')
-
-    try {
-      // Simulate realistic AI analysis progress
-      const progressSteps = [
-        { progress: 20, message: "Uploading images..." },
-        { progress: 35, message: "Processing images..." },
-        { progress: 60, message: "Identifying furniture..." },
-        { progress: 80, message: "Analyzing style & material..." },
-        { progress: 95, message: "Calculating price..." }
-      ]
-      
-      let stepIndex = 0
-      const progressInterval = setInterval(() => {
-        if (stepIndex < progressSteps.length) {
-          const step = progressSteps[stepIndex]
-          setUploadProgress(step.progress)
-          setProgressMessage(step.message)
-          stepIndex++
-        } else {
-          clearInterval(progressInterval)
-        }
-      }, 800)
-
-      // Create FormData for the API call
-      const formData = new FormData()
-      selectedFiles.forEach((file, index) => {
-        formData.append(`image${index}`, file)
-      })
-
-      // Call the actual AI analysis API
-      const response = await fetch('/api/ai/analyze-images', {
-        method: 'POST',
-        body: formData,
-      })
-
-      clearInterval(progressInterval)
-      setUploadProgress(100)
-      setProgressMessage('Analysis complete!')
-
-      if (!response.ok) {
-        throw new Error('Analysis failed')
-      }
-
-      const result = await response.json()
-      
-      // Small delay for UX
-      setTimeout(() => {
-        setIsAnalyzing(false)
-        setUploadProgress(0)
-        setProgressMessage('')
-        
-        // Create image URLs for the uploaded files
-        const imageUrls = selectedFiles.map(file => URL.createObjectURL(file))
-        
-        // Add the images metadata to the result for compatibility
-        const enrichedResult = {
-          ...result,
-          images: result.images || imageUrls.map((_, index) => ({
-            filename: `temp-${index}`,
-            order: index + 1,
-            is_primary: index === 0
-          }))
-        }
-        
-        // Show the listing preview
-        onShowListingPreview(enrichedResult, imageUrls)
-      }, 500)
-
-    } catch (error) {
-      console.error('Upload failed:', error)
-      setIsAnalyzing(false)
-      setUploadProgress(0)
-      setProgressMessage('')
-      alert('Upload failed. Please try again.')
-    }
-  }, [selectedFiles, onShowListingPreview])
+    await uploadAndAnalyze(selectedFiles)
+  }, [selectedFiles, uploadAndAnalyze])
 
   const removeFile = useCallback((indexToRemove: number) => {
     setSelectedFiles(prev => prev.filter((_, index) => index !== indexToRemove))
@@ -279,4 +203,4 @@ export function InteractiveUploadZone({ onShowListingPreview }: InteractiveUploa
       </CardContent>
     </Card>
   )
-}
+})

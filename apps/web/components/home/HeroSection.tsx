@@ -1,22 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { InteractiveUploadZone } from './InteractiveUploadZone'
 import { type AIAnalysisResult } from "@/lib/api-client-new"
+import { User } from "@/lib/types/user"
+import { useFileUpload } from "@/lib/hooks/useFileUpload"
 import { MainNavigation } from "../navigation/MainNavigation"
 
-interface User {
-  id: string
-  username: string
-  email: string
-  seller_personality: string
-  buyer_personality: string
-  is_active: boolean
-  created_at: string
-  last_login?: string
-}
 
 interface HeroSectionProps {
   user: User | null
@@ -27,7 +19,7 @@ interface HeroSectionProps {
   onShowListingPreview: (analysisData: AIAnalysisResult, uploadedImages: string[]) => void
 }
 
-export function HeroSection({ 
+export const HeroSection = React.memo(function HeroSection({ 
   user, 
   onSignIn, 
   onSignOut, 
@@ -36,57 +28,18 @@ export function HeroSection({
   onShowListingPreview
 }: HeroSectionProps) {
   const [showUploadZone, setShowUploadZone] = useState(false)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const { uploadAndAnalyze, isAnalyzing } = useFileUpload({ 
+    onShowListingPreview, 
+    showProgressSteps: false 
+  })
 
   const handleFilesDirectly = async (files: File[]) => {
-    try {
-      const imageFiles = files.filter(file => file.type.startsWith('image/'))
-      if (imageFiles.length === 0) {
-        alert('Please select image files only')
-        setIsAnalyzing(false)
-        return
-      }
-
-      // Create FormData for the API call
-      const formData = new FormData()
-      imageFiles.forEach((file, index) => {
-        formData.append(`image${index}`, file)
-      })
-
-      // Call the actual AI analysis API
-      const response = await fetch('/api/ai/analyze-images', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error('Analysis failed')
-      }
-
-      const result = await response.json()
-      
-      // Create image URLs for the uploaded files
-      const imageUrls = imageFiles.map(file => URL.createObjectURL(file))
-      
-      // Add the images metadata to the result for compatibility
-      const enrichedResult = {
-        ...result,
-        images: result.images || imageUrls.map((_, index) => ({
-          filename: `temp-${index}`,
-          order: index + 1,
-          is_primary: index === 0
-        }))
-      }
-      
-      // Stop analyzing and show the listing preview
-      setIsAnalyzing(false)
-      onShowListingPreview(enrichedResult, imageUrls)
-
-    } catch (error) {
-      console.error('Upload failed:', error)
-      setIsAnalyzing(false)
-      alert('Upload failed. Please try again.')
+    const imageFiles = files.filter(file => file.type.startsWith('image/'))
+    if (imageFiles.length === 0) {
+      alert('Please select image files only')
+      return
     }
+    await uploadAndAnalyze(imageFiles)
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -110,7 +63,6 @@ export function HeroSection({
     
     const files = Array.from(e.dataTransfer.files)
     if (files.length > 0) {
-      setIsAnalyzing(true)
       handleFilesDirectly(files)
     }
   }
@@ -126,7 +78,6 @@ export function HeroSection({
     input.onchange = async (e) => {
       const files = Array.from((e.target as HTMLInputElement).files || [])
       if (files.length > 0) {
-        setIsAnalyzing(true)
         handleFilesDirectly(files)
       }
       document.body.removeChild(input)
@@ -198,7 +149,6 @@ export function HeroSection({
                 <InteractiveUploadZone 
                   onShowListingPreview={(analysisData, uploadedImages) => {
                     setShowUploadZone(false)
-                    setIsAnalyzing(false)
                     onShowListingPreview(analysisData, uploadedImages)
                   }}
                 />
@@ -244,4 +194,4 @@ export function HeroSection({
       </main>
     </div>
   )
-}
+})
