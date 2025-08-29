@@ -6,24 +6,7 @@ import { Package, ShoppingBag, Bell } from 'lucide-react'
 import MyListingsTab from './MyListingsTab'
 import MyOffersTab from './MyOffersTab'
 import ActivityTab from './ActivityTab'
-import { ProfileData as BaseProfileData } from './ProfileHeader'
-
-// Extended ProfileData with active_items for tabs
-interface ProfileData extends BaseProfileData {
-  active_items: Array<{
-    id: number
-    name: string
-    description?: string
-    furniture_type: string
-    starting_price: number
-    condition?: string
-    image_filename?: string
-    images?: Array<{ filename: string; order: number; is_primary: boolean }>
-    views_count: number
-    created_at: string
-    highest_buyer_offer?: number
-  }>
-}
+import { ProfileData } from '@/lib/types/profile'
 
 interface ProfileTabsProps {
   profile: ProfileData

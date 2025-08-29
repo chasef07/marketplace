@@ -1,90 +1,31 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Skeleton } from '@/components/ui/skeleton'
 import { MainNavigation } from '../navigation/MainNavigation'
-import ProfileHeader, { ProfileData as BaseProfileData } from './ProfileHeader'
+import ProfileHeader from './ProfileHeader'
 import ProfileTabs from './ProfileTabs'
 import OfferConfirmationPopup from '../buyer/OfferConfirmationPopup'
-
-// Extended ProfileData with active_items for the full profile view
-interface ProfileData extends BaseProfileData {
-  active_items: Array<{
-    id: number
-    name: string
-    description?: string
-    furniture_type: string
-    starting_price: number
-    condition?: string
-    image_filename?: string
-    images?: Array<{ filename: string; order: number; is_primary: boolean }>
-    views_count: number
-    created_at: string
-    highest_buyer_offer?: number
-  }>
-}
+import { useProfile, useCurrentUser } from '@/lib/hooks/useProfile'
+import { ProfileData } from '@/lib/types/profile'
+import { apiClient } from '@/lib/api-client-new'
 
 interface ProfileViewProps {
   username: string
-  isOwnProfile?: boolean
-  currentUser?: { 
-    id: string
-    username: string
-    email: string
-    seller_personality: string
-    buyer_personality: string
-    is_active: boolean
-    created_at: string
-    last_login?: string 
-  } | null
-  onNavigateHome?: () => void
-  onNavigateMarketplace?: () => void
-  onCreateListing?: () => void
-  onSignOut?: () => void
-  onSignIn?: () => void
-  onViewProfile?: () => void
 }
 
-export default function ProfileView({ 
-  username, 
-  isOwnProfile = false, 
-  currentUser, 
-  onNavigateHome,
-  onNavigateMarketplace, 
-  onCreateListing, 
-  onSignOut, 
-  onSignIn, 
-  onViewProfile 
-}: ProfileViewProps) {
-  const [profile, setProfile] = useState<ProfileData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+export default function ProfileView({ username }: ProfileViewProps) {
+  const router = useRouter()
+  const { profile, loading: profileLoading, error } = useProfile(username)
+  const { user: currentUser, loading: userLoading } = useCurrentUser()
+  
   const [showOfferConfirmation, setShowOfferConfirmation] = useState(false)
   const [lastOfferDetails, setLastOfferDetails] = useState<any>(null)
   const [initialOfferItemId, setInitialOfferItemId] = useState<number | null>(null)
 
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await fetch(`/api/profiles/${username}`)
-        
-        if (!response.ok) {
-          throw new Error(response.status === 404 ? 'Profile not found' : 'Failed to load profile')
-        }
-
-        const profileData = await response.json()
-        setProfile(profileData)
-      } catch (err) {
-        console.error('Error fetching profile:', err)
-        setError(err instanceof Error ? err.message : 'Something went wrong')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchProfile()
-  }, [username])
+  const isOwnProfile = currentUser && currentUser.username === username
+  const loading = profileLoading || userLoading
 
   // Check for URL parameter to open offer form
   useEffect(() => {
@@ -106,17 +47,42 @@ export default function ProfileView({
     setShowOfferConfirmation(true)
   }
 
+  const handleBrowseItems = () => {
+    router.push('/browse')
+  }
+
+  const handleCreateListing = () => {
+    router.push('/')
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await apiClient.signOut()
+      router.push('/')
+    } catch (error) {
+      console.error('Error signing out:', error)
+      router.push('/')
+    }
+  }
+
+  const handleSignIn = () => {
+    router.push('/')
+  }
+
+  const handleViewProfile = () => {
+    // Already on profile page, no action needed
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50">
         <MainNavigation
-          user={currentUser}
-          onNavigateHome={onNavigateHome}
-          onBrowseItems={onNavigateMarketplace}
-          onCreateListing={onCreateListing}
-          onViewProfile={onViewProfile}
-          onSignIn={onSignIn}
-          onSignOut={onSignOut}
+          user={currentUser || null}
+          onBrowseItems={handleBrowseItems}
+          onCreateListing={handleCreateListing}
+          onViewProfile={handleViewProfile}
+          onSignIn={handleSignIn}
+          onSignOut={handleSignOut}
           currentPage="profile"
         />
         
@@ -152,13 +118,12 @@ export default function ProfileView({
     return (
       <div className="min-h-screen bg-slate-50">
         <MainNavigation
-          user={currentUser}
-          onNavigateHome={onNavigateHome}
-          onBrowseItems={onNavigateMarketplace}
-          onCreateListing={onCreateListing}
-          onViewProfile={onViewProfile}
-          onSignIn={onSignIn}
-          onSignOut={onSignOut}
+          user={currentUser || null}
+          onBrowseItems={handleBrowseItems}
+          onCreateListing={handleCreateListing}
+          onViewProfile={handleViewProfile}
+          onSignIn={handleSignIn}
+          onSignOut={handleSignOut}
           currentPage="profile"
         />
         
@@ -180,13 +145,12 @@ export default function ProfileView({
     <div className="min-h-screen bg-slate-50">
       {/* Navigation Header */}
       <MainNavigation
-        user={currentUser}
-        onNavigateHome={onNavigateHome}
-        onBrowseItems={onNavigateMarketplace}
-        onCreateListing={onCreateListing}
-        onViewProfile={onViewProfile}
-        onSignIn={onSignIn}
-        onSignOut={onSignOut}
+        user={currentUser || null}
+        onBrowseItems={handleBrowseItems}
+        onCreateListing={handleCreateListing}
+        onViewProfile={handleViewProfile}
+        onSignIn={handleSignIn}
+        onSignOut={handleSignOut}
         currentPage="profile"
       />
 
@@ -195,13 +159,13 @@ export default function ProfileView({
           {/* Profile Header */}
           <ProfileHeader 
             profile={profile} 
-            isOwnProfile={isOwnProfile}
+            isOwnProfile={isOwnProfile || false}
           />
 
           {/* Profile Tabs */}
           <ProfileTabs
             profile={profile}
-            isOwnProfile={isOwnProfile}
+            isOwnProfile={isOwnProfile || false}
             userId={profile.id}
             onOfferConfirmed={handleOfferConfirmed}
             initialOfferItemId={initialOfferItemId || undefined}

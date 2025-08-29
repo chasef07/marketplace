@@ -13,10 +13,7 @@ interface ItemGridProps {
   error: string | null
   pagination: PaginationInfo | null
   onItemClick?: (itemId: number) => void
-  onFavoriteClick?: (itemId: number) => void
-  onMessageClick?: (itemId: number) => void
   onPageChange: (page: number) => void
-  favoriteItemIds?: number[]
   className?: string
 }
 
@@ -169,10 +166,7 @@ export function ItemGrid({
   error,
   pagination,
   onItemClick,
-  onFavoriteClick,
-  onMessageClick,
   onPageChange,
-  favoriteItemIds = [],
   className = ''
 }: ItemGridProps) {
   if (loading) {
@@ -205,9 +199,6 @@ export function ItemGrid({
             item={item}
             viewMode={viewMode}
             onItemClick={onItemClick}
-            onFavoriteClick={onFavoriteClick}
-            onMessageClick={onMessageClick}
-            isFavorited={favoriteItemIds.includes(item.id)}
           />
         ))}
       </div>

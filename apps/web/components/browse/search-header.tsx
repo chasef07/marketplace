@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Search, SlidersHorizontal, Grid3x3, List, X } from "lucide-react"
+import { Search, Grid3x3, List, X } from "lucide-react"
 
-export type SortOption = 'newest' | 'price_low' | 'price_high' | 'most_viewed'
+export type SortOption = 'price_low' | 'price_high'
 export type ViewMode = 'grid' | 'list'
 
 interface SearchHeaderProps {
@@ -17,10 +17,6 @@ interface SearchHeaderProps {
   onSortChange: (sort: SortOption) => void
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
-  showFilters: boolean
-  onToggleFilters: () => void
-  activeFilters: string[]
-  onRemoveFilter: (filter: string) => void
   totalItems: number
   loading?: boolean
 }
@@ -32,10 +28,6 @@ export function SearchHeader({
   onSortChange,
   viewMode,
   onViewModeChange,
-  showFilters,
-  onToggleFilters,
-  activeFilters,
-  onRemoveFilter,
   totalItems,
   loading = false
 }: SearchHeaderProps) {
@@ -66,10 +58,8 @@ export function SearchHeader({
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="price_low">Price: Low</SelectItem>
-                <SelectItem value="price_high">Price: High</SelectItem>
-                <SelectItem value="most_viewed">Most Viewed</SelectItem>
+                <SelectItem value="price_low">Price: Low to High</SelectItem>
+                <SelectItem value="price_high">Price: High to Low</SelectItem>
               </SelectContent>
             </Select>
 
@@ -97,73 +87,29 @@ export function SearchHeader({
               </Button>
             </div>
 
-            <Separator orientation="vertical" className="h-6" />
-
-            {/* Filter toggle */}
-            <Button
-              variant={showFilters ? 'secondary' : 'outline'}
-              onClick={onToggleFilters}
-              className="bg-white/50 border-white/30 hover:bg-white/70"
-              disabled={loading}
-            >
-              <SlidersHorizontal className="h-4 w-4 mr-2" />
-              Filters
-            </Button>
           </div>
         </div>
 
-        {/* Active filters and results count */}
-        {(activeFilters.length > 0 || searchQuery) && (
-          <>
-            <div className="flex flex-wrap gap-2 items-center mt-3">
-              <span className="text-sm text-muted-foreground">
-                {loading ? 'Searching...' : `${totalItems} items`}
-              </span>
-              
-              {searchQuery && (
-                <Badge variant="secondary" className="bg-white/50">
-                  Search: "{searchQuery}"
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onSearchChange('')}
-                    className="h-auto p-0 ml-1 hover:bg-transparent"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
-              )}
-              
-              {activeFilters.map((filter) => (
-                <Badge key={filter} variant="secondary" className="bg-white/50">
-                  {filter}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onRemoveFilter(filter)}
-                    className="h-auto p-0 ml-1 hover:bg-transparent"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
-              ))}
-              
-              {(activeFilters.length > 1 || (activeFilters.length > 0 && searchQuery)) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    activeFilters.forEach(onRemoveFilter)
-                    onSearchChange('')
-                  }}
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                >
-                  Clear all
-                </Button>
-              )}
-            </div>
-          </>
-        )}
+        {/* Results count and search badge */}
+        <div className="flex flex-wrap gap-2 items-center mt-3">
+          <span className="text-sm text-muted-foreground">
+            {loading ? 'Searching...' : `${totalItems} items found`}
+          </span>
+          
+          {searchQuery && (
+            <Badge variant="secondary" className="bg-white/50">
+              Search: "{searchQuery}"
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onSearchChange('')}
+                className="h-auto p-0 ml-1 hover:bg-transparent"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </Badge>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -5,70 +5,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { createClient } from '@/lib/supabase'
 import { BLUR_PLACEHOLDERS } from '@/lib/blur-data'
-// ProfileData with active_items
-interface ProfileData {
-  id: string
-  username: string
-  display_name: string
-  bio?: string
-  profile_picture_filename?: string
-  location: {
-    city?: string
-    state?: string
-    zip_code?: string
-  }
-  is_verified: boolean
-  stats: {
-    total_sales: number
-    total_purchases: number
-    rating_average: number
-    rating_count: number
-  }
-  member_since: string
-  last_active?: string
-  active_items: Array<{
-    id: number
-    name: string
-    description?: string
-    furniture_type: string
-    starting_price: number
-    condition?: string
-    image_filename?: string
-    images?: Array<{ filename: string; order: number; is_primary: boolean }>
-    views_count: number
-    created_at: string
-    highest_buyer_offer?: number
-  }>
-}
-
-interface MyListingsTabProps {
-  profile: ProfileData
-  isOwnProfile?: boolean
-}
+import { ProfileData, MyListingsTabProps } from '@/lib/types/profile'
+import { getItemImageUrl, formatPrice, formatTimeAgo } from '@/lib/utils/profile'
 
 export default function MyListingsTab({ profile, isOwnProfile = false }: MyListingsTabProps) {
-  const supabaseClient = useMemo(() => createClient(), [])
-
-  const getItemImageUrl = useMemo(() => (item: ProfileData['active_items'][0]) => {
-    const primaryImage = item.images?.find(img => img.is_primary) || item.images?.[0]
-    const filename = primaryImage?.filename || item.image_filename
-    
-    if (!filename) return null
-    
-    const { data } = supabaseClient.storage.from('furniture-images').getPublicUrl(filename)
-    return data.publicUrl
-  }, [supabaseClient])
-
-  const formatPrice = useMemo(() => (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price)
-  }, [])
 
   if (profile.active_items.length === 0) {
     return (

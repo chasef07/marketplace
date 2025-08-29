@@ -59,7 +59,7 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
           ...editedData,
           analysis: {
             ...editedData.analysis,
-            estimated_dimensions: includeDimensions ? editedData.analysis.estimated_dimensions : null
+            estimated_dimensions: includeDimensions ? editedData.analysis.estimated_dimensions : ''
           }
         }
         await onCreateListing(finalData)

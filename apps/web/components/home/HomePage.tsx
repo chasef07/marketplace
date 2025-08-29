@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import dynamic from 'next/dynamic'
+import { useRouter } from 'next/navigation'
 import { HeroSection } from './HeroSection'
 import { ListingPreview } from './ListingPreview'
-import { Marketplace } from '../marketplace/marketplace'
 import { EnhancedAuth } from '../auth/enhanced-auth'
 import { ThemedLoading } from '../ui/themed-loading'
 import { type AIAnalysisResult, apiClient } from "@/lib/api-client-new"
@@ -29,19 +29,19 @@ const ProfileEdit = dynamic(() => import('../profile/profile-edit'), {
 
 
 export const HomePage = React.memo(function HomePage() {
+  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
-  const [currentView, setCurrentView] = useState<'home' | 'marketplace' | 'auth' | 'item-detail' | 'listing-preview' | 'profile-view' | 'profile-edit'>('home')
+  const [currentView, setCurrentView] = useState<'home' | 'auth' | 'item-detail' | 'listing-preview' | 'profile-view' | 'profile-edit'>('home')
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<{analysisData: AIAnalysisResult, uploadedImages: string[]} | null>(null)
-  const [marketplaceKey, setMarketplaceKey] = useState(0) // Force marketplace re-render
   const [isLoading, setIsLoading] = useState(true) // Add loading state
   const [error, setError] = useState<string | null>(null)
   const [authMode, setAuthMode] = useState<'signin' | 'register' | 'reset'>('signin') // Track auth mode
 
   // Listen for navigation events from QuickActions overlay
   useEffect(() => {
-    const handleNavigateToMarketplace = () => setCurrentView('marketplace')
+    const handleNavigateToMarketplace = () => router.push('/browse')
     const handleNavigateToCreateListing = () => {
       if (user) {
         setCurrentView('home') // Home page has the create listing form
@@ -167,13 +167,12 @@ export const HomePage = React.memo(function HomePage() {
       await new Promise(resolve => setTimeout(resolve, 500))
       
       // Force marketplace refresh and navigate
-      setMarketplaceKey(prev => prev + 1)
-      setCurrentView('marketplace')
+      router.push('/browse')
       
     } catch (error) {
       console.error('Failed to create listing:', error)
-      // Still navigate to marketplace on error
-      setCurrentView('marketplace')
+      // Still navigate to browse on error
+      router.push('/browse')
     }
   }, [])
 
@@ -191,8 +190,8 @@ export const HomePage = React.memo(function HomePage() {
           // Clear the pending data
           window.localStorage.removeItem('pendingListing')
           
-          // Set view to marketplace immediately to prevent home page flash
-          setCurrentView('marketplace')
+          // Navigate to browse immediately to prevent home page flash
+          router.push('/browse')
           
           // Wait a bit longer to ensure auth session is fully established
           await new Promise(resolve => setTimeout(resolve, 1000))
@@ -207,8 +206,8 @@ export const HomePage = React.memo(function HomePage() {
       }
     }
     
-    // If no pending listing, go to marketplace to see all listings
-    setCurrentView('marketplace')
+    // If no pending listing, go to browse to see all listings
+    router.push('/browse')
   }
 
   const handleSignOut = useCallback(async () => {
@@ -220,7 +219,6 @@ export const HomePage = React.memo(function HomePage() {
       setCurrentView('home')
       
       // Clear any cached data
-      setMarketplaceKey(prev => prev + 1)
       setSelectedItemId(null)
       setSelectedUsername(null)
       setPreviewData(null)
@@ -243,14 +241,10 @@ export const HomePage = React.memo(function HomePage() {
   const handleBackToHome = () => {
     setCurrentView('home')
     setPreviewData(null)
-    // Force marketplace refresh for when user navigates to marketplace later
-    setMarketplaceKey(prev => prev + 1)
   }
 
   const handleBackToMarketplace = () => {
-    setCurrentView('marketplace')
-    // Force marketplace refresh to show updated item list
-    setMarketplaceKey(prev => prev + 1)
+    router.push('/browse')
   }
 
   const handleShowListingPreview = (analysisData: AIAnalysisResult, uploadedImages: string[]) => {
@@ -299,19 +293,6 @@ export const HomePage = React.memo(function HomePage() {
     return <ThemedLoading message="Preparing your marketplace experience..." />
   }
 
-  if (currentView === 'marketplace') {
-    return (
-      <Marketplace
-        key={marketplaceKey} // Force re-render when key changes
-        user={user}
-        onCreateListing={() => setCurrentView('home')}
-        onLogout={handleSignOut}
-        onItemClick={handleItemClick}
-        onSignInClick={() => { setAuthMode('signin'); setCurrentView('auth'); }}
-        onViewProfile={handleViewProfile}
-      />
-    )
-  }
 
   if (currentView === 'auth') {
     return (
@@ -357,9 +338,6 @@ export const HomePage = React.memo(function HomePage() {
     return (
       <ProfileView
         username={selectedUsername}
-        isOwnProfile={user?.username === selectedUsername}
-        onNavigateHome={() => setCurrentView('home')}
-        onNavigateMarketplace={() => setCurrentView('marketplace')}
       />
     )
   }
@@ -377,7 +355,7 @@ export const HomePage = React.memo(function HomePage() {
         user={user}
         onSignIn={() => { setAuthMode('signin'); setCurrentView('auth'); }}
         onSignOut={handleSignOut}
-        onBrowseItems={() => setCurrentView('marketplace')}
+        onBrowseItems={() => router.push('/browse')}
         onViewProfile={handleViewProfile}
         onShowListingPreview={handleShowListingPreview}
       />

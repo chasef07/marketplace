@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { BrowsePage } from "@/components/browse/browse-page"
+import { useRouter, useParams } from "next/navigation"
+import { ItemDetail } from "@/components/marketplace/item-detail"
 import { User } from "@/lib/types/user"
 import { apiClient } from "@/lib/api-client-new"
 
-export default function Browse() {
+export default function MarketplaceItemPage() {
   const router = useRouter()
+  const params = useParams()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -40,48 +41,41 @@ export default function Browse() {
     }
   }, [])
 
-  const handleCreateListing = () => {
-    router.push('/')
-  }
-
-  const handleLogout = async () => {
-    try {
-      await apiClient.signOut()
-      router.push('/')
-    } catch (error) {
-      console.error('Error signing out:', error)
-      router.push('/')
-    }
-  }
-
-  const handleItemClick = (itemId: number) => {
-    router.push(`/marketplace/${itemId}`)
+  const handleBack = () => {
+    router.push('/browse')
   }
 
   const handleSignIn = () => {
     router.push('/')
   }
 
-  const handleViewProfile = () => {
-    if (user?.username) {
-      router.push(`/profile/${user.username}`)
-    }
+  const handleViewProfile = (username: string) => {
+    router.push(`/profile/${username}`)
   }
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="animate-pulse text-slate-600">Loading marketplace...</div>
+        <div className="animate-pulse text-slate-600">Loading item details...</div>
+      </div>
+    )
+  }
+
+  const itemId = parseInt(params.id as string)
+
+  if (isNaN(itemId)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="text-red-600">Invalid item ID</div>
       </div>
     )
   }
 
   return (
-    <BrowsePage 
+    <ItemDetail
+      itemId={itemId}
       user={user}
-      onCreateListing={handleCreateListing}
-      onLogout={handleLogout}
-      onItemClick={handleItemClick}
+      onBack={handleBack}
       onSignInClick={handleSignIn}
       onViewProfile={handleViewProfile}
     />

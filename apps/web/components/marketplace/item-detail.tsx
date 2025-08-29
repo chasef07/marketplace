@@ -403,8 +403,8 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-4">
-        <div className="grid lg:grid-cols-5 gap-6 max-w-7xl mx-auto">
+      <div className="container mx-auto px-4 py-4 sm:py-6">
+        <div className="grid lg:grid-cols-5 gap-4 sm:gap-6 max-w-7xl mx-auto">
           {/* Image Carousel - Takes up 3 columns on large screens */}
           <div className="lg:col-span-3 space-y-6">
             <Card className="overflow-hidden">
@@ -444,16 +444,16 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
             
             {/* Item Title & Basic Info - Mobile Only */}
             <div className="lg:hidden mb-6">
-              <h1 className="text-2xl font-bold mb-2 text-slate-800">{item.name}</h1>
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-3xl font-bold text-green-600">${item.starting_price}</div>
+              <h1 className="text-2xl sm:text-3xl font-bold mb-3 text-slate-800 leading-tight">{item.name}</h1>
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-3xl sm:text-4xl font-bold text-green-600">${parseFloat(item.starting_price).toFixed(2)}</div>
               </div>
               <p className="text-sm text-slate-500">Listed {formatTimeAgo(item.created_at)}</p>
             </div>
 
             {/* Description - Under Photo */}
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <h3 className="text-lg font-semibold mb-4 text-slate-800">Description</h3>
                 {isEditing ? (
                   <Textarea
@@ -486,7 +486,7 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
           <div className="lg:col-span-2 space-y-6">
             {/* Price and Actions Card */}
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 {/* Title - Desktop Only */}
                 <div className="hidden lg:block mb-6">
                   <h1 className="text-2xl font-bold mb-2 text-slate-800">{item.name}</h1>
@@ -515,7 +515,7 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
                     </div>
                   ) : (
                     <div className="flex items-center justify-between">
-                      <div className="text-4xl font-bold text-green-600">${item.starting_price}</div>
+                      <div className="text-4xl font-bold text-green-600">${parseFloat(item.starting_price).toFixed(2)}</div>
                     </div>
                   )}
                 </div>
@@ -528,7 +528,7 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
                       {/* Make Offer Button - Opens Overlay */}
                       <Button 
                         onClick={() => setShowOfferOverlay(true)}
-                        className="w-full font-medium text-white hover:opacity-90"
+                        className="w-full font-medium text-white hover:opacity-90 h-12 sm:h-auto"
                         style={{ backgroundColor: '#4A6FA5' }}
                         size="lg"
                       >
@@ -541,7 +541,7 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
                   {!user && (
                     <Button 
                       onClick={onSignInClick}
-                      className="w-full font-medium text-white hover:opacity-90" 
+                      className="w-full font-medium text-white hover:opacity-90 h-12 sm:h-auto" 
                       style={{ backgroundColor: '#4A6FA5' }}
                       size="lg"
                     >

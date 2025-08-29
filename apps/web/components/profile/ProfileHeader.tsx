@@ -8,53 +8,24 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
-import { createClient } from '@/lib/supabase'
-
-export interface ProfileData {
-  id: string
-  username: string
-  display_name: string
-  bio?: string
-  profile_picture_filename?: string
-  location: {
-    city?: string
-    state?: string
-    zip_code?: string
-  }
-  is_verified: boolean
-  stats: {
-    total_sales: number
-    total_purchases: number
-    rating_average: number
-    rating_count: number
-  }
-  member_since: string
-  last_active?: string
-}
-
-interface ProfileHeaderProps {
-  profile: ProfileData
-  isOwnProfile?: boolean
-}
+import { ProfileData, ProfileHeaderProps } from '@/lib/types/profile'
+import { 
+  getProfileImageUrl, 
+  formatMemberSince, 
+  formatLastActive, 
+  formatRating,
+  getInitials 
+} from '@/lib/utils/profile'
 
 export default function ProfileHeader({ 
   profile, 
   isOwnProfile = false
 }: ProfileHeaderProps) {
-  const supabaseClient = useMemo(() => createClient(), [])
-
-  const profileImageUrl = useMemo(() => {
-    if (!profile.profile_picture_filename) return null
-    const { data } = supabaseClient.storage.from('furniture-images').getPublicUrl(profile.profile_picture_filename)
-    return data.publicUrl
-  }, [supabaseClient, profile.profile_picture_filename])
-
-  const memberSinceFormatted = useMemo(() => {
-    return new Date(profile.member_since).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long'
-    })
-  }, [profile.member_since])
+  const profileImageUrl = useMemo(() => getProfileImageUrl(profile.profile_picture_filename), [profile.profile_picture_filename])
+  const memberSinceFormatted = useMemo(() => formatMemberSince(profile.member_since), [profile.member_since])
+  const lastActiveFormatted = useMemo(() => formatLastActive(profile.last_active), [profile.last_active])
+  const { display: ratingDisplay, stars } = useMemo(() => formatRating(profile.stats.rating_average, profile.stats.rating_count), [profile.stats.rating_average, profile.stats.rating_count])
+  const initials = useMemo(() => getInitials(profile.display_name), [profile.display_name])
 
   const locationString = useMemo(() => {
     return [profile.location.city, profile.location.state].filter(Boolean).join(', ')
@@ -70,8 +41,8 @@ export default function ProfileHeader({
               src={profileImageUrl || undefined} 
               alt={`${profile.display_name}'s profile`}
             />
-            <AvatarFallback className="bg-gradient-to-br from-slate-100 to-blue-100 text-slate-600">
-              <User className="h-8 w-8" />
+            <AvatarFallback className="bg-gradient-to-br from-slate-100 to-blue-100 text-slate-600 font-semibold text-lg">
+              {initials}
             </AvatarFallback>
           </Avatar>
           <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-3 border-white"></div>

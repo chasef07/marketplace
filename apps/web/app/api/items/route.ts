@@ -13,11 +13,16 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '12')
     const offset = (page - 1) * limit
 
+    // Parse search and sort parameters
+    const search = searchParams.get('search')
+    const sort = searchParams.get('sort')
+
     // Validate pagination parameters
     const validatedLimit = Math.min(Math.max(limit, 1), 50) // Max 50 items per page
     const validatedOffset = Math.max(offset, 0)
 
-    const { data: items, error, count } = await supabase
+    // Build the query
+    let query = supabase
       .from('items')
       .select(`
         *,
@@ -29,8 +34,27 @@ export async function GET(request: NextRequest) {
         )
       `, { count: 'exact' })
       .in('item_status', ['active', 'under_negotiation'])
-      .order('created_at', { ascending: false })
-      .range(validatedOffset, validatedOffset + validatedLimit - 1)
+
+    // Add search functionality
+    if (search && search.trim()) {
+      const searchTerm = search.trim()
+      query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
+    }
+
+    // Add sorting functionality
+    if (sort === 'price_asc') {
+      query = query.order('starting_price', { ascending: true })
+    } else if (sort === 'price_desc') {
+      query = query.order('starting_price', { ascending: false })
+    } else {
+      // Default to newest first
+      query = query.order('created_at', { ascending: false })
+    }
+
+    // Apply pagination
+    query = query.range(validatedOffset, validatedOffset + validatedLimit - 1)
+
+    const { data: items, error, count } = await query
 
     if (error) {
       console.error('Error fetching items:', error)

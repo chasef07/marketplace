@@ -1,15 +1,13 @@
 'use client'
 
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Progress } from "@/components/ui/progress"
-import { Heart, MessageCircle, Eye, MapPin, Sparkles } from "lucide-react"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Eye, MapPin } from "lucide-react"
 import Image from "next/image"
 import { Item } from "@/lib/api-client-new"
 import { FURNITURE_BLUR_DATA_URL } from "@/lib/blur-data"
 import { useState } from "react"
+import { createClient } from "@/lib/supabase"
 
 export type ViewMode = 'grid' | 'list'
 
@@ -17,29 +15,29 @@ interface ItemCardProps {
   item: Item
   viewMode: ViewMode
   onItemClick?: (itemId: number) => void
-  onFavoriteClick?: (itemId: number) => void
-  onMessageClick?: (itemId: number) => void
-  isFavorited?: boolean
   className?: string
 }
 
-interface User {
-  id: string
-  username: string
-  seller_personality?: string
-}
 
 export function ItemCard({
   item,
   viewMode,
   onItemClick,
-  onFavoriteClick,
-  onMessageClick,
-  isFavorited = false,
   className = ''
 }: ItemCardProps) {
-  const [imageLoading, setImageLoading] = useState(true)
   const [imageError, setImageError] = useState(false)
+  
+  // Get the correct image URL using the same logic as profile utilities
+  const getItemImageUrl = (item: Item): string | null => {
+    const supabase = createClient()
+    const primaryImage = item.images?.find(img => img.is_primary) || item.images?.[0]
+    const filename = primaryImage?.filename || item.image_filename
+    
+    if (!filename) return null
+    
+    const { data } = supabase.storage.from('furniture-images').getPublicUrl(filename)
+    return data.publicUrl
+  }
   
   // Use real seller data from the API response
   const seller = item.seller || { 
@@ -47,7 +45,6 @@ export function ItemCard({
     username: 'Unknown User', 
     seller_personality: 'friendly' 
   }
-  const negotiationProgress = item.item_status === 'under_negotiation' ? 65 : 0
 
   const formatTimeAgo = (timestamp: string) => {
     const now = new Date()
@@ -61,21 +58,6 @@ export function ItemCard({
     return 'Just now'
   }
 
-  const getStatusBadge = () => {
-    switch (item.item_status) {
-      case 'under_negotiation':
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-700">In Negotiation</Badge>
-      case 'active':
-        return <Badge variant="secondary" className="bg-green-100 text-green-700">Available</Badge>
-      default:
-        return null
-    }
-  }
-
-  const isNewListing = () => {
-    const hoursSinceCreated = (Date.now() - new Date(item.created_at).getTime()) / (1000 * 60 * 60)
-    return hoursSinceCreated < 24
-  }
 
   if (viewMode === 'list') {
     return (
@@ -87,19 +69,15 @@ export function ItemCard({
           <div className="flex gap-4">
             {/* Image */}
             <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-              {!imageError && item.image_url && item.image_url.trim() ? (
+              {!imageError && getItemImageUrl(item) ? (
                 <Image
-                  src={item.image_url}
+                  src={getItemImageUrl(item)!}
                   alt={item.name}
                   fill
                   className="object-cover"
                   placeholder="blur"
                   blurDataURL={FURNITURE_BLUR_DATA_URL}
-                  onLoad={() => setImageLoading(false)}
-                  onError={() => {
-                    setImageError(true)
-                    setImageLoading(false)
-                  }}
+                  onError={() => setImageError(true)}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
@@ -115,13 +93,7 @@ export function ItemCard({
                   <h3 className="font-medium text-gray-900 truncate pr-2">{item.name}</h3>
                   <p className="text-sm text-gray-600 mt-1 line-clamp-2">{item.description}</p>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <div className="text-lg font-bold text-gray-900">${item.starting_price}</div>
-                  <div className="flex gap-1">
-                    {getStatusBadge()}
-                    {isNewListing() && <Badge className="bg-orange-100 text-orange-700">New</Badge>}
-                  </div>
-                </div>
+                <div className="text-lg font-bold text-gray-900">${item.starting_price}</div>
               </div>
 
               <div className="flex items-center justify-between">
@@ -150,41 +122,8 @@ export function ItemCard({
                   <span>{formatTimeAgo(item.created_at)}</span>
                 </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onFavoriteClick?.(item.id)
-                    }}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Heart className={`h-4 w-4 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onMessageClick?.(item.id)
-                    }}
-                    className="h-8 w-8 p-0"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                  </Button>
-                </div>
               </div>
 
-              {negotiationProgress > 0 && (
-                <div className="mt-3">
-                  <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                    <span>Negotiation Progress</span>
-                    <span>{negotiationProgress}%</span>
-                  </div>
-                  <Progress value={negotiationProgress} className="h-1" />
-                </div>
-              )}
             </div>
           </div>
         </CardContent>
@@ -201,19 +140,15 @@ export function ItemCard({
       <CardContent className="p-0">
         {/* Image container */}
         <div className="relative w-full aspect-square rounded-t-lg overflow-hidden bg-gray-100">
-          {!imageError && item.image_url && item.image_url.trim() ? (
+          {!imageError && getItemImageUrl(item) ? (
             <Image
-              src={item.image_url}
+              src={getItemImageUrl(item)!}
               alt={item.name}
               fill
               className="object-cover"
               placeholder="blur"
               blurDataURL={FURNITURE_BLUR_DATA_URL}
-              onLoad={() => setImageLoading(false)}
-              onError={() => {
-                setImageError(true)
-                setImageLoading(false)
-              }}
+              onError={() => setImageError(true)}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -221,23 +156,7 @@ export function ItemCard({
             </div>
           )}
           
-          {/* Overlay badges */}
-          <div className="absolute top-2 left-2 flex gap-1">
-            {isNewListing() && <Badge className="bg-orange-100 text-orange-700 text-xs">New</Badge>}
-          </div>
 
-          {/* Favorite button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation()
-              onFavoriteClick?.(item.id)
-            }}
-            className="absolute top-2 right-2 h-8 w-8 p-0 bg-white/70 hover:bg-white/90"
-          >
-            <Heart className={`h-4 w-4 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
-          </Button>
         </div>
 
         {/* Content */}
@@ -249,19 +168,6 @@ export function ItemCard({
 
           <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.description}</p>
 
-          {/* Status and progress */}
-          <div className="mb-3">
-            {getStatusBadge()}
-            {negotiationProgress > 0 && (
-              <div className="mt-2">
-                <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                  <span>Negotiation Progress</span>
-                  <span>{negotiationProgress}%</span>
-                </div>
-                <Progress value={negotiationProgress} className="h-1" />
-              </div>
-            )}
-          </div>
 
           {/* Footer */}
           <div className="flex items-center justify-between text-sm">
@@ -291,21 +197,6 @@ export function ItemCard({
             </div>
           </div>
 
-          {/* Action buttons */}
-          <div className="flex gap-2 mt-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation()
-                onMessageClick?.(item.id)
-              }}
-              className="flex-1 bg-white/50"
-            >
-              <MessageCircle className="h-4 w-4 mr-2" />
-              Message
-            </Button>
-          </div>
         </div>
       </CardContent>
     </Card>
