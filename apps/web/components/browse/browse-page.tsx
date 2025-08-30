@@ -149,7 +149,7 @@ export function BrowsePage({
 
 
   return (
-    <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen pt-20 bg-hero-gradient">
       {/* Main Navigation Header */}
       <MainNavigation
         user={user}

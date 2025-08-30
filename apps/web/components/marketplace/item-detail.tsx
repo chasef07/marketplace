@@ -338,7 +338,7 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
 
   if (error || !item) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-hero-gradient flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center space-x-2">
             <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
@@ -354,7 +354,7 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-hero-gradient">
       {/* Clean Header */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
         <div className="container mx-auto px-4 py-4">

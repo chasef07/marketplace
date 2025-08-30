@@ -46,10 +46,10 @@ export function MainNavigation({
           <div className="hidden md:flex items-center space-x-3 lg:space-x-4">
             {user ? (
               <>
-                <span className="text-blue-600 text-sm font-medium hidden lg:block truncate max-w-32">
+                <span className="text-primary text-sm font-medium hidden lg:block truncate max-w-32">
                   {getRotatingGreeting(user.id)}, {user.username}!
                 </span>
-                <span className="text-blue-600 text-sm font-medium lg:hidden">
+                <span className="text-primary text-sm font-medium lg:hidden">
                   Hi, {user.username}!
                 </span>
                 {currentPage !== 'home' && onNavigateHome && (
@@ -125,8 +125,8 @@ export function MainNavigation({
                   {user ? (
                     <>
                       {/* User greeting */}
-                      <div className="px-3 py-2 bg-blue-50 rounded-lg">
-                        <p className="text-blue-600 text-sm font-medium">
+                      <div className="px-3 py-2 bg-accent/30 rounded-lg">
+                        <p className="text-primary text-sm font-medium">
                           {getRotatingGreeting(user.id)}, {user.username}!
                         </p>
                       </div>

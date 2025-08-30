@@ -28,6 +28,13 @@ module.exports = {
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
       },
+      backgroundImage: {
+        'hero-gradient': 'linear-gradient(135deg, var(--gradient-from), var(--gradient-to))',
+        'accent-gradient': 'linear-gradient(135deg, var(--gradient-accent-from), var(--gradient-accent-to))',
+        'sunset-warm': 'linear-gradient(135deg, #fef2f2 0%, #fef3c7 100%)',
+        'sunset-intense': 'linear-gradient(135deg, #fee2e2 0%, #fed7aa 100%)',
+        'sunset-glow': 'linear-gradient(45deg, #dc2626 0%, #d97706 50%, #f59e0b 100%)',
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",

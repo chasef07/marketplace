@@ -86,7 +86,7 @@ export const InteractiveUploadZone = React.memo(function InteractiveUploadZone({
           className={`
             border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all
             ${isDragging 
-              ? 'border-blue-500 bg-blue-50' 
+              ? 'border-primary bg-accent/50' 
               : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
             }
             ${isAnalyzing ? 'cursor-not-allowed' : 'cursor-pointer'}
@@ -108,8 +108,8 @@ export const InteractiveUploadZone = React.memo(function InteractiveUploadZone({
 
           {isAnalyzing ? (
             <div className="space-y-4">
-              <div className="w-12 h-12 mx-auto text-blue-600">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+              <div className="w-12 h-12 mx-auto text-primary">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
               </div>
               
               <div>
@@ -143,9 +143,9 @@ export const InteractiveUploadZone = React.memo(function InteractiveUploadZone({
                     </Button>
                     
                     <div className="flex justify-center space-x-4 text-xs text-slate-500">
-                      <span>✨ Instant Analysis</span>
-                      <span>💰 Smart Pricing</span>
-                      <span>📝 Complete Listings</span>
+                      <span>Instant Analysis</span>
+                      <span>Smart Pricing</span>
+                      <span>Complete Listings</span>
                     </div>
                   </div>
                 </>

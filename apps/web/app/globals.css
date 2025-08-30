@@ -19,46 +19,29 @@ html, body {
   --foreground: #171717;
   --card: #ffffff;
   --card-foreground: #171717;
-  --primary: #2563eb;
+  --primary: #dc2626;
   --primary-foreground: #ffffff;
-  --secondary: #eff6ff;
+  --secondary: #fee2e2;
   --secondary-foreground: #171717;
-  --muted: #f8fafc;
-  --muted-foreground: #64748b;
-  --accent: #eff6ff;
+  --muted: #fef2f2;
+  --muted-foreground: #7c2d12;
+  --accent: #fed7aa;
   --accent-foreground: #171717;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #2563eb;
-}
-
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #ffffff;
-    --foreground: #171717;
-    --card: #ffffff;
-    --card-foreground: #171717;
-    --primary: #2563eb;
-    --primary-foreground: #ffffff;
-    --secondary: #eff6ff;
-    --secondary-foreground: #171717;
-    --muted: #f8fafc;
-    --muted-foreground: #64748b;
-    --accent: #eff6ff;
-    --accent-foreground: #171717;
-    --destructive: #ef4444;
-    --destructive-foreground: #ffffff;
-    --border: #e2e8f0;
-    --input: #e2e8f0;
-    --ring: #2563eb;
-  }
+  --border: #fed7aa;
+  --input: #fed7aa;
+  --ring: #dc2626;
+  
+  /* New gradient variables */
+  --gradient-from: #fef2f2;
+  --gradient-to: #fef3c7;
+  --gradient-accent-from: #fee2e2;
+  --gradient-accent-to: #fed7aa;
 }
 
 body {
-  background: var(--background);
+  background: linear-gradient(135deg, var(--gradient-from), var(--gradient-to));
   color: var(--foreground);
   font-family: 'Inter', var(--font-sans), system-ui, sans-serif;
   overflow-x: hidden;
