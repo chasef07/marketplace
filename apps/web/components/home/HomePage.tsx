@@ -1,14 +1,14 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { HeroSection } from './HeroSection'
 import { ListingPreview } from './ListingPreview'
 import { EnhancedAuth } from '../auth/enhanced-auth'
 import { ThemedLoading } from '../ui/themed-loading'
+import { useAuth } from '@/lib/hooks/useAuth'
 import { type AIAnalysisResult, apiClient } from "@/lib/api-client-new"
-import { User } from "@/lib/types/user"
 
 // Lazy load heavy components
 
@@ -27,12 +27,13 @@ const ProfileView = dynamic(() => import('../profile/profile-view'), {
 
 export const HomePage = React.memo(function HomePage() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
+  const { user, loading: isLoading } = useAuth({
+    onSignOut: () => setCurrentView('home')
+  })
   const [currentView, setCurrentView] = useState<'home' | 'auth' | 'item-detail' | 'listing-preview' | 'profile-view'>('home')
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<{analysisData: AIAnalysisResult, uploadedImages: string[]} | null>(null)
-  const [isLoading, setIsLoading] = useState(true) // Add loading state
   const [authMode, setAuthMode] = useState<'signin' | 'register' | 'reset'>('signin') // Track auth mode
 
   // Listen for navigation events from QuickActions overlay
@@ -56,87 +57,6 @@ export const HomePage = React.memo(function HomePage() {
     }
   }, [user, router])
 
-  // Initialize auth state with proper Supabase listener
-  useEffect(() => {
-    let mounted = true
-    let authStateTimeout: NodeJS.Timeout | null = null
-
-    // Debounced auth state handler to prevent race conditions
-    const debouncedAuthStateChange = (session: unknown) => {
-      if (authStateTimeout) {
-        clearTimeout(authStateTimeout)
-      }
-      
-      authStateTimeout = setTimeout(async () => {
-        if (!mounted) return
-        
-        if ((session as { user?: unknown })?.user) {
-          // User signed in - get their profile data
-          try {
-            const userData = await apiClient.getCurrentUser()
-            if (mounted && userData) {
-              setUser(userData)
-            }
-          } catch (error) {
-            // Profile might not exist yet for new users, or auth error
-            console.warn('Auth state change error:', error)
-            if (mounted) setUser(null)
-          }
-        } else {
-          // User signed out
-          if (mounted) {
-            setUser(null)
-            setCurrentView('home')
-          }
-        }
-      }, 200) // 200ms debounce
-    }
-
-    // Initialize auth state immediately (non-blocking)
-    const initializeAuth = async () => {
-      try {
-        const session = await apiClient.getSession()
-        if (mounted) {
-          if (session?.user) {
-            // Try to get user data, but don't block the UI
-            apiClient.getCurrentUser().then(userData => {
-              if (mounted && userData) {
-                setUser(userData)
-              }
-            }).catch((error) => {
-              // Auth errors during init, clear state
-              console.warn('Init auth error:', error)
-              if (mounted) setUser(null)
-            })
-          } else {
-            setUser(null)
-          }
-          setIsLoading(false) // Always stop loading after initial check
-        }
-      } catch (error) {
-        console.warn('Initialize auth error:', error)
-        if (mounted) {
-          setUser(null)
-          setIsLoading(false)
-        }
-      }
-    }
-
-    // Set up Supabase auth state listener for real-time updates
-    const { data: { subscription } } = apiClient.onAuthStateChange(debouncedAuthStateChange)
-
-    initializeAuth()
-
-    return () => {
-      mounted = false
-      if (authStateTimeout) {
-        clearTimeout(authStateTimeout)
-      }
-      if (subscription) {
-        subscription.unsubscribe()
-      }
-    }
-  }, []) // Empty dependency array - only run once on mount
 
   const createListingAndNavigate = useCallback(async (analysisData: AIAnalysisResult, agentEnabled = false) => {
     try {
