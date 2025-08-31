@@ -16,8 +16,7 @@ interface OfferConfirmationPopupProps {
 
 export default function OfferConfirmationPopup({ 
   isVisible, 
-  onClose,
-  offerDetails
+  onClose
 }: OfferConfirmationPopupProps) {
   
 

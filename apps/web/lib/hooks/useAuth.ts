@@ -89,7 +89,7 @@ export function useAuth(options: UseAuthOptions = {}) {
         subscription.unsubscribe()
       }
     }
-  }, [options.onSignOut])
+  }, [options])
 
   return { user, loading, setUser }
 }

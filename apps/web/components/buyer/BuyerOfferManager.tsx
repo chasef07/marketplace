@@ -5,10 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Separator } from '@/components/ui/separator'
 import { 
   ShoppingBag, 
-  DollarSign, 
   Clock, 
   CheckCircle, 
   XCircle, 
@@ -166,23 +164,6 @@ export default function BuyerOfferManager({ userId, onOfferConfirmed, initialOff
     }
   }
 
-  const handleCounterOffer = async (negotiationId: number, price: number) => {
-    try {
-      setSubmitting(true)
-      await apiClient.counterOffer(negotiationId, price, `Counter offer: $${price}`)
-      
-      // Show confirmation
-      onOfferConfirmed?.()
-      
-      // Refresh offers
-      await fetchOffers()
-    } catch (err) {
-      console.error('Failed to submit counter offer:', err)
-      alert('Failed to submit counter offer. Please try again.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
 
   const handleBuyerAccept = async (negotiationId: number) => {
     try {

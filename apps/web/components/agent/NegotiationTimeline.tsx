@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -78,7 +78,7 @@ export function NegotiationTimeline({ sellerId, className }: NegotiationTimeline
 
   const supabase = useMemo(() => createClient(), [])
 
-  const loadNegotiations = async () => {
+  const loadNegotiations = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -179,13 +179,13 @@ export function NegotiationTimeline({ sellerId, className }: NegotiationTimeline
     } finally {
       setLoading(false)
     }
-  }
+  }, [sellerId, supabase])
 
   useEffect(() => {
     if (sellerId) {
       loadNegotiations()
     }
-  }, [sellerId])
+  }, [sellerId, loadNegotiations])
 
   const toggleExpanded = (negotiationId: number) => {
     const newExpanded = new Set(expandedNegotiations)

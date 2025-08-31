@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { Bell, Bot, Clock, DollarSign, TrendingUp, X, Eye, MessageSquare, CheckCircle } from 'lucide-react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { Bell, Bot, Clock, DollarSign, X, Eye, MessageSquare, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -41,14 +41,7 @@ export function BuyerNotifications({ userId, className = '' }: BuyerNotification
 
   const supabase = useMemo(() => createClient(), [])
 
-  useEffect(() => {
-    if (userId) {
-      loadNotifications()
-      setupRealTimeSubscriptions()
-    }
-  }, [userId])
-
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     try {
       // Get buyer's negotiations with latest offers that need attention
       const { data: negotiations, error } = await supabase
@@ -137,9 +130,9 @@ export function BuyerNotifications({ userId, className = '' }: BuyerNotification
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId, supabase])
 
-  const setupRealTimeSubscriptions = () => {
+  const setupRealTimeSubscriptions = useCallback(() => {
     // Subscribe to new offers for buyer's negotiations
     const offersSubscription = supabase
       .channel(`buyer_offers_${userId}`)
@@ -171,7 +164,7 @@ export function BuyerNotifications({ userId, className = '' }: BuyerNotification
     return () => {
       offersSubscription.unsubscribe()
     }
-  }
+  }, [userId, supabase, loadNotifications])
 
   const markAsRead = (notificationId: string) => {
     setNotifications(prev => 
@@ -306,6 +299,13 @@ export function BuyerNotifications({ userId, className = '' }: BuyerNotification
     const diffDays = Math.floor(diffHours / 24)
     return `${diffDays}d ago`
   }
+
+  useEffect(() => {
+    if (userId) {
+      loadNotifications()
+      setupRealTimeSubscriptions()
+    }
+  }, [userId, loadNotifications, setupRealTimeSubscriptions])
 
   if (loading) {
     return (

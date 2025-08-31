@@ -2,18 +2,16 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import { User, MapPin, Calendar, Star, Package, ShoppingBag, Edit } from 'lucide-react'
+import { MapPin, Calendar, Star, Package, ShoppingBag, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
-import { ProfileData, ProfileHeaderProps } from '@/lib/types/profile'
+import { ProfileHeaderProps } from '@/lib/types/profile'
 import { 
   getProfileImageUrl, 
-  formatMemberSince, 
-  formatLastActive, 
-  formatRating,
+  formatMemberSince,
   getInitials 
 } from '@/lib/utils/profile'
 
@@ -23,8 +21,6 @@ export default function ProfileHeader({
 }: ProfileHeaderProps) {
   const profileImageUrl = useMemo(() => getProfileImageUrl(profile.profile_picture_filename), [profile.profile_picture_filename])
   const memberSinceFormatted = useMemo(() => formatMemberSince(profile.member_since), [profile.member_since])
-  const lastActiveFormatted = useMemo(() => formatLastActive(profile.last_active), [profile.last_active])
-  const { display: ratingDisplay, stars } = useMemo(() => formatRating(profile.stats.rating_average, profile.stats.rating_count), [profile.stats.rating_average, profile.stats.rating_count])
   const initials = useMemo(() => getInitials(profile.display_name), [profile.display_name])
 
   const locationString = useMemo(() => {

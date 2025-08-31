@@ -9,7 +9,6 @@ import { EnhancedAuth } from '../auth/enhanced-auth'
 import { ThemedLoading } from '../ui/themed-loading'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { type AIAnalysisResult, apiClient } from "@/lib/api-client-new"
-import { User } from "@/lib/types/user"
 
 // Lazy load heavy components
 
@@ -90,7 +89,7 @@ export const HomePage = React.memo(function HomePage() {
     }
   }, [router])
 
-  const handleAuthSuccess = async (_userData: User) => {
+  const handleAuthSuccess = async () => {
     // Check if there's a pending listing from photo upload
     if (typeof window !== 'undefined') {
       const pendingListing = window.localStorage.getItem('pendingListing')
@@ -133,7 +132,7 @@ export const HomePage = React.memo(function HomePage() {
       setSelectedItemId(null)
       setSelectedUsername(null)
       setPreviewData(null)
-    } catch (error) {
+    } catch {
       // Always clear view state even if sign out fails
       setCurrentView('home')
     }

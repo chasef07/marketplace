@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import Image from 'next/image'
 import { CheckCircle, Clock, DollarSign, Package, User, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -32,14 +33,7 @@ export function SellerNotifications({ userId, className = '' }: SellerNotificati
 
   const supabase = useMemo(() => createClient(), [])
 
-  useEffect(() => {
-    if (userId) {
-      loadPendingConfirmations()
-      setupRealTimeSubscriptions()
-    }
-  }, [userId])
-
-  const loadPendingConfirmations = async () => {
+  const loadPendingConfirmations = useCallback(async () => {
     try {
       // Get negotiations in buyer_accepted status (need seller confirmation)
       const { data: negotiations, error } = await supabase
@@ -83,9 +77,9 @@ export function SellerNotifications({ userId, className = '' }: SellerNotificati
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId, supabase])
 
-  const setupRealTimeSubscriptions = () => {
+  const setupRealTimeSubscriptions = useCallback(() => {
     // Skip realtime subscriptions on localhost/HTTP to avoid WebSocket security errors
     if (typeof window !== 'undefined' && window.location.protocol === 'http:') {
       console.log('Skipping realtime subscriptions on HTTP connection')
@@ -115,7 +109,7 @@ export function SellerNotifications({ userId, className = '' }: SellerNotificati
     return () => {
       subscription.unsubscribe()
     }
-  }
+  }, [userId, supabase, loadPendingConfirmations])
 
   const confirmDeal = async (negotiationId: number) => {
     setActionLoading(negotiationId)
@@ -179,6 +173,13 @@ export function SellerNotifications({ userId, className = '' }: SellerNotificati
     return `${diffDays}d ago`
   }
 
+  useEffect(() => {
+    if (userId) {
+      loadPendingConfirmations()
+      setupRealTimeSubscriptions()
+    }
+  }, [userId, loadPendingConfirmations, setupRealTimeSubscriptions])
+
   if (loading) {
     return (
       <div className={`space-y-3 ${className}`}>
@@ -219,9 +220,11 @@ export function SellerNotifications({ userId, className = '' }: SellerNotificati
                 {/* Item Image */}
                 <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                   {getItemImageUrl(confirmation.item) ? (
-                    <img
+                    <Image
                       src={getItemImageUrl(confirmation.item)!}
                       alt={confirmation.item.name}
+                      width={64}
+                      height={64}
                       className="w-full h-full object-cover"
                     />
                   ) : (
