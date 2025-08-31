@@ -1,15 +1,15 @@
 'use client'
 
-import { useMemo } from 'react'
+import { memo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { BLUR_PLACEHOLDERS } from '@/lib/blur-data'
-import { ProfileData, MyListingsTabProps } from '@/lib/types/profile'
-import { getItemImageUrl, formatPrice, formatTimeAgo } from '@/lib/utils/profile'
+import { MyListingsTabProps } from '@/lib/types/profile'
+import { getItemImageUrl, formatPrice } from '@/lib/utils/profile'
 
-export default function MyListingsTab({ profile, isOwnProfile = false }: MyListingsTabProps) {
+const MyListingsTab = memo(function MyListingsTab({ profile, isOwnProfile = false }: MyListingsTabProps) {
 
   if (profile.active_items.length === 0) {
     return (
@@ -99,4 +99,6 @@ export default function MyListingsTab({ profile, isOwnProfile = false }: MyListi
       ))}
     </div>
   )
-}
+})
+
+export default MyListingsTab

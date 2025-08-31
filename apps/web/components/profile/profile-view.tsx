@@ -75,7 +75,7 @@ export default function ProfileView({ username }: ProfileViewProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="profile-page">
         <MainNavigation
           user={currentUser || null}
           onBrowseItems={handleBrowseItems}
@@ -116,7 +116,7 @@ export default function ProfileView({ username }: ProfileViewProps) {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="profile-page">
         <MainNavigation
           user={currentUser || null}
           onBrowseItems={handleBrowseItems}
@@ -142,7 +142,7 @@ export default function ProfileView({ username }: ProfileViewProps) {
   if (!profile) return null
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="profile-page">
       {/* Navigation Header */}
       <MainNavigation
         user={currentUser || null}

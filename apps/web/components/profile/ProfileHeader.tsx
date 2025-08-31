@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import Link from 'next/link'
 import { MapPin, Calendar, Star, Package, ShoppingBag, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,7 @@ import {
   getInitials 
 } from '@/lib/utils/profile'
 
-export default function ProfileHeader({ 
+const ProfileHeader = memo(function ProfileHeader({ 
   profile, 
   isOwnProfile = false
 }: ProfileHeaderProps) {
@@ -132,4 +132,6 @@ export default function ProfileHeader({
       </div>
     </Card>
   )
-}
+})
+
+export default ProfileHeader

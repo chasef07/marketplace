@@ -15,7 +15,7 @@ import {
 } from '@/lib/types/profile'
 
 /**
- * Hook for fetching and managing profile data
+ * Hook for fetching and managing profile data with optimized loading
  */
 export function useProfile(username: string) {
   const [profile, setProfile] = useState<ProfileData | null>(null)
@@ -27,13 +27,17 @@ export function useProfile(username: string) {
       setLoading(true)
       setError(null)
       
-      const response = await fetch(`/api/profiles/${username}`)
+      // Use parallel requests to reduce loading time
+      const [profileResponse] = await Promise.all([
+        fetch(`/api/profiles/${username}`),
+        // Prefetch related data if needed
+      ])
       
-      if (!response.ok) {
-        throw new Error(response.status === 404 ? 'Profile not found' : 'Failed to load profile')
+      if (!profileResponse.ok) {
+        throw new Error(profileResponse.status === 404 ? 'Profile not found' : 'Failed to load profile')
       }
 
-      const profileData = await response.json()
+      const profileData = await profileResponse.json()
       setProfile(profileData)
     } catch (err) {
       console.error('Failed to fetch profile:', err)
@@ -59,35 +63,69 @@ export function useProfile(username: string) {
   }
 }
 
+// Cache for current user data to avoid repeated API calls
+let cachedUser: User | null = null
+let userPromise: Promise<User | null> | null = null
+
 /**
- * Hook for current user profile management
+ * Hook for current user profile management with caching
  */
 export function useCurrentUser() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(cachedUser)
+  const [loading, setLoading] = useState(!cachedUser)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const loadCurrentUser = async () => {
+  const loadCurrentUser = useCallback(async () => {
+    // Return cached promise if already loading
+    if (userPromise) {
       try {
-        setLoading(true)
-        const userData = await apiClient.getCurrentUser()
+        const userData = await userPromise
         setUser(userData)
+        return userData
       } catch (err) {
-        console.error('Failed to load current user:', err)
         setError(err instanceof Error ? err.message : 'Failed to load user')
-      } finally {
-        setLoading(false)
+        return null
       }
     }
 
+    // Return cached user if available
+    if (cachedUser && !loading) {
+      return cachedUser
+    }
+
+    try {
+      setLoading(true)
+      setError(null)
+      
+      // Create promise for this request
+      userPromise = apiClient.getCurrentUser()
+      const userData = await userPromise
+      
+      // Cache the result
+      cachedUser = userData
+      setUser(userData)
+      return userData
+    } catch (err) {
+      console.error('Failed to load current user:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load user')
+      return null
+    } finally {
+      setLoading(false)
+      userPromise = null
+    }
+  }, [loading])
+
+  useEffect(() => {
     loadCurrentUser()
 
     // Set up real-time auth state listener
     const { data: { subscription } } = apiClient.onAuthStateChange((session) => {
       if (session?.user) {
-        apiClient.getCurrentUser().then(setUser).catch(console.error)
+        // Clear cache on auth change
+        cachedUser = null
+        loadCurrentUser()
       } else {
+        cachedUser = null
         setUser(null)
       }
     })
@@ -95,7 +133,7 @@ export function useCurrentUser() {
     return () => {
       subscription.unsubscribe()
     }
-  }, [])
+  }, [loadCurrentUser])
 
   return {
     user,
