@@ -19,20 +19,14 @@ const ItemDetail = dynamic(() => import('../marketplace/item-detail').then(mod =
 
 
 
-const ProfileView = dynamic(() => import('../profile/profile-view'), {
-  loading: () => <div className="min-h-screen bg-gray-100 animate-pulse" />
-})
-
-
-
 
 export const HomePage = React.memo(function HomePage() {
   const router = useRouter()
-  const [currentView, setCurrentView] = useState<'home' | 'auth' | 'item-detail' | 'listing-preview' | 'profile-view'>('home')
+  const [currentView, setCurrentView] = useState<'home' | 'auth' | 'item-detail' | 'listing-preview'>('home')
 
 
   // Enhanced state change tracking
-  const setCurrentViewWithLogging = useCallback((newView: 'home' | 'auth' | 'item-detail' | 'listing-preview' | 'profile-view') => {
+  const setCurrentViewWithLogging = useCallback((newView: 'home' | 'auth' | 'item-detail' | 'listing-preview') => {
     // Prevent view changes during critical flows
     if (preventViewChangeRef.current && newView !== 'listing-preview' && currentView === 'listing-preview') {
       return
@@ -58,7 +52,6 @@ export const HomePage = React.memo(function HomePage() {
   })
 
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
-  const [selectedUsername, setSelectedUsername] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<{analysisData: AIAnalysisResult, uploadedImages: string[]} | null>(null)
   const [authMode, setAuthMode] = useState<'signin' | 'register' | 'reset'>('signin') // Track auth mode
   
@@ -195,7 +188,6 @@ export const HomePage = React.memo(function HomePage() {
       
       // Clear any cached data
       setSelectedItemId(null)
-      setSelectedUsername(null)
       setPreviewData(null)
     } catch {
       // Always clear view state even if sign out fails
@@ -231,15 +223,12 @@ export const HomePage = React.memo(function HomePage() {
   }, [currentView, setCurrentViewWithLogging])
 
   const handleViewProfile = (username?: string) => {
-    if (username && typeof username === 'string') {
-      setSelectedUsername(username)
-    } else if (user && user.username && typeof user.username === 'string') {
-      setSelectedUsername(user.username)
+    const targetUsername = username || user?.username
+    if (targetUsername) {
+      router.push(`/profile/${targetUsername}`)
     } else {
-      console.warn('Unable to load profile - no valid username')
-      return
+      console.warn('Unable to navigate to profile - no valid username')
     }
-    setCurrentViewWithLogging('profile-view')
   }
 
 
@@ -302,13 +291,6 @@ export const HomePage = React.memo(function HomePage() {
   }
 
 
-  if (currentView === 'profile-view' && selectedUsername) {
-    return (
-      <ProfileView
-        username={selectedUsername}
-      />
-    )
-  }
 
 
 

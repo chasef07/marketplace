@@ -15,7 +15,7 @@ interface BrowsePageProps {
   onLogout: () => void
   onItemClick?: (itemId: number) => void
   onSignInClick?: () => void
-  onViewProfile?: () => void
+  onViewProfile?: (username?: string) => void
 }
 
 // Fetcher function for SWR
@@ -160,7 +160,6 @@ export function BrowsePage({
         onViewProfile={onViewProfile}
         onSignIn={onSignInClick}
         onSignOut={onLogout}
-        currentPage="browse"
       />
       
       {/* Search Header */}

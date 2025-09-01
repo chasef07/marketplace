@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from "react"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Menu } from "lucide-react"
@@ -12,10 +13,9 @@ interface MainNavigationProps {
   onNavigateHome?: () => void
   onBrowseItems?: () => void
   onCreateListing?: () => void
-  onViewProfile?: () => void
+  onViewProfile?: (username?: string) => void
   onSignIn?: () => void
   onSignOut?: () => void
-  currentPage?: 'home' | 'browse' | 'profile'
 }
 
 export function MainNavigation({
@@ -26,9 +26,19 @@ export function MainNavigation({
   onViewProfile,
   onSignIn,
   onSignOut,
-  currentPage = 'home'
 }: MainNavigationProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const pathname = usePathname()
+
+  // Auto-detect current page from URL
+  const getCurrentPage = (): 'home' | 'browse' | 'profile' => {
+    if (pathname === '/') return 'home'
+    if (pathname.startsWith('/browse')) return 'browse'
+    if (pathname.startsWith('/profile')) return 'profile'
+    return 'home' // default fallback
+  }
+
+  const currentPage = getCurrentPage()
 
   const handleMenuClick = (callback?: () => void) => {
     setIsOpen(false)
@@ -71,7 +81,7 @@ export function MainNavigation({
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    onClick={onViewProfile}
+                    onClick={() => onViewProfile()}
                     disabled={!user?.username}
                     className={!user?.username ? 'opacity-50 cursor-not-allowed' : ''}
                     title={!user?.username ? 'Loading profile...' : `View ${user.username}'s profile`}
@@ -162,7 +172,7 @@ export function MainNavigation({
                         <Button 
                           variant="ghost" 
                           className={`justify-start h-12 text-base text-slate-800 hover:bg-slate-100 hover:text-slate-900 ${!user?.username ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          onClick={() => handleMenuClick(onViewProfile)}
+                          onClick={() => handleMenuClick(() => onViewProfile())}
                           disabled={!user?.username}
                           title={!user?.username ? 'Loading profile...' : `View ${user.username}'s profile`}
                         >
@@ -205,7 +215,7 @@ export function MainNavigation({
                       )}
                       {onSignIn && (
                         <Button 
-                          className="justify-start h-12 text-base bg-primary text-white hover:bg-primary/90" 
+                          className="justify-start h-12 text-base bg-primary text-black hover:bg-primary/90" 
                           onClick={() => handleMenuClick(onSignIn)}
                         >
                           Sign In

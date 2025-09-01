@@ -11,8 +11,9 @@ export async function GET(
       const supabase = createSupabaseServerClient()
       const { username } = await params
 
+
       // Get profile by username - using safe column selection
-      const { data: profile, error: profileError } = await supabase
+      let { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select(`
           id,
@@ -26,6 +27,27 @@ export async function GET(
         .eq('username', username)
         .eq('is_active', true)
         .single()
+
+      // If not found by username, try by email (for cases where email is used as username)
+      if ((profileError || !profile) && username.includes('@')) {
+        const { data: profileByEmail, error: emailError } = await supabase
+          .from('profiles')
+          .select(`
+            id,
+            username,
+            email,
+            zip_code,
+            created_at,
+            last_login,
+            is_active
+          `)
+          .eq('email', username)
+          .eq('is_active', true)
+          .single()
+        
+        profile = profileByEmail
+        profileError = emailError
+      }
 
       if (profileError || !profile) {
         return NextResponse.json({ error: 'Profile not found' }, { status: 404 })

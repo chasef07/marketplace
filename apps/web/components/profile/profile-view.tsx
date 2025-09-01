@@ -75,7 +75,7 @@ export default function ProfileView({ username }: ProfileViewProps) {
 
   if (loading) {
     return (
-      <div className="profile-page">
+      <div className="min-h-screen pt-20 bg-hero-gradient">
         <MainNavigation
           user={currentUser || null}
           onBrowseItems={handleBrowseItems}
@@ -83,10 +83,9 @@ export default function ProfileView({ username }: ProfileViewProps) {
           onViewProfile={handleViewProfile}
           onSignIn={handleSignIn}
           onSignOut={handleSignOut}
-          currentPage="profile"
         />
         
-        <div className="pt-24 pb-8">
+        <div className="pt-4 pb-8">
           <div className="max-w-4xl mx-auto p-6 space-y-6">
             {/* Profile Header Skeleton */}
             <div className="bg-white rounded-xl shadow-md border border-slate-200/60 p-6">
@@ -116,7 +115,7 @@ export default function ProfileView({ username }: ProfileViewProps) {
 
   if (error) {
     return (
-      <div className="profile-page">
+      <div className="min-h-screen pt-20 bg-hero-gradient">
         <MainNavigation
           user={currentUser || null}
           onBrowseItems={handleBrowseItems}
@@ -124,10 +123,9 @@ export default function ProfileView({ username }: ProfileViewProps) {
           onViewProfile={handleViewProfile}
           onSignIn={handleSignIn}
           onSignOut={handleSignOut}
-          currentPage="profile"
         />
         
-        <div className="pt-24 pb-8">
+        <div className="pt-4 pb-8">
           <div className="max-w-4xl mx-auto p-6">
             <div className="bg-white rounded-xl shadow-md border border-slate-200/60 p-8 text-center">
               <h3 className="text-lg font-medium text-slate-900 mb-2">Profile not found</h3>
@@ -142,7 +140,7 @@ export default function ProfileView({ username }: ProfileViewProps) {
   if (!profile) return null
 
   return (
-    <div className="profile-page">
+    <div className="min-h-screen pt-20 bg-hero-gradient">
       {/* Navigation Header */}
       <MainNavigation
         user={currentUser || null}
@@ -151,10 +149,9 @@ export default function ProfileView({ username }: ProfileViewProps) {
         onViewProfile={handleViewProfile}
         onSignIn={handleSignIn}
         onSignOut={handleSignOut}
-        currentPage="profile"
       />
 
-      <div className="pt-24 pb-8">
+      <div className="pt-4 pb-8">
         <div className="max-w-4xl mx-auto p-6 space-y-6">
           {/* Profile Header */}
           <ProfileHeader 

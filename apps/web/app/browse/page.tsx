@@ -7,13 +7,10 @@ import { EnhancedAuth } from "@/components/auth/enhanced-auth"
 import { useAuth } from "@/lib/hooks/useAuth"
 import { apiClient } from "@/lib/api-client-new"
 import { createSellHandler } from "@/lib/utils/navigation"
-import ProfileView from "@/components/profile/profile-view"
 
 export default function Browse() {
   const router = useRouter()
   const { user, loading } = useAuth()
-  const [currentView, setCurrentView] = useState<'browse' | 'profile-view'>('browse')
-  const [selectedUsername, setSelectedUsername] = useState<string | null>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [authMode, setAuthMode] = useState<'signin' | 'register' | 'reset'>('signin')
 
@@ -45,14 +42,10 @@ export default function Browse() {
   }, [])
 
   const handleViewProfile = (username?: string) => {
-    if (username && typeof username === 'string') {
-      setSelectedUsername(username)
-    } else if (user && user.username && typeof user.username === 'string') {
-      setSelectedUsername(user.username)
-    } else {
-      return
+    const targetUsername = username || user?.username
+    if (targetUsername) {
+      router.push(`/profile/${targetUsername}`)
     }
-    setCurrentView('profile-view')
   }
 
   if (loading) {
@@ -60,15 +53,6 @@ export default function Browse() {
       <div className="min-h-screen flex items-center justify-center bg-hero-gradient">
         <div className="animate-pulse text-slate-600">Loading marketplace...</div>
       </div>
-    )
-  }
-
-  // Render profile view if that's the current view
-  if (currentView === 'profile-view' && selectedUsername) {
-    return (
-      <ProfileView
-        username={selectedUsername}
-      />
     )
   }
 

@@ -16,7 +16,7 @@ interface HeroSectionProps {
   onSignIn: () => void
   onSignOut: () => void
   onBrowseItems: () => void
-  onViewProfile: () => void
+  onViewProfile: (username?: string) => void
   onShowListingPreview: (analysisData: AIAnalysisResult, uploadedImages: string[]) => void
 }
 
@@ -110,7 +110,6 @@ export const HeroSection = React.memo(function HeroSection({
         onViewProfile={onViewProfile}
         onSignIn={onSignIn}
         onSignOut={onSignOut}
-        currentPage="home"
       />
 
       {/* Main Content */}
