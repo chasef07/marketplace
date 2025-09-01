@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { HeroSection } from './HeroSection'
@@ -9,6 +9,7 @@ import { EnhancedAuth } from '../auth/enhanced-auth'
 import { ThemedLoading } from '../ui/themed-loading'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { type AIAnalysisResult, apiClient } from "@/lib/api-client-new"
+import { handlePendingAction, clearPendingActions } from '@/lib/utils/navigation'
 
 // Lazy load heavy components
 
@@ -27,24 +28,64 @@ const ProfileView = dynamic(() => import('../profile/profile-view'), {
 
 export const HomePage = React.memo(function HomePage() {
   const router = useRouter()
-  const { user, loading: isLoading } = useAuth({
-    onSignOut: () => setCurrentView('home')
-  })
   const [currentView, setCurrentView] = useState<'home' | 'auth' | 'item-detail' | 'listing-preview' | 'profile-view'>('home')
+
+
+  // Enhanced state change tracking
+  const setCurrentViewWithLogging = useCallback((newView: 'home' | 'auth' | 'item-detail' | 'listing-preview' | 'profile-view') => {
+    // Prevent view changes during critical flows
+    if (preventViewChangeRef.current && newView !== 'listing-preview' && currentView === 'listing-preview') {
+      return
+    }
+    
+    setCurrentView(newView)
+  }, [currentView])
+
+  // Create stable onSignOut callback
+  const handleAuthSignOut = useCallback(() => {
+    // Only change view if we're not already on the auth modal
+    if (currentView !== 'auth') {
+      setCurrentViewWithLogging('home')
+    }
+  }, [currentView, setCurrentViewWithLogging])
+  
+  // Create a stable reference to prevent auth hook re-initialization
+  const authCallbacks = useRef({ onSignOut: handleAuthSignOut })
+  authCallbacks.current.onSignOut = handleAuthSignOut
+  
+  const { user, loading: isLoading } = useAuth({
+    onSignOut: authCallbacks.current.onSignOut
+  })
+
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null)
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<{analysisData: AIAnalysisResult, uploadedImages: string[]} | null>(null)
   const [authMode, setAuthMode] = useState<'signin' | 'register' | 'reset'>('signin') // Track auth mode
+  
+  // Prevent view changes while in certain critical flows
+  const preventViewChangeRef = useRef(false)
+  
+  // Auth state timeout management
+  const authStateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Enhanced auth modal stability management
+  const openAuthModal = useCallback((mode: 'signin' | 'register' | 'reset' = 'signin') => {
+    setAuthMode(mode)
+    setCurrentViewWithLogging('auth')
+  }, [currentView, setCurrentViewWithLogging])
+
+  const closeAuthModal = useCallback(() => {
+    setCurrentViewWithLogging('home')
+  }, [currentView, setCurrentViewWithLogging])
 
   // Listen for navigation events from QuickActions overlay
   useEffect(() => {
     const handleNavigateToMarketplace = () => router.push('/browse')
     const handleNavigateToCreateListing = () => {
       if (user) {
-        setCurrentView('home') // Home page has the create listing form
+        setCurrentViewWithLogging('home') // Home page has the create listing form
       } else {
-        setAuthMode('signin')
-        setCurrentView('auth')
+        openAuthModal('signin')
       }
     }
 
@@ -55,8 +96,16 @@ export const HomePage = React.memo(function HomePage() {
       window.removeEventListener('navigate-to-marketplace', handleNavigateToMarketplace)
       window.removeEventListener('navigate-to-create-listing', handleNavigateToCreateListing)
     }
-  }, [user, router])
+  }, [user, router, openAuthModal])
 
+  // Cleanup timeout on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (authStateTimeoutRef.current) {
+        clearTimeout(authStateTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const createListingAndNavigate = useCallback(async (analysisData: AIAnalysisResult, agentEnabled = false) => {
     try {
@@ -89,10 +138,11 @@ export const HomePage = React.memo(function HomePage() {
     }
   }, [router])
 
-  const handleAuthSuccess = async () => {
+  const handleAuthSuccess = useCallback(async () => {
     // Check if there's a pending listing from photo upload
     if (typeof window !== 'undefined') {
       const pendingListing = window.localStorage.getItem('pendingListing')
+      
       if (pendingListing) {
         // Parse the pending data and create the listing immediately
         try {
@@ -100,33 +150,48 @@ export const HomePage = React.memo(function HomePage() {
           
           // Clear the pending data
           window.localStorage.removeItem('pendingListing')
+          clearPendingActions()
           
-          // Navigate to browse immediately to prevent home page flash
-          router.push('/browse')
+          // Wait a bit to ensure auth session is fully established
+          await new Promise(resolve => setTimeout(resolve, 500))
           
-          // Wait a bit longer to ensure auth session is fully established
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          
-          // Create the listing in the background with the new user
+          // Create the listing and navigate
           await createListingAndNavigate(parsedData.analysisData)
           return
         } catch (error) {
           console.error('Failed to parse pending listing:', error)
           window.localStorage.removeItem('pendingListing')
+          clearPendingActions()
+        }
+      }
+      
+      // Handle other pending actions using the utility function
+      const pendingAction = window.localStorage.getItem('pendingAction')
+      const pendingTimestamp = window.localStorage.getItem('pendingActionTimestamp')
+      const actionResult = handlePendingAction(pendingAction, pendingTimestamp)
+      
+      if (actionResult.isValid) {
+        clearPendingActions()
+        
+        if (actionResult.shouldStayOnHome) {
+          // Stay on home page for creating a new listing
+          setCurrentViewWithLogging('home')
+          return
         }
       }
     }
     
-    // If no pending listing, go to browse to see all listings
+    // Close auth modal and navigate to browse
+    setCurrentViewWithLogging('home')
     router.push('/browse')
-  }
+  }, [router, createListingAndNavigate, setCurrentViewWithLogging])
 
   const handleSignOut = useCallback(async () => {
     try {
       await apiClient.signOut()
       
       // Clear local state (auth hook handles user state via onSignOut callback)
-      setCurrentView('home')
+      setCurrentViewWithLogging('home')
       
       // Clear any cached data
       setSelectedItemId(null)
@@ -134,7 +199,7 @@ export const HomePage = React.memo(function HomePage() {
       setPreviewData(null)
     } catch {
       // Always clear view state even if sign out fails
-      setCurrentView('home')
+      setCurrentViewWithLogging('home')
     }
   }, [])
 
@@ -142,7 +207,9 @@ export const HomePage = React.memo(function HomePage() {
 
 
   const handleBackToHome = () => {
-    setCurrentView('home')
+    // Disable protection to allow intentional navigation
+    preventViewChangeRef.current = false
+    setCurrentViewWithLogging('home')
     setPreviewData(null)
   }
 
@@ -150,10 +217,18 @@ export const HomePage = React.memo(function HomePage() {
     router.push('/browse')
   }
 
-  const handleShowListingPreview = (analysisData: AIAnalysisResult, uploadedImages: string[]) => {
+  const handleShowListingPreview = useCallback((analysisData: AIAnalysisResult, uploadedImages: string[]) => {
+    // Enable critical flow protection to prevent accidental view changes
+    preventViewChangeRef.current = true
+    
     setPreviewData({ analysisData, uploadedImages })
-    setCurrentView('listing-preview')
-  }
+    setCurrentViewWithLogging('listing-preview')
+    
+    // Remove protection after a short delay to allow user navigation
+    setTimeout(() => {
+      preventViewChangeRef.current = false
+    }, 1000)
+  }, [currentView, setCurrentViewWithLogging])
 
   const handleViewProfile = (username?: string) => {
     if (username && typeof username === 'string') {
@@ -164,12 +239,12 @@ export const HomePage = React.memo(function HomePage() {
       console.warn('Unable to load profile - no valid username')
       return
     }
-    setCurrentView('profile-view')
+    setCurrentViewWithLogging('profile-view')
   }
 
 
 
-  const handleListingPreviewSignUp = (editedData: AIAnalysisResult) => {
+  const handleListingPreviewSignUp = useCallback((editedData: AIAnalysisResult) => {
     // Store the edited data and image URLs for after authentication
     if (typeof window !== 'undefined') {
       const pendingData = {
@@ -178,9 +253,8 @@ export const HomePage = React.memo(function HomePage() {
       }
       window.localStorage.setItem('pendingListing', JSON.stringify(pendingData))
     }
-    setAuthMode('register') // Set to register mode for account creation
-    setCurrentView('auth')
-  }
+    openAuthModal('register') // Set to register mode for account creation
+  }, [previewData?.uploadedImages, openAuthModal])
 
   // Show themed loading screen while initializing auth
   if (isLoading) {
@@ -192,7 +266,7 @@ export const HomePage = React.memo(function HomePage() {
     return (
       <EnhancedAuth
         isOpen={true}
-        onClose={handleBackToHome}
+        onClose={closeAuthModal}
         onAuthSuccess={handleAuthSuccess}
         initialMode={authMode}
       />
@@ -208,7 +282,7 @@ export const HomePage = React.memo(function HomePage() {
         itemId={selectedItemId}
         user={user}
         onBack={handleBackToMarketplace}
-        onSignInClick={() => { setAuthMode('signin'); setCurrentView('auth'); }}
+        onSignInClick={() => openAuthModal('signin')}
         onViewProfile={handleViewProfile}
       />
     )
@@ -242,7 +316,7 @@ export const HomePage = React.memo(function HomePage() {
     <div className="homepage-container">
       <HeroSection
         user={user}
-        onSignIn={() => { setAuthMode('signin'); setCurrentView('auth'); }}
+        onSignIn={() => openAuthModal('signin')}
         onSignOut={handleSignOut}
         onBrowseItems={() => router.push('/browse')}
         onViewProfile={handleViewProfile}

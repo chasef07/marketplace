@@ -45,7 +45,7 @@ export function BrowsePage({
   // State management
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState<SortOption>('price_low')
+  const [sortBy, setSortBy] = useState<SortOption>('newest')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [currentPage, setCurrentPage] = useState(1)
   const [pagination, setPagination] = useState<PaginationInfo | null>(null)
@@ -75,6 +75,9 @@ export function BrowsePage({
 
     // Add sorting
     switch (sortBy) {
+      case 'newest':
+        params.set('sort', 'newest')
+        break
       case 'price_low':
         params.set('sort', 'price_asc')
         break
@@ -82,7 +85,7 @@ export function BrowsePage({
         params.set('sort', 'price_desc')
         break
       default:
-        params.set('sort', 'price_asc')
+        params.set('sort', 'newest')
         break
     }
 

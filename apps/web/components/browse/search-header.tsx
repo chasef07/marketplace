@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Search, Grid3x3, List, X } from "lucide-react"
 
-export type SortOption = 'price_low' | 'price_high'
+export type SortOption = 'newest' | 'price_low' | 'price_high'
 export type ViewMode = 'grid' | 'list'
 
 interface SearchHeaderProps {
@@ -45,7 +45,7 @@ export function SearchHeader({
               placeholder="Search home goods..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10 bg-white/50 border-white/30 focus:border-white/50 focus:ring-white/20"
+              className="pl-10 bg-white/90 border-white/60 focus:border-white/80 focus:ring-white/30"
               disabled={loading}
             />
           </div>
@@ -54,10 +54,11 @@ export function SearchHeader({
           <div className="flex gap-2 items-center flex-shrink-0">
             {/* Sort selector */}
             <Select value={sortBy} onValueChange={onSortChange} disabled={loading}>
-              <SelectTrigger className="w-[140px] bg-white/50 border-white/30">
+              <SelectTrigger className="w-[140px] bg-white/90 border-white/60">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white/95 border-white/70 backdrop-blur-md shadow-lg">
+                <SelectItem value="newest">Newest Items</SelectItem>
                 <SelectItem value="price_low">Price: Low to High</SelectItem>
                 <SelectItem value="price_high">Price: High to Low</SelectItem>
               </SelectContent>
@@ -66,7 +67,7 @@ export function SearchHeader({
             <Separator orientation="vertical" className="h-6" />
 
             {/* View mode toggle */}
-            <div className="flex rounded-lg bg-white/50 border border-white/30 p-1">
+            <div className="flex rounded-lg bg-white/90 border border-white/60 p-1">
               <Button
                 variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                 size="sm"
@@ -97,7 +98,7 @@ export function SearchHeader({
           </span>
           
           {searchQuery && (
-            <Badge variant="secondary" className="bg-white/50">
+            <Badge variant="secondary" className="bg-white/90 border-white/60">
               Search: "{searchQuery}"
               <Button
                 variant="ghost"

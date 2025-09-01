@@ -10,6 +10,7 @@ import OfferConfirmationPopup from '../buyer/OfferConfirmationPopup'
 import { useProfile, useCurrentUser } from '@/lib/hooks/useProfile'
 import { ProfileData } from '@/lib/types/profile'
 import { apiClient } from '@/lib/api-client-new'
+import { createSellHandler } from '@/lib/utils/navigation'
 
 interface ProfileViewProps {
   username: string
@@ -51,9 +52,8 @@ export default function ProfileView({ username }: ProfileViewProps) {
     router.push('/browse')
   }
 
-  const handleCreateListing = () => {
-    router.push('/')
-  }
+  // Use unified sell handler for consistent navigation behavior
+  const handleCreateListing = createSellHandler(currentUser, router)
 
   const handleSignOut = async () => {
     try {

@@ -1,11 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import dynamic from 'next/dynamic'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -16,7 +14,6 @@ import { Separator } from "@/components/ui/separator"
 import { ArrowLeft, MapPin, User, DollarSign, Edit, Save, X, AlertCircle } from "lucide-react"
 import OfferConfirmationPopup from "@/components/buyer/OfferConfirmationPopup"
 import { apiClient, ImageData } from "@/lib/api-client-new"
-import { FURNITURE_BLUR_DATA_URL } from "@/lib/blur-data"
 import { ItemDetailSkeleton } from "@/components/ui/skeleton"
 import { ImageCarousel } from "@/components/ui/ImageCarousel"
 
@@ -60,41 +57,6 @@ interface User {
   last_login?: string
 }
 
-interface Negotiation {
-  id: number
-  item_id: number
-  seller_id: string
-  buyer_id: string
-  current_offer: number
-  final_price?: number
-  status: string
-  round_number: number
-  created_at: string
-  updated_at: string
-}
-
-interface AgentDecision {
-  id: number
-  decision_type: string
-  confidence_score: number
-  reasoning: string
-  created_at: string
-}
-
-interface Offer {
-  id: number
-  negotiation_id: number
-  offer_type: string
-  price: number
-  message: string | null
-  round_number: number
-  created_at: string
-  is_counter_offer: boolean
-  agent_generated?: boolean
-  agent_decisions?: AgentDecision[]
-  buyer_id?: string
-  seller_id?: string
-}
 
 interface ItemDetailProps {
   itemId: number
@@ -105,7 +67,6 @@ interface ItemDetailProps {
 }
 
 export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile }: ItemDetailProps) {
-  const router = useRouter()
   const [item, setItem] = useState<FurnitureItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -135,7 +96,6 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
     item_status: 'active'
   })
   const [saveLoading, setSaveLoading] = useState(false)
-  const [showDimensions, setShowDimensions] = useState(false)
 
   // Memoize user ID to prevent unnecessary re-fetches when user object changes
   const userId = useMemo(() => user?.id, [user?.id])
@@ -144,12 +104,6 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
     try {
       setLoading(true)
       const response = await apiClient.getItem(itemId)
-      console.log('🔍 Fetched item data:', {
-        id: response.id,
-        name: response.name,
-        item_status: response.item_status,
-        seller_id: response.seller_id
-      })
       setItem(response)
     } catch (err) {
       setError('Failed to load item details')
@@ -182,13 +136,6 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
         return
       }
 
-      // Debug: Log item status before API call
-      console.log('🔍 Item status before making offer:', {
-        itemId: item.id,
-        itemStatus: item.item_status,
-        itemName: item.name
-      })
-
       // Use the correct API endpoint for creating offers
       const headers = await apiClient.getAuthHeaders(true)
       const response = await fetch(`/api/negotiations/items/${item.id}/offers`, {
@@ -201,12 +148,7 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
       })
 
       if (response.ok) {
-        const data = await response.json()
-        console.log('🎯 Offer submitted with response:', {
-          hasAgentResponse: !!data.agentResponse,
-          agentDecision: data.agentResponse?.decision,
-          agentAction: data.agentResponse?.actionResult?.action
-        })
+        await response.json()
         
         // Close the offer overlay
         setShowOfferOverlay(false)

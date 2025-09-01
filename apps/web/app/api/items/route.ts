@@ -46,6 +46,8 @@ export async function GET(request: NextRequest) {
       query = query.order('starting_price', { ascending: true })
     } else if (sort === 'price_desc') {
       query = query.order('starting_price', { ascending: false })
+    } else if (sort === 'newest') {
+      query = query.order('created_at', { ascending: false })
     } else {
       // Default to newest first
       query = query.order('created_at', { ascending: false })

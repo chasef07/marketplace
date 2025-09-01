@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { apiClient } from '@/lib/api-client-new'
 import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/lib/hooks/useAuth'
 import { 
   ProfileData, 
   User, 
@@ -63,82 +64,18 @@ export function useProfile(username: string) {
   }
 }
 
-// Cache for current user data to avoid repeated API calls
-let cachedUser: User | null = null
-let userPromise: Promise<User | null> | null = null
-
 /**
- * Hook for current user profile management with caching
+ * Hook for current user profile management - now uses the main useAuth hook
+ * This eliminates duplicate auth state listeners and API calls
  */
 export function useCurrentUser() {
-  const [user, setUser] = useState<User | null>(cachedUser)
-  const [loading, setLoading] = useState(!cachedUser)
-  const [error, setError] = useState<string | null>(null)
-
-  const loadCurrentUser = useCallback(async () => {
-    // Return cached promise if already loading
-    if (userPromise) {
-      try {
-        const userData = await userPromise
-        setUser(userData)
-        return userData
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load user')
-        return null
-      }
-    }
-
-    // Return cached user if available
-    if (cachedUser && !loading) {
-      return cachedUser
-    }
-
-    try {
-      setLoading(true)
-      setError(null)
-      
-      // Create promise for this request
-      userPromise = apiClient.getCurrentUser()
-      const userData = await userPromise
-      
-      // Cache the result
-      cachedUser = userData
-      setUser(userData)
-      return userData
-    } catch (err) {
-      console.error('Failed to load current user:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load user')
-      return null
-    } finally {
-      setLoading(false)
-      userPromise = null
-    }
-  }, [loading])
-
-  useEffect(() => {
-    loadCurrentUser()
-
-    // Set up real-time auth state listener
-    const { data: { subscription } } = apiClient.onAuthStateChange((session) => {
-      if (session?.user) {
-        // Clear cache on auth change
-        cachedUser = null
-        loadCurrentUser()
-      } else {
-        cachedUser = null
-        setUser(null)
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [loadCurrentUser])
-
+  // Use the main auth hook to get consistent user state
+  const { user, loading } = useAuth()
+  
   return {
     user,
     loading,
-    error
+    error: null // useAuth handles errors internally
   }
 }
 

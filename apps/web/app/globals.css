@@ -7,10 +7,17 @@ html, body {
   overflow-x: hidden;
 }
 
-/* Homepage container - no scroll, fixed height */
+/* Homepage container - allow mobile scroll */
 .homepage-container {
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+}
+
+/* Desktop: fixed height, no scroll */
+@media (min-width: 768px) {
+  .homepage-container {
+    height: 100vh;
+    overflow: hidden;
+  }
 }
 
 /* Profile page specific styles */

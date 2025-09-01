@@ -69,6 +69,12 @@ export const HeroSection = React.memo(function HeroSection({
   }
 
   const handleCreateListingClick = () => {
+    // Prevent multiple file inputs if already analyzing
+    if (isAnalyzing) {
+      console.warn('Upload already in progress')
+      return
+    }
+
     // Create a temporary file input and trigger it
     const input = document.createElement('input')
     input.type = 'file'
@@ -79,9 +85,16 @@ export const HeroSection = React.memo(function HeroSection({
     input.onchange = async (e) => {
       const files = Array.from((e.target as HTMLInputElement).files || [])
       if (files.length > 0) {
+        // Start upload before removing input to prevent state conflicts
         handleFilesDirectly(files)
       }
-      document.body.removeChild(input)
+      
+      // Delayed cleanup to prevent state conflicts
+      setTimeout(() => {
+        if (document.body.contains(input)) {
+          document.body.removeChild(input)
+        }
+      }, 100)
     }
     
     document.body.appendChild(input)
@@ -102,20 +115,20 @@ export const HeroSection = React.memo(function HeroSection({
 
       {/* Main Content */}
       <main 
-        className="max-w-6xl mx-auto px-6 py-16"
+        className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-16"
         onDragOver={handleDragOver}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         {/* Hero Section */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-slate-900 mb-6">
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 mb-4 sm:mb-6 px-4">
             Sell Your Home Goods
             <span className="text-primary"> in Seconds</span>
           </h1>
           
-          <p className="text-xl text-slate-700 mb-8 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl text-slate-700 mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
             Snap a photo, get AI pricing, list instantly on our marketplace
           </p>
 

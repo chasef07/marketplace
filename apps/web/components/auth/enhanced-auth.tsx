@@ -43,6 +43,7 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldError[]>([])
   const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>({ score: 0, feedback: [] })
+
   
   const [formData, setFormData] = useState<FormData>({
     username: '',
@@ -240,7 +241,7 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
               user = await apiClient.getCurrentUser()
               if (user) break
             } catch {
-              console.log(`Profile not ready, retry ${retries + 1}/${maxRetries}`)
+              // Profile not ready, retry
             }
             
             retries++

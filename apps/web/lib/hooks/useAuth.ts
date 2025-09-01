@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { apiClient } from '@/lib/api-client-new'
 import { User } from '@/lib/types/user'
 
@@ -9,18 +9,22 @@ interface UseAuthOptions {
 export function useAuth(options: UseAuthOptions = {}) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const authStateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const stableUserRef = useRef<User | null>(null)
+
+  // Stabilize the onSignOut callback to prevent unnecessary effect re-runs
+  const stableOnSignOut = useCallback(options.onSignOut || (() => {}), [options.onSignOut])
 
   useEffect(() => {
     let mounted = true
-    let authStateTimeout: NodeJS.Timeout | null = null
 
-    // Debounced auth state handler to prevent race conditions
+    // Enhanced debounced auth state handler to prevent race conditions
     const debouncedAuthStateChange = (session: unknown) => {
-      if (authStateTimeout) {
-        clearTimeout(authStateTimeout)
+      if (authStateTimeoutRef.current) {
+        clearTimeout(authStateTimeoutRef.current)
       }
       
-      authStateTimeout = setTimeout(async () => {
+      authStateTimeoutRef.current = setTimeout(async () => {
         if (!mounted) return
         
         if ((session as { user?: unknown })?.user) {
@@ -28,21 +32,29 @@ export function useAuth(options: UseAuthOptions = {}) {
           try {
             const userData = await apiClient.getCurrentUser()
             if (mounted && userData) {
-              setUser(userData)
+              // Only update user if it's actually different to prevent unnecessary re-renders
+              if (!stableUserRef.current || stableUserRef.current.id !== userData.id) {
+                stableUserRef.current = userData
+                setUser(userData)
+              }
             }
           } catch (error) {
             // Profile might not exist yet for new users, or auth error
             console.warn('Auth state change error:', error)
-            if (mounted) setUser(null)
+            if (mounted) {
+              stableUserRef.current = null
+              setUser(null)
+            }
           }
         } else {
-          // User signed out
-          if (mounted) {
+          // User signed out - only call onSignOut if we actually had a user before
+          if (mounted && stableUserRef.current) {
+            stableUserRef.current = null
             setUser(null)
-            options.onSignOut?.()
+            stableOnSignOut()
           }
         }
-      }, 200) // 200ms debounce
+      }, 200) // Reduced debounce to 200ms for better responsiveness
     }
 
     // Initialize auth state immediately (non-blocking)
@@ -82,14 +94,14 @@ export function useAuth(options: UseAuthOptions = {}) {
 
     return () => {
       mounted = false
-      if (authStateTimeout) {
-        clearTimeout(authStateTimeout)
+      if (authStateTimeoutRef.current) {
+        clearTimeout(authStateTimeoutRef.current)
       }
       if (subscription) {
         subscription.unsubscribe()
       }
     }
-  }, [options])
+  }, [stableOnSignOut])
 
-  return { user, loading, setUser }
+  return { user, loading, setUser, stableUser: stableUserRef.current }
 }

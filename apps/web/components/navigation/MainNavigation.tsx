@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, X } from "lucide-react"
+import { Menu } from "lucide-react"
 import { getRotatingGreeting } from "@/lib/greetings"
 import { User } from "@/lib/types/user"
 
@@ -36,7 +36,7 @@ export function MainNavigation({
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 md:bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Logo */}
@@ -110,15 +110,15 @@ export function MainNavigation({
           <div className="md:hidden">
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="p-2">
+                <Button variant="ghost" size="sm" className="p-2 text-slate-700 hover:bg-white/20">
                   <Menu className="h-5 w-5" />
                   <span className="sr-only">Open menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[280px] sm:w-[320px]">
+              <SheetContent side="right" className="w-[280px] sm:w-[320px] bg-white border-l border-slate-200 shadow-xl">
                 <SheetHeader>
-                  <SheetTitle className="text-left">
-                    {user ? `Hi, ${user.username}!` : 'Menu'}
+                  <SheetTitle className="text-left text-slate-900 font-semibold">
+                    Menu
                   </SheetTitle>
                 </SheetHeader>
                 <div className="flex flex-col space-y-4 mt-8">
@@ -134,7 +134,7 @@ export function MainNavigation({
                       {currentPage !== 'home' && onNavigateHome && (
                         <Button 
                           variant="ghost" 
-                          className="justify-start h-12 text-base" 
+                          className="justify-start h-12 text-base text-slate-800 hover:bg-slate-100 hover:text-slate-900" 
                           onClick={() => handleMenuClick(onNavigateHome)}
                         >
                           Home
@@ -143,7 +143,7 @@ export function MainNavigation({
                       {currentPage !== 'browse' && onBrowseItems && (
                         <Button 
                           variant="ghost" 
-                          className="justify-start h-12 text-base" 
+                          className="justify-start h-12 text-base text-slate-800 hover:bg-slate-100 hover:text-slate-900" 
                           onClick={() => handleMenuClick(onBrowseItems)}
                         >
                           Browse
@@ -152,7 +152,7 @@ export function MainNavigation({
                       {currentPage !== 'home' && onCreateListing && (
                         <Button 
                           variant="ghost" 
-                          className="justify-start h-12 text-base" 
+                          className="justify-start h-12 text-base text-slate-800 hover:bg-slate-100 hover:text-slate-900" 
                           onClick={() => handleMenuClick(onCreateListing)}
                         >
                           Sell
@@ -161,7 +161,7 @@ export function MainNavigation({
                       {currentPage !== 'profile' && onViewProfile && (
                         <Button 
                           variant="ghost" 
-                          className={`justify-start h-12 text-base ${!user?.username ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          className={`justify-start h-12 text-base text-slate-800 hover:bg-slate-100 hover:text-slate-900 ${!user?.username ? 'opacity-50 cursor-not-allowed' : ''}`}
                           onClick={() => handleMenuClick(onViewProfile)}
                           disabled={!user?.username}
                           title={!user?.username ? 'Loading profile...' : `View ${user.username}'s profile`}
@@ -188,7 +188,7 @@ export function MainNavigation({
                       {currentPage !== 'browse' && onBrowseItems && (
                         <Button 
                           variant="ghost" 
-                          className="justify-start h-12 text-base" 
+                          className="justify-start h-12 text-base text-slate-800 hover:bg-slate-100 hover:text-slate-900" 
                           onClick={() => handleMenuClick(onBrowseItems)}
                         >
                           Browse
@@ -197,7 +197,7 @@ export function MainNavigation({
                       {currentPage !== 'home' && onCreateListing && (
                         <Button 
                           variant="ghost" 
-                          className="justify-start h-12 text-base" 
+                          className="justify-start h-12 text-base text-slate-800 hover:bg-slate-100 hover:text-slate-900" 
                           onClick={() => handleMenuClick(onCreateListing)}
                         >
                           Sell
@@ -205,7 +205,7 @@ export function MainNavigation({
                       )}
                       {onSignIn && (
                         <Button 
-                          className="justify-start h-12 text-base" 
+                          className="justify-start h-12 text-base bg-primary text-white hover:bg-primary/90" 
                           onClick={() => handleMenuClick(onSignIn)}
                         >
                           Sign In

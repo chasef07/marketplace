@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { BrowsePage } from "@/components/browse/browse-page"
+import { EnhancedAuth } from "@/components/auth/enhanced-auth"
 import { useAuth } from "@/lib/hooks/useAuth"
 import { apiClient } from "@/lib/api-client-new"
+import { createSellHandler } from "@/lib/utils/navigation"
 import ProfileView from "@/components/profile/profile-view"
 
 export default function Browse() {
@@ -12,10 +14,11 @@ export default function Browse() {
   const { user, loading } = useAuth()
   const [currentView, setCurrentView] = useState<'browse' | 'profile-view'>('browse')
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [authMode, setAuthMode] = useState<'signin' | 'register' | 'reset'>('signin')
 
-  const handleCreateListing = () => {
-    router.push('/')
-  }
+  // Use unified sell handler for consistent navigation behavior
+  const handleCreateListing = createSellHandler(user, router)
 
   const handleLogout = async () => {
     try {
@@ -31,9 +34,15 @@ export default function Browse() {
     router.push(`/marketplace/${itemId}`)
   }
 
-  const handleSignIn = () => {
-    router.push('/')
-  }
+  const handleSignIn = useCallback(() => {
+    setAuthMode('signin')
+    setShowAuthModal(true)
+  }, [])
+
+  const handleAuthSuccess = useCallback(async () => {
+    setShowAuthModal(false)
+    // The useAuth hook will automatically update the user state
+  }, [])
 
   const handleViewProfile = (username?: string) => {
     if (username && typeof username === 'string') {
@@ -64,13 +73,22 @@ export default function Browse() {
   }
 
   return (
-    <BrowsePage 
-      user={user}
-      onCreateListing={handleCreateListing}
-      onLogout={handleLogout}
-      onItemClick={handleItemClick}
-      onSignInClick={handleSignIn}
-      onViewProfile={handleViewProfile}
-    />
+    <>
+      <BrowsePage 
+        user={user}
+        onCreateListing={handleCreateListing}
+        onLogout={handleLogout}
+        onItemClick={handleItemClick}
+        onSignInClick={handleSignIn}
+        onViewProfile={handleViewProfile}
+      />
+      
+      <EnhancedAuth
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onAuthSuccess={handleAuthSuccess}
+        initialMode={authMode}
+      />
+    </>
   )
 }
