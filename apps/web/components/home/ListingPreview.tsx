@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,9 +9,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Edit, Save, Camera, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
-import { type AIAnalysisResult } from "@/lib/api-client-new"
+import { type AIAnalysisResult, apiClient } from "@/lib/api-client-new"
 import { User } from "@/lib/types/user"
 import Image from "next/image"
+import { FirstListingSetup } from "../ai-agent/FirstListingSetup"
 
 
 interface ListingPreviewProps {
@@ -20,7 +21,13 @@ interface ListingPreviewProps {
   user: User | null
   onBack: () => void
   onSignUp: (editedData: AIAnalysisResult) => void
-  onCreateListing?: (editedData: AIAnalysisResult) => void
+  onCreateListing?: (editedData: AIAnalysisResult, agentEnabled?: boolean) => void
+}
+
+interface AgentPreferences {
+  minAcceptablePrice: number | null
+  sellingPriority: 'best_price' | 'quick_sale'
+  targetSaleDate?: Date | null
 }
 
 export function ListingPreview({ analysisData, uploadedImages, user, onBack, onSignUp, onCreateListing }: ListingPreviewProps) {
@@ -30,6 +37,10 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
   const [isCreatingListing, setIsCreatingListing] = useState(false)
   const [showDimensions, setShowDimensions] = useState(true)
   const [includeDimensions, setIncludeDimensions] = useState(!!analysisData.analysis.estimated_dimensions)
+  const [showAgentSetup, setShowAgentSetup] = useState(false)
+  const [hasSeenAgentSetup, setHasSeenAgentSetup] = useState(false)
+  const [isCheckingAgentSetup, setIsCheckingAgentSetup] = useState(true)
+  const [agentPreferences, setAgentPreferences] = useState<AgentPreferences | null>(null)
 
   const handleSignUp = () => {
     const finalData = {
@@ -42,8 +53,94 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
     onSignUp(finalData)
   }
 
+  // Check if user has seen agent setup when component loads
+  useEffect(() => {
+    const checkAgentSetupStatus = async () => {
+      if (!user) {
+        setIsCheckingAgentSetup(false)
+        return
+      }
+      
+      try {
+        const headers = await apiClient.getAuthHeaders(true)
+        const response = await fetch('/api/auth/me', { headers })
+        if (response.ok) {
+          const userData = await response.json()
+          console.log('Agent setup status:', userData.has_seen_agent_setup)
+          setHasSeenAgentSetup(userData.has_seen_agent_setup || false)
+        } else {
+          console.error('Failed to fetch user data:', response.status)
+        }
+      } catch (error) {
+        console.error('Failed to check agent setup status:', error)
+        // Default to showing setup for safety
+        setHasSeenAgentSetup(false)
+      } finally {
+        setIsCheckingAgentSetup(false)
+      }
+    }
+
+    checkAgentSetupStatus()
+  }, [user])
+
   const handleCreateListing = async () => {
-    if (onCreateListing && !isCreatingListing) {
+    if (!onCreateListing || isCreatingListing) return
+    
+    // If user is logged in and hasn't seen agent setup, show the setup modal first
+    if (user && !hasSeenAgentSetup && !isCheckingAgentSetup) {
+      setShowAgentSetup(true)
+      return
+    }
+    
+    // Otherwise proceed with normal listing creation
+    setIsCreatingListing(true)
+    try {
+      const finalData = {
+        ...editedData,
+        analysis: {
+          ...editedData.analysis,
+          estimated_dimensions: includeDimensions ? editedData.analysis.estimated_dimensions : ''
+        }
+      }
+      onCreateListing(finalData, !!agentPreferences)
+    } catch (error) {
+      // Error handling is done in parent component
+    } finally {
+      // Don't reset loading state here since we'll navigate away
+    }
+  }
+
+  const handleAgentSetupComplete = async (preferences: AgentPreferences) => {
+    try {
+      // Save agent preferences via API
+      const headers = await apiClient.getAuthHeaders(true)
+      const response = await fetch('/api/seller/agent/setup', {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          minAcceptablePrice: preferences.minAcceptablePrice && !isNaN(Number(preferences.minAcceptablePrice)) 
+            ? Number(preferences.minAcceptablePrice) 
+            : null,
+          sellingPriority: preferences.sellingPriority,
+          targetSaleDate: preferences.targetSaleDate?.toISOString() || null
+        })
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Agent setup API error:', response.status, errorText)
+        throw new Error(`Failed to save agent preferences: ${response.status} - ${errorText}`)
+      }
+
+      // Store preferences and mark as completed
+      setAgentPreferences(preferences)
+      setHasSeenAgentSetup(true)
+      setShowAgentSetup(false)
+      
+      // Now create the listing with agent enabled
       setIsCreatingListing(true)
       try {
         const finalData = {
@@ -53,12 +150,15 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
             estimated_dimensions: includeDimensions ? editedData.analysis.estimated_dimensions : ''
           }
         }
-        await onCreateListing(finalData)
+        onCreateListing!(finalData, true) // Enable agent
       } catch (error) {
-        // Error handling is done in parent component
-      } finally {
-        // Don't reset loading state here since we'll navigate away
+        console.error('Failed to create listing after agent setup:', error)
       }
+    } catch (error) {
+      console.error('Failed to setup AI agent:', error)
+      // Could show an error message here, but for now proceed without agent
+      setShowAgentSetup(false)
+      handleCreateListing() // Proceed without agent setup
     }
   }
 
@@ -243,11 +343,18 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
               {user ? (
                 <Button 
                   onClick={handleCreateListing}
-                  disabled={isCreatingListing}
+                  disabled={isCreatingListing || isCheckingAgentSetup}
                   className="w-full h-12 text-base font-semibold"
                   size="lg"
                 >
-                  {isCreatingListing ? 'Creating Listing...' : 'Create Listing'}
+                  {isCreatingListing 
+                    ? 'Creating Listing...' 
+                    : isCheckingAgentSetup 
+                    ? 'Checking Setup...'
+                    : !hasSeenAgentSetup 
+                    ? 'Continue with AI Agent Setup'
+                    : 'Create Listing'
+                  }
                 </Button>
               ) : (
                 <Button 
@@ -382,6 +489,17 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
           </div>
         </div>
       </main>
+      
+      {/* AI Agent Setup Modal */}
+      {user && (
+        <FirstListingSetup
+          isOpen={showAgentSetup}
+          onClose={() => setShowAgentSetup(false)}
+          analysisData={editedData}
+          onComplete={handleAgentSetupComplete}
+          isLoading={isCreatingListing}
+        />
+      )}
       </div>
     </>
   )

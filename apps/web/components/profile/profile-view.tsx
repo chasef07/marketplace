@@ -7,6 +7,7 @@ import { MainNavigation } from '../navigation/MainNavigation'
 import ProfileHeader from './ProfileHeader'
 import ProfileTabs from './ProfileTabs'
 import OfferConfirmationPopup from '../buyer/OfferConfirmationPopup'
+import { AgentStatusCard } from '../ai-agent/AgentStatusCard'
 import { useProfile, useCurrentUser } from '@/lib/hooks/useProfile'
 import { ProfileData } from '@/lib/types/profile'
 import { apiClient } from '@/lib/api-client-new'
@@ -158,6 +159,11 @@ export default function ProfileView({ username }: ProfileViewProps) {
             profile={profile} 
             isOwnProfile={isOwnProfile || false}
           />
+
+          {/* AI Agent Status Card - Only show on own profile */}
+          {isOwnProfile && (
+            <AgentStatusCard userId={profile.id} />
+          )}
 
           {/* Profile Tabs */}
           <ProfileTabs

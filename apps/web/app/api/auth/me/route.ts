@@ -52,7 +52,9 @@ export async function GET(request: NextRequest) {
         created_at: profile.created_at,
         last_login: profile.last_login,
         zip_code: profile.zip_code
-      }
+      },
+      has_seen_agent_setup: profile.has_seen_agent_setup || false,
+      agent_setup_completed_at: profile.agent_setup_completed_at
     })
     // No caching to ensure fresh user data
     response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate')

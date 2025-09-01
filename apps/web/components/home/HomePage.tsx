@@ -137,7 +137,7 @@ export const HomePage = React.memo(function HomePage() {
       const pendingListing = window.localStorage.getItem('pendingListing')
       
       if (pendingListing) {
-        // Parse the pending data and create the listing immediately
+        // Parse the pending data and return to listing preview for AI agent setup
         try {
           const parsedData = JSON.parse(pendingListing)
           
@@ -148,8 +148,13 @@ export const HomePage = React.memo(function HomePage() {
           // Wait a bit to ensure auth session is fully established
           await new Promise(resolve => setTimeout(resolve, 500))
           
-          // Create the listing and navigate
-          await createListingAndNavigate(parsedData.analysisData)
+          // Return to listing preview with the analysis data and images
+          // This will allow the AI agent setup flow to trigger for new users
+          setPreviewData({
+            analysisData: parsedData.analysisData,
+            uploadedImages: parsedData.imageUrls
+          })
+          setCurrentView('listing-preview')
           return
         } catch (error) {
           console.error('Failed to parse pending listing:', error)
