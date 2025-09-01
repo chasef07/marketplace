@@ -50,7 +50,7 @@ export default function Browse() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-hero-gradient">
+      <div className="min-h-screen flex items-center justify-center bg-aurora-dreams bg-aurora-animated">
         <div className="animate-pulse text-slate-600">Loading marketplace...</div>
       </div>
     )

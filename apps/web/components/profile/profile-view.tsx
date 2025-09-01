@@ -75,7 +75,7 @@ export default function ProfileView({ username }: ProfileViewProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-20 bg-hero-gradient">
+      <div className="min-h-screen pt-20 bg-aurora-dreams bg-aurora-animated">
         <MainNavigation
           user={currentUser || null}
           onBrowseItems={handleBrowseItems}
@@ -115,7 +115,7 @@ export default function ProfileView({ username }: ProfileViewProps) {
 
   if (error) {
     return (
-      <div className="min-h-screen pt-20 bg-hero-gradient">
+      <div className="min-h-screen pt-20 bg-aurora-dreams bg-aurora-animated">
         <MainNavigation
           user={currentUser || null}
           onBrowseItems={handleBrowseItems}

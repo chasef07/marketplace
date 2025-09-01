@@ -29,11 +29,15 @@ module.exports = {
         ring: "hsl(var(--ring))",
       },
       backgroundImage: {
+        // Original gradients (BACKUP - DO NOT DELETE)
         'hero-gradient': 'linear-gradient(135deg, var(--gradient-from), var(--gradient-to))',
         'accent-gradient': 'linear-gradient(135deg, var(--gradient-accent-from), var(--gradient-accent-to))',
         'sunset-warm': 'linear-gradient(135deg, #fef2f2 0%, #fef3c7 100%)',
         'sunset-intense': 'linear-gradient(135deg, #fee2e2 0%, #fed7aa 100%)',
         'sunset-glow': 'linear-gradient(45deg, #dc2626 0%, #d97706 50%, #f59e0b 100%)',
+        
+        // New Aurora Dreams gradient - Muted Mediterranean Pastels
+        'aurora-dreams': 'linear-gradient(45deg, #c8d4b8 0%, #e6d2c0 25%, #f2e8d0 50%, #e8dcc0 75%, #d0dde6 100%)',
       },
       borderRadius: {
         lg: "var(--radius)",

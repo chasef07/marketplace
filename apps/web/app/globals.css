@@ -150,6 +150,22 @@ html {
   }
 }
 
+/* Aurora Dreams gradient animation */
+@keyframes aurora-flow {
+  0%, 100% { 
+    background-position: 0% 50%; 
+  }
+  25% {
+    background-position: 100% 0%;
+  }
+  50% { 
+    background-position: 100% 50%; 
+  }
+  75% {
+    background-position: 0% 100%;
+  }
+}
+
 .animate-fade-in-up {
   animation: fadeInUp 0.6s ease-out forwards;
 }
@@ -307,4 +323,10 @@ html {
 
 .animate-progress-bar {
   animation: progress-bar 3s ease-in-out infinite;
+}
+
+/* Aurora Dreams animation utility class */
+.bg-aurora-animated {
+  background-size: 400% 400%;
+  animation: aurora-flow 20s ease infinite;
 }
