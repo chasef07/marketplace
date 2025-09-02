@@ -49,7 +49,7 @@ export { Skeleton }
 
 export function ItemDetailSkeleton() {
   return (
-    <div className="min-h-screen bg-hero-gradient">
+    <div className="min-h-screen bg-aurora-dreams bg-aurora-animated">
       <div className="container mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
           {/* Image skeleton */}

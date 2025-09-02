@@ -70,7 +70,7 @@ export default function MarketplaceItemPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-hero-gradient">
+      <div className="min-h-screen flex items-center justify-center bg-aurora-dreams bg-aurora-animated">
         <div className="animate-pulse text-slate-600">Loading item details...</div>
       </div>
     )
@@ -80,7 +80,7 @@ export default function MarketplaceItemPage() {
 
   if (isNaN(itemId)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-hero-gradient">
+      <div className="min-h-screen flex items-center justify-center bg-aurora-dreams bg-aurora-animated">
         <div className="text-red-600">Invalid item ID</div>
       </div>
     )

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -280,7 +279,7 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
 
   if (error || !item) {
     return (
-      <div className="min-h-screen bg-hero-gradient flex items-center justify-center">
+      <div className="min-h-screen bg-aurora-dreams bg-aurora-animated flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center space-x-2">
             <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
@@ -296,7 +295,7 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
   }
 
   return (
-    <div className="min-h-screen bg-hero-gradient">
+    <div className="min-h-screen bg-aurora-dreams bg-aurora-animated">
       {/* Clean Header */}
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
         <div className="container mx-auto px-4 py-4">
@@ -470,12 +469,11 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
                       {/* Make Offer Button - Opens Overlay */}
                       <Button 
                         onClick={() => setShowOfferOverlay(true)}
-                        className="w-full font-medium text-white hover:opacity-90 h-12 sm:h-auto"
-                        style={{ backgroundColor: '#4A6FA5' }}
-                        size="lg"
+                        className="w-full bg-slate-700 hover:bg-slate-800 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200 ease-in-out border border-slate-600 hover:border-slate-700"
+                        size="default"
                       >
                         <DollarSign className="h-4 w-4 mr-2" />
-                        Make Offer
+                        Make an Offer
                       </Button>
                       
                     </>
@@ -483,10 +481,10 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
                   {!user && (
                     <Button 
                       onClick={onSignInClick}
-                      className="w-full font-medium text-white hover:opacity-90 h-12 sm:h-auto" 
-                      style={{ backgroundColor: '#4A6FA5' }}
-                      size="lg"
+                      className="w-full bg-slate-600 hover:bg-slate-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200 ease-in-out border border-slate-500 hover:border-slate-600" 
+                      size="default"
                     >
+                      <User className="h-4 w-4 mr-2" />
                       Sign in to Make Offer
                     </Button>
                   )}
@@ -649,7 +647,7 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
                   setOfferMessage('')
                   setOfferError(null)
                 }}
-                className="flex-1"
+                className="flex-1 hover:bg-slate-50 transition-colors duration-200"
                 disabled={isSubmittingOffer}
               >
                 Cancel
@@ -657,10 +655,16 @@ export function ItemDetail({ itemId, user, onBack, onSignInClick, onViewProfile 
               <Button
                 onClick={handleMakeOffer}
                 disabled={!offerPrice || isSubmittingOffer}
-                className="flex-1"
-                style={{ backgroundColor: '#4A6FA5' }}
+                className="flex-1 bg-slate-700 hover:bg-slate-800 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed border border-slate-600 hover:border-slate-700"
               >
-                {isSubmittingOffer ? 'Submitting...' : 'Submit Offer'}
+                {isSubmittingOffer ? (
+                  <span className="flex items-center">
+                    <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Submitting...
+                  </span>
+                ) : (
+                  'Submit Offer'
+                )}
               </Button>
             </div>
           </div>

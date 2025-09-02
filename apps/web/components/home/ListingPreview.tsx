@@ -201,37 +201,40 @@ export function ListingPreview({ analysisData, uploadedImages, user, onBack, onS
           -moz-appearance: textfield !important;
         }
       `}</style>
-      <div className="min-h-screen bg-hero-gradient">
+      <div className="min-h-screen bg-aurora-dreams bg-aurora-animated">
         {/* Header */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-4 md:px-6">
+          <div className="flex items-center justify-between gap-2 md:gap-4">
             <Button 
               variant="ghost" 
               onClick={onBack}
               disabled={isCreatingListing}
-              className="flex items-center space-x-2"
+              className="flex items-center space-x-1 md:space-x-2 flex-shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Back to Upload</span>
+              <span className="hidden sm:inline">Back to Upload</span>
+              <span className="sm:hidden">Back</span>
             </Button>
             
-            <div className="text-2xl font-bold text-slate-800">Marketplace</div>
+            <div className="text-lg md:text-2xl font-bold text-slate-800 text-center flex-1 min-w-0">
+              Marketplace
+            </div>
             
             <Button 
               variant={isEditing ? "default" : "outline"}
               onClick={() => setIsEditing(!isEditing)}
-              className="flex items-center space-x-2"
+              className="flex items-center space-x-1 md:space-x-2 flex-shrink-0"
             >
               {isEditing ? (
                 <>
                   <Save className="w-4 h-4" />
-                  <span>Save</span>
+                  <span className="hidden sm:inline">Save</span>
                 </>
               ) : (
                 <>
                   <Edit className="w-4 h-4" />
-                  <span>Edit</span>
+                  <span className="hidden sm:inline">Edit</span>
                 </>
               )}
             </Button>

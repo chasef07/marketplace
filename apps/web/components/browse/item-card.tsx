@@ -1,5 +1,6 @@
 'use client'
 
+import React from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Eye, MapPin } from "lucide-react"
@@ -19,13 +20,24 @@ interface ItemCardProps {
 }
 
 
-export function ItemCard({
+const ItemCardComponent = ({
   item,
   viewMode,
   onItemClick,
   className = ''
-}: ItemCardProps) {
+}: ItemCardProps) => {
   const [imageError, setImageError] = useState(false)
+  
+  // Input validation and debugging
+  if (!viewMode || (viewMode !== 'grid' && viewMode !== 'list')) {
+    console.error('ItemCard: Invalid viewMode received:', viewMode)
+    return null
+  }
+  
+  // Debug logging for troubleshooting (can be removed in production)
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`ItemCard ${item.id}: Rendering in ${viewMode} mode`)
+  }
   
   // Get the correct image URL using the same logic as profile utilities
   const getItemImageUrl = (item: Item): string | null => {
@@ -58,15 +70,16 @@ export function ItemCard({
     return 'Just now'
   }
 
-
+  // Explicit conditional rendering - only one view should ever render
   if (viewMode === 'list') {
     return (
       <Card 
-        className={`cursor-pointer transition-all duration-200 hover:shadow-lg bg-white/50 backdrop-blur-sm border-white/20 ${className}`}
+        className={`cursor-pointer transition-all duration-200 hover:shadow-lg bg-white/50 backdrop-blur-sm border-white/20 w-full ${className}`}
         onClick={() => onItemClick?.(item.id)}
+        data-view-mode="list"
       >
         <CardContent className="p-4">
-          <div className="flex gap-4">
+          <div className="flex gap-4 w-full">
             {/* Image */}
             <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
               {!imageError && getItemImageUrl(item) ? (
@@ -89,11 +102,11 @@ export function ItemCard({
             {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h3 className="font-medium text-gray-900 truncate pr-2">{item.name}</h3>
+                <div className="flex-1 min-w-0 pr-3">
+                  <h3 className="font-medium text-gray-900 truncate">{item.name}</h3>
                   <p className="text-sm text-gray-600 mt-1 line-clamp-2">{item.description}</p>
                 </div>
-                <div className="text-lg font-bold text-gray-900">${item.starting_price}</div>
+                <div className="text-lg font-bold text-gray-900 flex-shrink-0 whitespace-nowrap">${item.starting_price.toFixed(2)}</div>
               </div>
 
               <div className="flex items-center justify-between">
@@ -121,9 +134,7 @@ export function ItemCard({
                   
                   <span>{formatTimeAgo(item.created_at)}</span>
                 </div>
-
               </div>
-
             </div>
           </div>
         </CardContent>
@@ -131,11 +142,14 @@ export function ItemCard({
     )
   }
 
-  // Grid view
-  return (
+  // Only render grid view if viewMode is explicitly 'grid'
+  // This ensures no fallthrough rendering can occur
+  if (viewMode === 'grid') {
+    return (
     <Card 
-      className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] bg-white/50 backdrop-blur-sm border-white/20 ${className}`}
+      className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] bg-white/50 backdrop-blur-sm border-white/20 w-full ${className}`}
       onClick={() => onItemClick?.(item.id)}
+      data-view-mode="grid"
     >
       <CardContent className="p-0">
         {/* Image container */}
@@ -163,7 +177,7 @@ export function ItemCard({
         <div className="p-4">
           <div className="flex items-start justify-between mb-2">
             <h3 className="font-medium text-gray-900 truncate pr-2">{item.name}</h3>
-            <div className="text-lg font-bold text-gray-900 flex-shrink-0">${item.starting_price}</div>
+            <div className="text-lg font-bold text-gray-900 flex-shrink-0 whitespace-nowrap">${item.starting_price.toFixed(2)}</div>
           </div>
 
           <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.description}</p>
@@ -200,5 +214,22 @@ export function ItemCard({
         </div>
       </CardContent>
     </Card>
-  )
+    )
+  }
+  
+  // Fallback: should never reach here due to validation at top
+  console.error('ItemCard: Unexpected rendering path - no view rendered', { viewMode })
+  return null
 }
+
+// Memoize the component to prevent unnecessary re-renders that could cause display issues
+export const ItemCard = React.memo(ItemCardComponent, (prevProps, nextProps) => {
+  // Custom comparison to prevent re-renders when the same viewMode and item are passed
+  return (
+    prevProps.item.id === nextProps.item.id &&
+    prevProps.viewMode === nextProps.viewMode &&
+    prevProps.item.starting_price === nextProps.item.starting_price &&
+    prevProps.item.name === nextProps.item.name &&
+    prevProps.className === nextProps.className
+  )
+})

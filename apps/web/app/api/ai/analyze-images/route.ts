@@ -118,17 +118,18 @@ export async function POST(request: NextRequest) {
       ? `Here are ${images.length} images of the same home goods item from different angles.` 
       : 'Here is an image of a home goods item.'
     
-    const prompt = `You are an expert home goods appraiser and interior designer. ${imageDescriptions} Analyze these home goods images and provide detailed information in the following JSON format:
+    const prompt = `You are an expert home goods appraiser and resale specialist. ${imageDescriptions} Analyze these home goods images and provide detailed information in the following JSON format:
 
-    IMPORTANT: For furniture_type, categorize any home goods item using one of these values. Use the most appropriate category, or 'other' for items that don't fit standard categories:
+    IMPORTANT: For furniture_type, categorize ANY home goods item using one of these values. Use the most appropriate category:
     
     Furniture: couch, dining_table, bookshelf, chair, desk, bed, dresser, coffee_table, nightstand, cabinet
-    Home Goods: musical_instrument, home_decor, appliance, electronics, artwork, lighting, textiles, storage_container, other
+    Home Goods: musical_instrument, home_decor, appliance, electronics, artwork, lighting, textiles, storage_container
+    Personal Items: clothing, kitchen_item, book_media, sports_equipment, tool, collectible, toy_game, garden_item, other
 
-    Accept and analyze ANY home goods item including but not limited to: furniture, musical instruments (drums, guitars, pianos, etc.), home decor, appliances, electronics, artwork, lighting, rugs, containers, and household items.
+    Accept and analyze ANY item that humans buy, sell, or use at home including: furniture, clothes, shoes, accessories, kitchen items, appliances, electronics, books, media, musical instruments, sports equipment, tools, toys, games, collectibles, art, decor, lighting, garden items, craft supplies, and any household goods.
 
     {
-      "furniture_type": "Choose the most appropriate category from: couch, dining_table, bookshelf, chair, desk, bed, dresser, coffee_table, nightstand, cabinet, musical_instrument, home_decor, appliance, electronics, artwork, lighting, textiles, storage_container, other",
+      "furniture_type": "Choose the most appropriate category from: couch, dining_table, bookshelf, chair, desk, bed, dresser, coffee_table, nightstand, cabinet, musical_instrument, home_decor, appliance, electronics, artwork, lighting, textiles, storage_container, clothing, kitchen_item, book_media, sports_equipment, tool, collectible, toy_game, garden_item, other",
       "estimated_dimensions": "approximate size description",
       "key_features": ["list", "of", "notable", "features", "from", "all", "angles"],
       "suggested_starting_price": "reasonable starting price in USD",

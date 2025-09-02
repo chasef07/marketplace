@@ -141,7 +141,7 @@ export default function ProfileView({ username }: ProfileViewProps) {
   if (!profile) return null
 
   return (
-    <div className="min-h-screen pt-20 bg-hero-gradient">
+    <div className="min-h-screen pt-20 bg-aurora-dreams bg-aurora-animated">
       {/* Navigation Header */}
       <MainNavigation
         user={currentUser || null}

@@ -307,7 +307,7 @@ export function EnhancedAuth({ isOpen, onClose, onAuthSuccess, initialMode = 'si
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-hero-gradient">
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-aurora-dreams bg-aurora-animated">
       <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl" style={{ borderColor: 'rgba(74, 111, 165, 0.2)' }}>
         <CardContent className="p-0" style={{ background: 'white' }}>
           {/* Header */}
